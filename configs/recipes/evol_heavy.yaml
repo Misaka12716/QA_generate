@@ -1,0 +1,19 @@
+name: evol_heavy
+description: 在推荐栈上叠加 Evol-Instruct 深度进化 25%，观察 grounding 是否被破坏。
+chunking: {name: heading_window, max_tokens: 768, overlap: 0.12}
+anchor: {name: ner_rake_textrank, top_k: 5}
+question_gen: {name: anchor_reverse, per_anchor: 2}
+evolution: {name: evol_depth, sample_ratio: 0.25}
+distillation: {name: cot_mixed}
+teacher_router: {name: single}
+filters:
+  - {name: rule_clean}
+  - {name: minhash_dedup, threshold: 0.8}
+  - {name: nli_fact, pass: 0.8, downgrade: 0.6}
+  - {name: llm_judge}
+  - {name: knowledge_ablation, f1_drop: 0.8}
+  - {name: diversity_sample, quota: {factual: 0.5, explanatory: 0.3, reasoning: 0.2}}
+grading: sab
+questions_per_chunk: 4
+max_samples: 80
+seed: 42

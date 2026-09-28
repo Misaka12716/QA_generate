@@ -1,0 +1,17 @@
+name: smoke
+description: 单测用小规模配方
+chunking: {name: heading_window, max_tokens: 400, overlap: 0.1}
+anchor: {name: tfidf_keyword, top_k: 3}
+question_gen: {name: anchor_reverse, per_anchor: 1}
+evolution: {name: none}
+distillation: {name: concise_response}
+teacher_router: {name: single}
+filters:
+  - {name: rule_clean, min_answer_tokens: 4}
+  - {name: exact_hash_dedup}
+  - {name: evidence_substring}
+grading: binary
+questions_per_chunk: 2
+max_chunks: 4
+max_samples: 12
+seed: 1

@@ -1,0 +1,71 @@
+name: ablation_suite
+input: fixtures/sample_manual.md
+heldout: fixtures/heldout.jsonl
+recipes_dir: configs/recipes
+experiments:
+  - id: E1_baseline
+    purpose: 复现智训平台现状，作为对照基线
+    recipe: baseline_platform.yaml
+
+  - id: E2_recommended
+    purpose: 设计稿推荐栈（锚点反向提问 + CoT 混合 + 多级过滤 + SAB）
+    recipe: recommended.yaml
+    cache_as: e2_raw
+
+  - id: E3_evol
+    purpose: 叠加 Evol-Instruct 深度进化，检验难题补量是否破坏 grounding
+    recipe: evol_heavy.yaml
+
+  - id: E4_full
+    purpose: 过滤消融对照组——全量过滤（复用 E2 蒸馏结果）
+    from: recommended.yaml
+    from_cache: e2_raw
+    override:
+      name: e4_full
+
+  - id: E4_no_nli
+    purpose: 去掉 NLI 事实闸
+    from: recommended.yaml
+    from_cache: e2_raw
+    override:
+      name: e4_no_nli
+      filters:
+        - {name: rule_clean}
+        - {name: minhash_dedup, threshold: 0.8}
+        - {name: llm_judge}
+        - {name: knowledge_ablation, f1_drop: 0.8}
+        - {name: diversity_sample, quota: {factual: 0.5, explanatory: 0.3, reasoning: 0.2}}
+
+  - id: E4_no_ablation
+    purpose: 去掉无上下文消融
+    from: recommended.yaml
+    from_cache: e2_raw
+    override:
+      name: e4_no_ablation
+      filters:
+        - {name: rule_clean}
+        - {name: minhash_dedup, threshold: 0.8}
+        - {name: nli_fact, pass: 0.8, downgrade: 0.6}
+        - {name: llm_judge}
+        - {name: diversity_sample, quota: {factual: 0.5, explanatory: 0.3, reasoning: 0.2}}
+
+  - id: E4_no_judge
+    purpose: 去掉 LLM-as-Judge
+    from: recommended.yaml
+    from_cache: e2_raw
+    override:
+      name: e4_no_judge
+      filters:
+        - {name: rule_clean}
+        - {name: minhash_dedup, threshold: 0.8}
+        - {name: nli_fact, pass: 0.8, downgrade: 0.6}
+        - {name: knowledge_ablation, f1_drop: 0.8}
+        - {name: diversity_sample, quota: {factual: 0.5, explanatory: 0.3, reasoning: 0.2}}
+
+  - id: E5_cost_min
+    purpose: 成本下界——廉价教师 + 规则哈希
+    recipe: cost_min.yaml
+
+  - id: E5_quality_max
+    purpose: 质量上界——分级路由 + 全过滤
+    recipe: quality_max.yaml

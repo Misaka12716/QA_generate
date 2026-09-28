@@ -1,0 +1,39 @@
+[project]
+name = "qa-pipeline"
+version = "0.1.0"
+description = "可拔插的 QA 数据生成、蒸馏与知识过滤管线，可对接智训微调平台。"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2",
+    "pyyaml>=6",
+    "openai>=1.0",
+    "httpx>=0.27",
+    "python-dotenv>=1.0",
+    "scikit-learn>=1.3",
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+nli = ["transformers>=4.40", "torch"]
+embed = ["sentence-transformers>=3.0"]
+sft = ["transformers>=4.40", "torch", "peft>=0.11", "accelerate>=0.30"]
+demo = ["fastapi>=0.110", "uvicorn>=0.27"]
+dev = ["pytest>=8", "fastapi>=0.110", "uvicorn>=0.27"]
+
+[project.scripts]
+qa-pipeline = "qa_pipeline.cli:main"
+
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+qa_pipeline = ["demo/static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

@@ -1,0 +1,17 @@
+name: baseline_platform
+description: 复现智训平台现状——字符窗切分 + 一次生成 Q/A + 证据子串 + LLM supported。
+chunking: {name: fixed_overlap, split: 600, overlap: 80}
+anchor: {name: none}
+question_gen: {name: direct_qa}
+evolution: {name: none}
+distillation: {name: concise_response}
+teacher_router: {name: single}
+filters:
+  - {name: rule_clean}
+  - {name: exact_hash_dedup}
+  - {name: evidence_substring}
+  - {name: llm_supported}
+grading: binary
+questions_per_chunk: 3
+max_samples: 80
+seed: 42
