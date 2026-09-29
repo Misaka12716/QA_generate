@@ -144,6 +144,12 @@ class LLMClient:
             logger.warning("chat_json failed: %s", exc)
             return None
 
+    def reset_usage(self) -> None:
+        self.calls = 0
+        self.prompt_tokens = 0
+        self.completion_tokens = 0
+        self.estimated_cost_usd = 0.0
+
     def usage_snapshot(self) -> dict[str, Any]:
         return {
             "llm_calls": self.calls,
@@ -235,22 +241,23 @@ def _fake_json(blob: str, user: str) -> dict[str, Any]:
         }
     if "生成" in blob and ("问题" in blob or "QA" in blob or "问答" in blob):
         anchors = _extract_listed_items(user, "锚点") or ["该模块"]
+        types = ["factual", "procedural", "conditional", "comparative", "multihop"]
         qs = []
-        for a in anchors[:3]:
+        for i, a in enumerate(anchors[:3]):
             qs.append(
                 {
                     "question": f"{a}的作用是什么？",
                     "anchor": a,
-                    "q_type": "factual",
+                    "q_type": types[i % len(types)],
                     "evidence_span": sent,
                     "answer": sent,
                 }
             )
             qs.append(
                 {
-                    "question": f"为什么需要{a}？",
+                    "question": f"操作{a}时需要遵循哪些步骤？",
                     "anchor": a,
-                    "q_type": "explanatory",
+                    "q_type": types[(i + 1) % len(types)],
                     "evidence_span": sent,
                     "answer": sent,
                 }
@@ -264,18 +271,20 @@ def _fake_json(blob: str, user: str) -> dict[str, Any]:
         if "问题：" in user:
             q = user.split("问题：", 1)[-1].splitlines()[0].strip()
         evolved = q.replace("是什么", "在故障条件下应如何处理") if q else "该如何结合上下文分步处理？"
-        return {"question": evolved, "evolution_type": "加约束", "q_type": "reasoning"}
+        return {"question": evolved, "evolution_type": "加约束", "q_type": "multihop"}
     if "NLI" in blob or "蕴含" in blob or "entailment" in blob.lower():
         return {"entailment": 0.88, "label": "entailment", "supported": True}
     if "质检" in blob or "supported" in blob or "是否被" in blob:
         return {"supported": True, "reason": "答案可由原文支持"}
     if "打分" in blob or "Judge" in blob or "相关性" in blob:
         return {
+            "accuracy": 5,
+            "relevancy": 5,
+            "completeness": 5,
+            "quality": 5,
             "relevance": 5,
-            "correctness": 4,
-            "completeness": 4,
+            "correctness": 5,
             "fluency": 5,
-            "reasoning": 4,
         }
     if "抽取答案片段" in blob or "evidence span" in blob.lower() or "答案跨度" in blob:
         return {"spans": [sent] if sent else []}
@@ -286,3 +295,119 @@ def _fake_json(blob: str, user: str) -> dict[str, Any]:
         "confidence": 0.9,
         "supported": True,
     }
+
+
+def _extract_json_obj(text: str) -> dict[str, Any] | None:
+    raw = (text or "").strip()
+    if not raw:
+        return None
+    try:
+        data = json.loads(raw)
+        return data if isinstance(data, dict) else None
+    except Exception:
+        pass
+    start = raw.find("{")
+    end = raw.rfind("}")
+    if start >= 0 and end > start:
+        try:
+            data = json.loads(raw[start : end + 1])
+            return data if isinstance(data, dict) else None
+        except Exception:
+            return None
+    return None
+
+
+class LocalLLM(LLMClient):
+    """用本地 CausalLM 作为教师。API 费用记 0，仍统计 token。"""
+
+    def __init__(self, model_path: str, device: str | None = None, max_new_tokens: int = 512) -> None:
+        super().__init__(api_key="local", base_url="local", default_model=str(model_path))
+        self.model_path = str(model_path)
+        self.device = device
+        self.max_new_tokens = int(max_new_tokens)
+        self._model = None
+        self._tokenizer = None
+
+    def _charge(self, model: str, pin: int, pout: int) -> None:
+        self.calls += 1
+        self.prompt_tokens += int(pin)
+        self.completion_tokens += int(pout)
+
+    def _ensure(self):
+        if self._model is not None:
+            return
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+
+        self._tokenizer = AutoTokenizer.from_pretrained(self.model_path, trust_remote_code=True)
+        if self._tokenizer.pad_token_id is None:
+            self._tokenizer.pad_token = self._tokenizer.eos_token
+        use_cuda = torch.cuda.is_available()
+        self._model = AutoModelForCausalLM.from_pretrained(
+            self.model_path,
+            torch_dtype=torch.bfloat16 if use_cuda else torch.float32,
+            device_map={"": 0} if use_cuda else None,
+            trust_remote_code=True,
+        )
+        self._model.eval()
+
+    def release(self) -> None:
+        self._model = None
+        self._tokenizer = None
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            return
+
+    def chat(
+        self,
+        messages: list[dict[str, str]],
+        model: str | None = None,
+        temperature: float = 0.3,
+        max_tokens: int = 2000,
+    ) -> str:
+        import torch
+
+        self._ensure()
+        tokenizer = self._tokenizer
+        prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        inputs = tokenizer(prompt, return_tensors="pt")
+        if torch.cuda.is_available():
+            inputs = {k: v.cuda() for k, v in inputs.items()}
+        limit = min(int(max_tokens), self.max_new_tokens)
+        do_sample = temperature > 0.05
+        gen_kwargs: dict[str, Any] = {
+            "max_new_tokens": limit,
+            "do_sample": do_sample,
+            "pad_token_id": tokenizer.pad_token_id,
+        }
+        if do_sample:
+            gen_kwargs["temperature"] = float(temperature)
+        with torch.no_grad():
+            out = self._model.generate(**inputs, **gen_kwargs)
+        text = tokenizer.decode(out[0][inputs["input_ids"].shape[1] :], skip_special_tokens=True).strip()
+        pin = int(inputs["input_ids"].shape[1])
+        self._charge(model or self.default_model, pin, max(1, out.shape[1] - pin))
+        return text
+
+    def chat_json(
+        self,
+        messages: list[dict[str, str]],
+        model: str | None = None,
+        temperature: float = 0.2,
+        max_tokens: int = 3000,
+    ) -> dict[str, Any] | None:
+        text = self.chat(messages, model=model, temperature=temperature, max_tokens=max_tokens)
+        data = _extract_json_obj(text)
+        if data is not None:
+            return data
+        retry = self.chat(
+            messages + [{"role": "user", "content": "上一次没有输出合法 JSON。请只输出一个 JSON 对象。"}],
+            model=model,
+            temperature=0.1,
+            max_tokens=max_tokens,
+        )
+        return _extract_json_obj(retry)

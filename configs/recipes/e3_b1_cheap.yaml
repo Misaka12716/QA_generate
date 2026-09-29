@@ -1,0 +1,16 @@
+name: e3_b1_cheap
+description: E3-B1 全量低成本单教师。
+chunking: {name: heading_window, max_tokens: 768, overlap: 0.12}
+anchor: {name: ner_rake_textrank, top_k: 5}
+question_gen: {name: anchor_reverse, per_anchor: 1}
+evolution: {name: none}
+distillation: {name: concise_response}
+teacher_router: {name: single, tier: cheap}
+filters:
+  - {name: rule_clean, min_answer_tokens: 4}
+  - {name: llm_judge, min_overall: 2.5}
+grading: none
+questions_per_chunk: 3
+max_chunks: 4
+max_samples: 16
+seed: 42

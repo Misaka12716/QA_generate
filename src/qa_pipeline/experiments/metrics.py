@@ -61,10 +61,26 @@ def compute_metrics(result: PipelineResult) -> dict[str, Any]:
         "fallbacks": result.stats.fallbacks,
         "stage_seconds": result.stats.stage_seconds,
         "rejected_by_filter": result.stats.rejected,
+        "funnel": result.stats.funnel,
+        "tokens_per_10k_kept": _per_10k(result),
     }
 
 
+def _per_10k(result: PipelineResult) -> int | None:
+    kept = len(result.pairs)
+    if not kept:
+        return None
+    tokens = result.stats.prompt_tokens + result.stats.completion_tokens
+    return int(round(tokens / kept * 10000))
+
+
 def quota_deviation(pairs: list[QAPair], target: dict[str, float] | None = None) -> float:
-    target = target or {"factual": 0.5, "explanatory": 0.3, "reasoning": 0.2}
+    target = target or {
+        "factual": 0.4,
+        "procedural": 0.2,
+        "conditional": 0.15,
+        "comparative": 0.15,
+        "multihop": 0.1,
+    }
     dist = type_distribution(pairs)
     return float(sum(abs(dist.get(k, 0) - t) for k, t in target.items()) / 2)

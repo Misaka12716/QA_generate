@@ -35,8 +35,12 @@ def to_zhixun_row(pair: QAPair, split: str | None = None) -> dict[str, Any]:
             "goal": "qa",
             "kind": {
                 "factual": "事实问答",
+                "procedural": "步骤说明",
+                "conditional": "条件问答",
+                "comparative": "比较问答",
+                "multihop": "多跳问答",
                 "explanatory": "步骤说明",
-                "reasoning": "条件问答",
+                "reasoning": "多跳问答",
             }.get(pair.q_type, "事实问答"),
             "grade": pair.grade,
             "chunk_id": pair.chunk_id,

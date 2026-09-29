@@ -33,6 +33,7 @@ class Recipe(BaseModel):
     anchor: StrategySpec
     question_gen: StrategySpec
     evolution: StrategySpec = Field(default_factory=lambda: StrategySpec(name="none"))
+    question_filter: StrategySpec = Field(default_factory=lambda: StrategySpec(name="none"))
     distillation: StrategySpec = Field(default_factory=lambda: StrategySpec(name="concise_response"))
     teacher_router: StrategySpec = Field(default_factory=lambda: StrategySpec(name="single"))
     filters: list[StrategySpec] = Field(default_factory=list)
@@ -55,7 +56,15 @@ class Recipe(BaseModel):
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "Recipe":
         raw = dict(data)
-        for key in ("chunking", "anchor", "question_gen", "evolution", "distillation", "teacher_router"):
+        for key in (
+            "chunking",
+            "anchor",
+            "question_gen",
+            "evolution",
+            "question_filter",
+            "distillation",
+            "teacher_router",
+        ):
             if key in raw:
                 raw[key] = StrategySpec.from_obj(raw[key])
         raw["filters"] = [StrategySpec.from_obj(f) for f in raw.get("filters") or []]
@@ -72,6 +81,7 @@ class Recipe(BaseModel):
             "anchor": spec(self.anchor),
             "question_gen": spec(self.question_gen),
             "evolution": spec(self.evolution),
+            "question_filter": spec(self.question_filter),
             "distillation": spec(self.distillation),
             "teacher_router": spec(self.teacher_router),
             "filters": [spec(f) for f in self.filters],

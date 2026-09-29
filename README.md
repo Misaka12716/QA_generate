@@ -38,11 +38,12 @@ qa-pipeline run --recipe configs/recipes/smoke.yaml --input fixtures/sample_manu
 # 导出智训 JSONL
 qa-pipeline export --run runs/demo --out runs/demo/zhixun.jsonl
 
-# 五组方案对比实验（默认跳过 SFT）
-qa-pipeline experiment --suite configs/experiments/suite.yaml --out runs/ablation --fake
+# 设计稿 E1–E8（默认跳过 SFT）
+qa-pipeline experiment --suite configs/experiments/suite.yaml --out runs/design_suite --fake
 
-# 含 LoRA SFT（Qwen2.5-0.5B，需 GPU 与 extras）
-qa-pipeline experiment --suite configs/experiments/suite.yaml --out runs/ablation --sft
+# 本地 Qwen2.5-7B 作教师，并做 LoRA SFT
+qa-pipeline experiment --suite configs/experiments/suite.yaml --out runs/design_suite \
+  --local-model /data/pjw/data/models/Qwen2.5-7B-Instruct --sft
 ```
 
 `run` 目录会写出 `qa.kept.jsonl`、`qa.raw.jsonl`、`zhixun.jsonl`、`stats.json`。智训 JSONL 字段为 `messages` + `metadata.evidence`，证据尽量保持为 chunk 子串，便于日后手工导入数据集发布。
@@ -54,10 +55,11 @@ qa-pipeline experiment --suite configs/experiments/suite.yaml --out runs/ablatio
 | chunking | `fixed_overlap` `heading_window` `semantic_boundary` |
 | anchor | `none` `tfidf_keyword` `ner_rake_textrank` `llm_extract` |
 | question_gen | `direct_qa` `anchor_reverse` `self_instruct` `answer_aware` |
-| evolution | `none` `evol_depth` `evol_breadth` `evol_both` |
-| distillation | `concise_response` `cot_mixed` `multi_teacher_judge` |
+| evolution | `none` `evol_depth` `evol_breadth` `evol_both` `tag_evol` `evol_unconstrained` |
+| question_filter | `none` `difficulty_sample` |
+| distillation | `concise_response` `cot_mixed` `multi_teacher_judge` `routed_teacher` |
 | teacher_router | `single` `grade_by_qtype` `always_strong` |
-| filter | `rule_clean` `exact_hash_dedup` `minhash_dedup` `semdedup` `nli_fact` `llm_judge` `knowledge_ablation` `evidence_substring` `llm_supported` `diversity_sample` |
+| filter | `rule_clean` `exact_hash_dedup` `minhash_dedup` `semdedup` `nli_fact` `roundtrip` `selfcheck` `llm_judge` `knowledge_ablation` `evidence_substring` `llm_supported` `diversity_sample` |
 | grading | `sab` `binary` `none` |
 
 Recipe 只写策略名和参数，见 `configs/recipes/`。新增算法：在对应 `plugins/` 模块用 `@register("stage", "name")` 注册即可。
@@ -68,15 +70,18 @@ Recipe 只写策略名和参数，见 `configs/recipes/`。新增算法：在对
 
 | ID | 目的 |
 | --- | --- |
-| E1_baseline | 复现智训：字符窗 + 一次生成 Q/A + 证据子串 + LLM supported |
-| E2_recommended | 锚点反向提问 + CoT 混合 + 规则/MinHash/NLI/Judge/消融 + SAB |
-| E3_evol | E2 + Evol-Instruct 深度 25% |
-| E4_* | 同一批蒸馏结果上消融 NLI / 消融 / Judge |
-| E5_cost_min / E5_quality_max | 成本帕累托两端 |
+| E1_baseline / E1_ours_full / E1_ours_s_only | 现状方案 vs 推荐路线 S+A / 仅 S |
+| E2_a1 … E2_a5 | 提问策略：Self-Instruct、锚点、Tag-Evol、无约束进化、难度采样 |
+| E3_b1 … E3_b4 | 蒸馏：廉价、强教师、分级路由、难题多教师 |
+| E4_c1 … E4_c5 | 锚点：无、TF-IDF、NER+TF-IDF、加关键句、LLM 抽取 |
+| E5_annotation | 导出 S/A 抽检表 |
+| E6_cost | 推荐路线漏斗与 token |
+| E7_refusal | 干扰上下文拒答 |
+| E8_d1 … E8_d4 | 基线全量、S、S+A、S+A+B 的数据效率 |
 
 输出 `runs/<suite>/report.md` 与 `metrics.json`（保留率、NLI、知识增益、Judge、类型熵、S 级占比、估算成本、可选 SFT ΔF1）。
 
-SFT 对齐智训 `training_worker`：Qwen2.5-0.5B-Instruct + LoRA r=16、3 epoch、chat template、只监督 assistant。评测用 `fixtures/heldout.jsonl`（不进入训练）。
+SFT 对齐智训 `training_worker`：本地 Qwen2.5-7B-Instruct + LoRA r=16、3 epoch、chat template、只监督 assistant。评测用 `fixtures/heldout.jsonl`（不进入训练）。拒答用 `fixtures/refusal.jsonl`。
 
 ## 测试
 

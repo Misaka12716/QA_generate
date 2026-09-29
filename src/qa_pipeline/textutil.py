@@ -196,5 +196,5 @@ def entropy(counts: dict[str, int]) -> float:
     for c in counts.values():
         if c:
             p = c / total
-            h -= p * math.log(p + 1e-12, 2)
-    return h
+            h -= p * math.log(p, 2)
+    return max(0.0, h)

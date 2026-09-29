@@ -13,5 +13,5 @@ filters:
   - {name: llm_supported}
 grading: binary
 questions_per_chunk: 3
-max_samples: 80
+max_samples: 16
 seed: 42

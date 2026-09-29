@@ -12,7 +12,7 @@ from typing import Any, Iterable
 from .config import Recipe, load_recipe
 from .llm import FakeLLM, LLMClient
 from .registry import build_strategy, ensure_plugins
-from .schemas import Chunk, Document, QAPair, UsageStats
+from .schemas import Chunk, Document, QAPair, Question, UsageStats
 from .textutil import approx_tokens, heading_sections, normalize
 
 logger = logging.getLogger(__name__)
@@ -60,6 +60,7 @@ class Pipeline:
         self.anchorer = build_strategy("anchor", _spec(recipe.anchor))
         self.qgen = build_strategy("question_gen", _spec(recipe.question_gen))
         self.evolver = build_strategy("evolution", _spec(recipe.evolution))
+        self.question_filter = build_strategy("question_filter", _spec(recipe.question_filter))
         self.router = build_strategy("teacher_router", _spec(recipe.teacher_router))
         self.distiller = build_strategy("distillation", _spec(recipe.distillation))
         self.filters = [build_strategy("filter", _spec(f)) for f in recipe.filters]
@@ -82,10 +83,35 @@ class Pipeline:
         anchored = self._timed("anchor", lambda: self.anchorer.run(chunks, ctx), ctx)
         questions = self._timed("question_gen", lambda: self.qgen.run(anchored, ctx), ctx)
         questions = self._timed("evolution", lambda: self.evolver.run(questions, ctx), ctx)
+        questions = self._timed("question_filter", lambda: self.question_filter.run(questions, ctx), ctx)
         if self.recipe.max_samples:
             questions = questions[: self.recipe.max_samples]
         ctx.stats.produced["questions"] = len(questions)
+        return self._finish(docs, chunks, questions, ctx, t0)
 
+    def distill_from_questions(self, questions: list[Question]) -> PipelineResult:
+        """跳过切分与提问，只重跑路由、蒸馏、过滤和分层。"""
+        ctx = PipelineContext(
+            recipe=self.recipe,
+            llm=self.llm,
+            rng=random.Random(self.recipe.seed),
+        )
+        t0 = time.perf_counter()
+        cloned = [q.model_copy(deep=True) for q in questions]
+        if self.recipe.max_samples:
+            cloned = cloned[: self.recipe.max_samples]
+        ctx.stats.produced["questions"] = len(cloned)
+        return self._finish([], [], cloned, ctx, t0)
+
+    def _finish(
+        self,
+        docs: list[Document],
+        chunks: list[Chunk],
+        questions: list[Question],
+        ctx: PipelineContext,
+        t0: float,
+    ) -> PipelineResult:
+        snapshot = [q.model_copy(deep=True) for q in questions]
         routed = self._timed("teacher_router", lambda: self.router.run(questions, ctx), ctx)
         pairs = self._timed("distillation", lambda: self.distiller.run(routed, ctx), ctx)
         ctx.stats.produced["distilled"] = len(pairs)
@@ -113,7 +139,7 @@ class Pipeline:
             recipe_name=self.recipe.name,
             documents=docs,
             chunks=chunks,
-            questions=questions,
+            questions=snapshot,
             pairs=kept,
             rejected=rejected,
             stats=ctx.stats,
@@ -126,6 +152,7 @@ class Pipeline:
             name = getattr(filt, "name", type(filt).__name__)
             pairs = self._timed(f"filter:{name}", lambda f=filt, current=pairs: f.run(current, ctx), ctx)
             dropped = before - len(pairs)
+            ctx.stats.funnel[name] = {"in": before, "out": len(pairs), "dropped": dropped}
             if dropped:
                 ctx.stats.rejected[name] = ctx.stats.rejected.get(name, 0) + dropped
         return pairs, ctx

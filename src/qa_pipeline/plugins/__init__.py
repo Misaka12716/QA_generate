@@ -9,6 +9,7 @@ _MODULES = [
     "qa_pipeline.plugins.anchors",
     "qa_pipeline.plugins.question_gen",
     "qa_pipeline.plugins.evolution",
+    "qa_pipeline.plugins.question_filter",
     "qa_pipeline.plugins.routing",
     "qa_pipeline.plugins.distillation",
     "qa_pipeline.plugins.filters",

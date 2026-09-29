@@ -16,6 +16,7 @@ from ..textutil import (
     exact_match,
     is_substring,
     ngrams,
+    rouge_l,
     sentences,
     sha1,
     token_f1,
@@ -23,6 +24,32 @@ from ..textutil import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+_JUDGE_ALIAS = {
+    "accuracy": ("accuracy", "correctness"),
+    "relevancy": ("relevancy", "relevance"),
+    "completeness": ("completeness",),
+    "quality": ("quality", "fluency"),
+}
+
+
+def _judge_dims(data: dict) -> dict[str, float]:
+    scores = {}
+    for name, aliases in _JUDGE_ALIAS.items():
+        value = 0.0
+        for alias in aliases:
+            if data.get(alias) is not None:
+                value = float(data.get(alias) or 0)
+                break
+        scores[name] = value
+    return scores
+
+
+def _answer_sim(left: str, right: str) -> float:
+    if not left or not right:
+        return 0.0
+    return max(token_f1(left, right), rouge_l(left, right))
 
 
 def _keep(pairs: list[QAPair], pred) -> list[QAPair]:
@@ -331,11 +358,10 @@ class LLMJudge:
         **_: object,
     ) -> None:
         self.weights = weights or {
-            "correctness": 0.35,
-            "relevance": 0.20,
-            "completeness": 0.20,
-            "fluency": 0.15,
-            "reasoning": 0.10,
+            "accuracy": 0.25,
+            "relevancy": 0.25,
+            "completeness": 0.25,
+            "quality": 0.25,
         }
         self.min_overall = float(min_overall)
 
@@ -347,8 +373,8 @@ class LLMJudge:
                     {
                         "role": "system",
                         "content": (
-                            "你是 QA 数据裁判，对相关性/正确性/完整性/语言质量/推理质量 1-5 打分。"
-                            '输出 JSON：{"relevance":1,"correctness":1,"completeness":1,"fluency":1,"reasoning":1}'
+                            "你是 QA 数据裁判。按事实性、相关性、完整性、语言质量打 1-5 分。"
+                            '输出 JSON：{"accuracy":1,"relevancy":1,"completeness":1,"quality":1}'
                         ),
                     },
                     {
@@ -361,11 +387,8 @@ class LLMJudge:
                 ],
                 model=ctx.model_for("default"),
             ) or {}
-            scores = {
-                k: float(data.get(k) or 0)
-                for k in ("relevance", "correctness", "completeness", "fluency", "reasoning")
-            }
-            overall = sum(scores[k] * w for k, w in self.weights.items())
+            scores = _judge_dims(data)
+            overall = sum(scores[k] * self.weights.get(k, 0.0) for k in scores)
             p.judge_scores = scores
             p.judge_overall = overall
             p.filter_trace[self.name] = {"scores": scores, "overall": overall}
@@ -411,12 +434,120 @@ class KnowledgeAblation:
         return kept
 
 
+@register("filter", "roundtrip")
+class RoundTrip:
+    """k 次复现蒸馏答案，至少一次语义匹配或平均相似度达标。"""
+
+    name = "roundtrip"
+
+    def __init__(self, k: int = 3, pass_sim: float = 0.75, mean_sim: float = 0.6, **_: object) -> None:
+        self.k = int(k)
+        self.pass_sim = float(pass_sim)
+        self.mean_sim = float(mean_sim)
+
+    def run(self, pairs: list[QAPair], ctx) -> list[QAPair]:
+        kept = []
+        for p in pairs:
+            sims = []
+            refused = 0
+            for _ in range(self.k):
+                text = ctx.llm.chat(
+                    [
+                        {
+                            "role": "system",
+                            "content": "请只根据参考文本回答问题。若材料不足以回答，只回复：无法回答。",
+                        },
+                        {"role": "user", "content": f"参考文本：{p.chunk_text}\n问题：{p.question}"},
+                    ],
+                    model=ctx.model_for("cheap"),
+                    max_tokens=300,
+                    temperature=0.7,
+                )
+                if any(flag in text for flag in ("无法回答", "无法确定", "不足以回答")):
+                    refused += 1
+                sims.append(_answer_sim(text, p.answer))
+            mean = sum(sims) / max(1, len(sims))
+            ok = refused < self.k and (max(sims, default=0) >= self.pass_sim or mean >= self.mean_sim)
+            p.filter_trace[self.name] = {"sims": [round(s, 4) for s in sims], "mean": round(mean, 4), "ok": ok}
+            p.log("filter", self.name, mean=mean, ok=ok)
+            if not ok:
+                p.action = "reject"
+                continue
+            kept.append(p)
+        return kept
+
+
+@register("filter", "selfcheck")
+class SelfCheck:
+    """SelfCheckGPT：仅对高价值候选采样，一致性过低则丢弃。"""
+
+    name = "selfcheck"
+
+    def __init__(
+        self,
+        n: int = 5,
+        min_consistency: float = 0.6,
+        s_nli: float = 0.8,
+        s_gain: float = 0.2,
+        **_: object,
+    ) -> None:
+        self.n = int(n)
+        self.min_consistency = float(min_consistency)
+        self.s_nli = float(s_nli)
+        self.s_gain = float(s_gain)
+
+    def run(self, pairs: list[QAPair], ctx) -> list[QAPair]:
+        kept = []
+        for p in pairs:
+            gain = 1.0 if p.kb_gain is None else p.kb_gain
+            candidate = (p.nli_score or 0) >= self.s_nli and gain >= self.s_gain and p.action == "pass"
+            if not candidate:
+                p.filter_trace[self.name] = {"skipped": True}
+                kept.append(p)
+                continue
+            answers = []
+            for _ in range(self.n):
+                answers.append(
+                    ctx.llm.chat(
+                        [
+                            {
+                                "role": "system",
+                                "content": "请只根据参考文本回答。回答要简短。",
+                            },
+                            {"role": "user", "content": f"参考文本：{p.chunk_text}\n问题：{p.question}"},
+                        ],
+                        model=ctx.model_for("cheap"),
+                        max_tokens=240,
+                        temperature=0.8,
+                    )
+                )
+            sims = []
+            for i in range(len(answers)):
+                for j in range(i + 1, len(answers)):
+                    sims.append(_answer_sim(answers[i], answers[j]))
+            consistency = sum(sims) / max(1, len(sims))
+            ok = consistency >= self.min_consistency
+            p.filter_trace[self.name] = {"consistency": round(consistency, 4), "ok": ok, "n": self.n}
+            p.log("filter", self.name, consistency=consistency, ok=ok)
+            if not ok:
+                p.action = "reject"
+                continue
+            kept.append(p)
+        return kept
+
+
 @register("filter", "diversity_sample")
 class DiversitySample:
     name = "diversity_sample"
 
     def __init__(self, quota: dict | None = None, per_doc_cap: int | None = None, **_: object) -> None:
-        self.quota = quota or {"factual": 0.5, "explanatory": 0.3, "reasoning": 0.2}
+        self.quota = quota or {
+            "factual": 0.4,
+            "procedural": 0.2,
+            "conditional": 0.15,
+            "comparative": 0.15,
+            "multihop": 0.1,
+        }
         self.per_doc_cap = per_doc_cap
 
     def run(self, pairs: list[QAPair], ctx) -> list[QAPair]:

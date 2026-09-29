@@ -20,9 +20,15 @@ def test_strategy_catalog():
     catalog = list_strategies()
     assert "heading_window" in catalog["chunking"]
     assert "anchor_reverse" in catalog["question_gen"]
+    assert "tag_evol" in catalog["evolution"]
+    assert "ner_tfidf" in catalog["anchor"]
     assert "nli_fact" in catalog["filter"]
+    assert "roundtrip" in catalog["filter"]
+    assert "selfcheck" in catalog["filter"]
+    assert "difficulty_sample" in catalog["question_filter"]
     assert "sab" in catalog["grading"]
     assert "grade_by_qtype" in catalog["teacher_router"]
+    assert "routed_teacher" in catalog["distillation"]
 
 
 def test_heading_chunking():
@@ -141,11 +147,15 @@ def test_suite_fake(tmp_path):
     payload = run_suite(suite, out_dir=tmp_path, fake=True, skip_sft=True)
     ids = [e["id"] for e in payload["experiments"]]
     assert "E1_baseline" in ids
-    assert "E2_recommended" in ids
-    assert "E4_no_nli" in ids
+    assert "E1_ours_full" in ids
+    assert "E2_a3" in ids
+    assert "E4_c3" in ids
+    assert "E6_cost" in ids
+    assert "E7_refusal" in ids
     assert (tmp_path / "report.md").is_file()
     assert (tmp_path / "metrics.json").is_file()
     assert (tmp_path / "E1_baseline" / "zhixun.jsonl").is_file()
+    assert (tmp_path / "E5_annotation" / "annotation.jsonl").is_file()
     baseline = next(row for row in payload["experiments"] if row["id"] == "E1_baseline")
     snap = baseline["recipe_snapshot"]
     assert snap["question_gen"]["name"] == "direct_qa"
@@ -157,9 +167,12 @@ def test_suite_fake(tmp_path):
         "evidence_substring",
         "llm_supported",
     ]
-    recommended = next(row for row in payload["experiments"] if row["id"] == "E2_recommended")
-    assert recommended["recipe_snapshot"]["question_gen"]["name"] == "anchor_reverse"
+    ours = next(row for row in payload["experiments"] if row["id"] == "E1_ours_full")
+    assert ours["recipe_snapshot"]["question_gen"]["name"] == "anchor_reverse"
+    assert ours["recipe_snapshot"]["evolution"]["name"] == "tag_evol"
     assert payload["llm"] == "fake"
+    cost = next(row for row in payload["experiments"] if row["id"] == "E6_cost")
+    assert "funnel" in (cost.get("metrics") or {})
 
 
 def test_sft_skip(tmp_path):

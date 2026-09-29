@@ -1,0 +1,17 @@
+name: e4_anchor_base
+description: E4 锚点消融的公共提问与过滤设置。
+chunking: {name: heading_window, max_tokens: 768, overlap: 0.12}
+anchor: {name: ner_tfidf, top_k: 5}
+question_gen: {name: anchor_reverse, per_anchor: 1}
+evolution: {name: none}
+distillation: {name: concise_response}
+teacher_router: {name: single}
+filters:
+  - {name: rule_clean, min_answer_tokens: 4}
+  - {name: evidence_substring}
+  - {name: nli_fact, pass: 0.7, downgrade: 0.5}
+grading: none
+questions_per_chunk: 3
+max_chunks: 4
+max_samples: 16
+seed: 42

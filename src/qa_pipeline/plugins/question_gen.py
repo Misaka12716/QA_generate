@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 from ..registry import register
-from ..schemas import Anchor, Chunk, Question
+from ..schemas import Q_TYPES, Anchor, Chunk, Question, canon_qtype
 from ..textutil import is_substring, longest_overlap_span, rouge_l, sentences, tokenize
 
-_TYPE_CYCLE = ["factual", "explanatory", "reasoning"]
+_TYPE_CYCLE = list(Q_TYPES)
+_QTYPE_DOC = "factual|procedural|conditional|comparative|multihop"
 
 
 def _anchors_of(chunk: Chunk) -> list[Anchor]:
@@ -42,7 +43,25 @@ def _clip_evidence(span: str, chunk: Chunk) -> str:
 
 
 def _quota_type(i: int) -> str:
-    return ["factual", "factual", "explanatory", "reasoning", "factual"][i % 5]
+    """设计稿默认配额：事实 40% / 步骤 20% / 条件 15% / 比较 15% / 多跳 10%。"""
+    table = (
+        ["factual"] * 8
+        + ["procedural"] * 4
+        + ["conditional"] * 3
+        + ["comparative"] * 3
+        + ["multihop"] * 2
+    )
+    return table[i % len(table)]
+
+
+def _as_qtype(value: object, index: int) -> str:
+    if isinstance(value, str) and canon_qtype(value, default="") in _TYPE_CYCLE and value.strip() in {
+        *_TYPE_CYCLE,
+        "explanatory",
+        "reasoning",
+    }:
+        return canon_qtype(value)
+    return _quota_type(index)
 
 
 @register("question_gen", "direct_qa")
@@ -80,12 +99,18 @@ class DirectQA:
                 qtext = str(item.get("q") or item.get("question") or "").strip()
                 if not _valid_question(qtext):
                     continue
-                kind = str(item.get("kind") or "")
+                kind = str(item.get("kind") or item.get("q_type") or "")
                 q_type = "factual"
-                if "解释" in kind or "why" in kind.lower():
-                    q_type = "explanatory"
-                elif "推理" in kind or "步骤" in kind:
-                    q_type = "reasoning"
+                if "多跳" in kind or "推理" in kind:
+                    q_type = "multihop"
+                elif "比较" in kind:
+                    q_type = "comparative"
+                elif "条件" in kind:
+                    q_type = "conditional"
+                elif "步骤" in kind or "流程" in kind:
+                    q_type = "procedural"
+                elif kind in _TYPE_CYCLE or kind in {"explanatory", "reasoning"}:
+                    q_type = canon_qtype(kind)
                 ev = _clip_evidence(str(item.get("evidence") or item.get("evidence_span") or ""), chunk)
                 q = Question(
                     question=qtext,
@@ -123,9 +148,10 @@ class AnchorReverseQG:
                         "content": (
                             "你是一个专业的QA数据生成器。请根据给定的文本块和锚点，生成能够从该文本块中找到答案的问题。\n"
                             "要求：\n1. 答案必须完全来自给定文本，不能引入外部知识\n"
-                            "2. 每个锚点生成1-2个不同类型的问题（事实型/解释型/推理型）\n"
-                            "3. 问题要自然、清晰，不重复\n"
-                            '4. 输出 JSON：{"questions":[{"question":"...","anchor":"...","q_type":"factual|explanatory|reasoning","evidence_span":"原文中的答案片段"}]}'
+                            "2. 每个锚点生成不同类型的问题，q_type 只能是 "
+                            f"{_QTYPE_DOC}（事实/步骤/条件/比较/多跳）\n"
+                            "3. 问题要自然、清晰，不重复，且只能依据文本块回答\n"
+                            '4. 输出 JSON：{"questions":[{"question":"...","anchor":"...","q_type":"factual","evidence_span":"原文中的答案片段"}]}'
                         ),
                     },
                     {
@@ -144,7 +170,7 @@ class AnchorReverseQG:
                 qtext = str(item.get("question") or "").strip()
                 if not _valid_question(qtext):
                     continue
-                q_type = item.get("q_type") if item.get("q_type") in {"factual", "explanatory", "reasoning"} else _quota_type(i)
+                q_type = _as_qtype(item.get("q_type"), i)
                 q = Question(
                     question=qtext,
                     chunk_id=chunk.chunk_id,
@@ -181,7 +207,7 @@ class SelfInstructQG:
                         "content": (
                             "你在做 Self-Instruct：参考种子问题风格，基于文本块生成新的、互不重复的问题。"
                             "问题必须能由文本块回答。"
-                            '输出 JSON：{"questions":[{"question":"...","q_type":"factual|explanatory|reasoning","evidence_span":"..."}]}'
+                            f'输出 JSON：{{"questions":[{{"question":"...","q_type":"{_QTYPE_DOC}","evidence_span":"..."}}]}}'
                         ),
                     },
                     {
@@ -201,7 +227,7 @@ class SelfInstructQG:
                     Question(
                         question=qtext,
                         chunk_id=chunk.chunk_id,
-                        q_type=item.get("q_type") if item.get("q_type") in {"factual", "explanatory", "reasoning"} else _quota_type(i),
+                        q_type=_as_qtype(item.get("q_type"), i),
                         evidence_span=_clip_evidence(str(item.get("evidence_span") or ""), chunk),
                         metadata={"source_doc": chunk.source_doc, "chunk_text": chunk.text, "strategy": self.name},
                     )
@@ -228,7 +254,7 @@ class AnswerAwareQG:
                         "role": "system",
                         "content": (
                             "先从文本块抽取可作为答案的原文片段（答案跨度），再为每个片段生成一个问题。"
-                            '输出 JSON：{"questions":[{"question":"...","evidence_span":"...","q_type":"factual|explanatory|reasoning"}]}'
+                            f'输出 JSON：{{"questions":[{{"question":"...","evidence_span":"...","q_type":"{_QTYPE_DOC}"}}]}}'
                         ),
                     },
                     {"role": "user", "content": f"文本块：{chunk.text}\n请抽取并提问 {n} 组。"},
@@ -245,7 +271,7 @@ class AnswerAwareQG:
                     Question(
                         question=qtext,
                         chunk_id=chunk.chunk_id,
-                        q_type=item.get("q_type") if item.get("q_type") in {"factual", "explanatory", "reasoning"} else "factual",
+                        q_type=_as_qtype(item.get("q_type"), i),
                         evidence_span=_clip_evidence(str(item.get("evidence_span") or ""), chunk),
                         metadata={"source_doc": chunk.source_doc, "chunk_text": chunk.text, "strategy": self.name},
                     )

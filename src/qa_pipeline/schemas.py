@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 def _uid(prefix: str = "") -> str:
@@ -17,10 +17,20 @@ def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-QType = Literal["factual", "explanatory", "reasoning"]
+Q_TYPES = ("factual", "procedural", "conditional", "comparative", "multihop")
+_QTYPE_ALIAS = {"explanatory": "procedural", "reasoning": "multihop"}
+QType = Literal["factual", "procedural", "conditional", "comparative", "multihop"]
 Grade = Literal["S", "A", "B", "reject"]
 FilterAction = Literal["pass", "reject", "downgrade"]
 AnchorType = Literal["entity", "keyword", "sentence"]
+
+
+def canon_qtype(value: object, default: str = "factual") -> str:
+    """把旧题型名映射到设计稿五类；无法识别时回落到 default。"""
+    if not isinstance(value, str):
+        return default
+    name = _QTYPE_ALIAS.get(value.strip(), value.strip())
+    return name if name in Q_TYPES else default
 
 
 class Document(BaseModel):
@@ -59,9 +69,15 @@ class Question(BaseModel):
     q_type: QType = "factual"
     evidence_span: str = ""
     evolution_type: str | None = None
+    evol_level: int = 0
     difficulty: float = 0.0
     answer_hint: str = ""
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("q_type", mode="before")
+    @classmethod
+    def _canon_qtype(cls, value: object) -> str:
+        return canon_qtype(value)
 
 
 class QAPair(BaseModel):
@@ -91,6 +107,11 @@ class QAPair(BaseModel):
     split: Literal["train", "validation", "test"] = "train"
     metadata: dict[str, Any] = Field(default_factory=dict)
 
+    @field_validator("q_type", mode="before")
+    @classmethod
+    def _canon_qtype(cls, value: object) -> str:
+        return canon_qtype(value)
+
     def log(self, stage: str, strategy: str, **payload: Any) -> None:
         self.audit.append(
             {
@@ -117,4 +138,5 @@ class UsageStats(BaseModel):
     stage_seconds: dict[str, float] = Field(default_factory=dict)
     produced: dict[str, int] = Field(default_factory=dict)
     rejected: dict[str, int] = Field(default_factory=dict)
+    funnel: dict[str, dict[str, int]] = Field(default_factory=dict)
     fallbacks: list[str] = Field(default_factory=list)

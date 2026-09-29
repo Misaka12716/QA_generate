@@ -6,12 +6,26 @@ from ..registry import register
 from ..schemas import QAPair
 
 
+_S_DIMS = ("accuracy", "relevancy", "completeness", "quality")
+
+
 def _overall(p: QAPair) -> float:
     if p.judge_overall is not None:
         return p.judge_overall
     if p.nli_score is not None:
         return p.nli_score * 5
     return 3.5 if p.action == "pass" else 2.0
+
+
+def _dims_at_least(p: QAPair, floor: float) -> bool:
+    if not p.judge_scores:
+        return False
+    values = []
+    for name in _S_DIMS:
+        if name not in p.judge_scores:
+            return False
+        values.append(float(p.judge_scores[name]))
+    return all(v >= floor for v in values)
 
 
 @register("grading", "none")
@@ -78,7 +92,13 @@ class SABGrade:
             if p.action == "reject" or score < self.b_overall:
                 p.grade = "reject"
                 p.action = "reject"
-            elif score >= self.s_overall and nli >= self.s_nli and gain_ok and p.action != "downgrade":
+            elif (
+                score >= self.s_overall
+                and _dims_at_least(p, 4.0)
+                and nli >= self.s_nli
+                and gain_ok
+                and p.action != "downgrade"
+            ):
                 p.grade = "S"
             elif score >= self.a_overall and nli >= self.a_nli:
                 p.grade = "A"

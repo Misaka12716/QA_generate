@@ -12,7 +12,7 @@ filters:
   - {name: nli_fact, pass: 0.8, downgrade: 0.6}
   - {name: llm_judge}
   - {name: knowledge_ablation, f1_drop: 0.8}
-  - {name: diversity_sample, quota: {factual: 0.5, explanatory: 0.3, reasoning: 0.2}}
+  - {name: diversity_sample, quota: {factual: 0.4, procedural: 0.2, conditional: 0.15, comparative: 0.15, multihop: 0.1}}
 grading: sab
 questions_per_chunk: 4
 max_samples: 80

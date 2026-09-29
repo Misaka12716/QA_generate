@@ -1,0 +1,16 @@
+name: e3_b4_multi_hard
+description: E3-B4 仅难题子集走多教师并裁判选优。
+chunking: {name: heading_window, max_tokens: 768, overlap: 0.12}
+anchor: {name: ner_rake_textrank, top_k: 5}
+question_gen: {name: anchor_reverse, per_anchor: 1}
+evolution: {name: none}
+distillation: {name: routed_teacher, teachers: [cheap, strong]}
+teacher_router: {name: grade_by_qtype}
+filters:
+  - {name: rule_clean, min_answer_tokens: 4}
+  - {name: llm_judge, min_overall: 2.5}
+grading: none
+questions_per_chunk: 3
+max_chunks: 4
+max_samples: 16
+seed: 42

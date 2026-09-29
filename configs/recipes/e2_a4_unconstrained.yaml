@@ -1,0 +1,18 @@
+name: e2_a4_unconstrained
+description: E2-A4 锚点 + 无约束 Evol-Instruct。
+chunking: {name: heading_window, max_tokens: 768, overlap: 0.12}
+anchor: {name: ner_rake_textrank, top_k: 5}
+question_gen: {name: anchor_reverse, per_anchor: 1}
+evolution: {name: evol_unconstrained, sample_ratio: 0.3}
+distillation: {name: concise_response}
+teacher_router: {name: single}
+filters:
+  - {name: rule_clean, min_answer_tokens: 4}
+  - {name: evidence_substring}
+  - {name: roundtrip, k: 3, pass_sim: 0.75, mean_sim: 0.6}
+  - {name: exact_hash_dedup}
+grading: none
+questions_per_chunk: 3
+max_chunks: 4
+max_samples: 16
+seed: 42

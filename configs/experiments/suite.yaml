@@ -1,71 +1,145 @@
-name: ablation_suite
+name: design_e1_e8
 input: fixtures/sample_manual.md
 heldout: fixtures/heldout.jsonl
+refusal: fixtures/refusal.jsonl
 recipes_dir: configs/recipes
 experiments:
   - id: E1_baseline
-    purpose: 复现智训平台现状，作为对照基线
+    purpose: 智训现状方案，一次生成 Q+A+证据并做规则过滤
     recipe: baseline_platform.yaml
+    cache_as: e1_baseline
+    sft: true
 
-  - id: E2_recommended
-    purpose: 设计稿推荐栈（锚点反向提问 + CoT 混合 + 多级过滤 + SAB）
+  - id: E1_ours_full
+    purpose: 推荐路线全量，训练时使用 S+A
     recipe: recommended.yaml
-    cache_as: e2_raw
+    cache_as: e1_ours
+    grades: [S, A]
+    sft: true
 
-  - id: E3_evol
-    purpose: 叠加 Evol-Instruct 深度进化，检验难题补量是否破坏 grounding
-    recipe: evol_heavy.yaml
+  - id: E1_ours_s_only
+    purpose: 推荐路线仅 S 级
+    kind: subset
+    from_kept: e1_ours
+    grades: [S]
+    sft: true
 
-  - id: E4_full
-    purpose: 过滤消融对照组——全量过滤（复用 E2 蒸馏结果）
-    from: recommended.yaml
-    from_cache: e2_raw
+  - id: E2_a1
+    purpose: 纯 Self-Instruct，无锚点无进化
+    recipe: e2_a1_self_instruct.yaml
+
+  - id: E2_a2
+    purpose: 锚点反向提问，不进化
+    recipe: e2_a2_anchor.yaml
+    cache_questions: q_anchor
+
+  - id: E2_a3
+    purpose: 锚点 + Tag-Evol 受控进化
+    recipe: e2_a3_tag_evol.yaml
+
+  - id: E2_a4
+    purpose: 锚点 + 无约束 Evol-Instruct
+    recipe: e2_a4_unconstrained.yaml
+
+  - id: E2_a5
+    purpose: 锚点 + Tag-Evol + 难度感知采样
+    recipe: e2_a5_difficulty.yaml
+
+  - id: E3_b1
+    purpose: 全量低成本单教师
+    recipe: e3_b1_cheap.yaml
+    from_questions: q_anchor
+
+  - id: E3_b2
+    purpose: 全量强教师
+    recipe: e3_b2_strong.yaml
+    from_questions: q_anchor
+
+  - id: E3_b3
+    purpose: 按题型分级路由
+    recipe: e3_b3_graded.yaml
+    from_questions: q_anchor
+
+  - id: E3_b4
+    purpose: 仅难题子集多教师选优
+    recipe: e3_b4_multi_hard.yaml
+    from_questions: q_anchor
+
+  - id: E4_c1
+    purpose: 无锚点，纯 LLM 自由生成
+    from: e4_anchor_base.yaml
     override:
-      name: e4_full
+      name: e4_c1_none
+      anchor: {name: none}
+      question_gen: {name: self_instruct, per_chunk: 3}
 
-  - id: E4_no_nli
-    purpose: 去掉 NLI 事实闸
-    from: recommended.yaml
-    from_cache: e2_raw
+  - id: E4_c2
+    purpose: 仅 TF-IDF 关键词
+    from: e4_anchor_base.yaml
     override:
-      name: e4_no_nli
-      filters:
-        - {name: rule_clean}
-        - {name: minhash_dedup, threshold: 0.8}
-        - {name: llm_judge}
-        - {name: knowledge_ablation, f1_drop: 0.8}
-        - {name: diversity_sample, quota: {factual: 0.5, explanatory: 0.3, reasoning: 0.2}}
+      name: e4_c2_tfidf
+      anchor: {name: tfidf_keyword, top_k: 5}
 
-  - id: E4_no_ablation
-    purpose: 去掉无上下文消融
-    from: recommended.yaml
-    from_cache: e2_raw
+  - id: E4_c3
+    purpose: NER + TF-IDF
+    from: e4_anchor_base.yaml
     override:
-      name: e4_no_ablation
-      filters:
-        - {name: rule_clean}
-        - {name: minhash_dedup, threshold: 0.8}
-        - {name: nli_fact, pass: 0.8, downgrade: 0.6}
-        - {name: llm_judge}
-        - {name: diversity_sample, quota: {factual: 0.5, explanatory: 0.3, reasoning: 0.2}}
+      name: e4_c3_ner_tfidf
+      anchor: {name: ner_tfidf, top_k: 5}
 
-  - id: E4_no_judge
-    purpose: 去掉 LLM-as-Judge
-    from: recommended.yaml
-    from_cache: e2_raw
+  - id: E4_c4
+    purpose: NER + TF-IDF + 关键句
+    from: e4_anchor_base.yaml
     override:
-      name: e4_no_judge
-      filters:
-        - {name: rule_clean}
-        - {name: minhash_dedup, threshold: 0.8}
-        - {name: nli_fact, pass: 0.8, downgrade: 0.6}
-        - {name: knowledge_ablation, f1_drop: 0.8}
-        - {name: diversity_sample, quota: {factual: 0.5, explanatory: 0.3, reasoning: 0.2}}
+      name: e4_c4_ner_sentence
+      anchor: {name: ner_rake_textrank, top_k: 5}
 
-  - id: E5_cost_min
-    purpose: 成本下界——廉价教师 + 规则哈希
-    recipe: cost_min.yaml
+  - id: E4_c5
+    purpose: 纯 LLM 抽取锚点
+    from: e4_anchor_base.yaml
+    override:
+      name: e4_c5_llm
+      anchor: {name: llm_extract, top_k: 5}
 
-  - id: E5_quality_max
-    purpose: 质量上界——分级路由 + 全过滤
-    recipe: quality_max.yaml
+  - id: E5_annotation
+    purpose: 导出 S/A 抽检表；无人工标签则不计算 Kappa
+    kind: annotate
+    from_kept: e1_ours
+    grades: [S, A]
+
+  - id: E6_cost
+    purpose: 汇总推荐路线的过滤漏斗、token 与费用
+    kind: cost
+    source: E1_ours_full
+
+  - id: E7_refusal
+    purpose: 对比基线与推荐路线在干扰上下文上的拒答
+    kind: refusal
+    compare: [E1_baseline, E1_ours_full]
+
+  - id: E8_d1
+    purpose: 基线全量训练数据
+    kind: subset
+    from_kept: e1_baseline
+    sft: true
+
+  - id: E8_d2
+    purpose: 仅 S 级
+    kind: subset
+    from_kept: e1_ours
+    grades: [S]
+    sft: true
+
+  - id: E8_d3
+    purpose: S+A
+    kind: subset
+    from_kept: e1_ours
+    grades: [S, A]
+    sft: true
+
+  - id: E8_d4
+    purpose: S+A+B
+    kind: subset
+    from_kept: e1_ours
+    grades: [S, A, B]
+    sft: true

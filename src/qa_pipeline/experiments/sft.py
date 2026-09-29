@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -13,7 +14,10 @@ from ..textutil import exact_match, token_f1
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_BASE = "Qwen/Qwen2.5-0.5B-Instruct"
+DEFAULT_BASE = os.environ.get(
+    "QA_PIPELINE_SFT_BASE",
+    "/data/pjw/data/models/Qwen2.5-7B-Instruct",
+)
 
 
 def write_sft_jsonl(pairs: list[QAPair], path: Path) -> Path:
@@ -139,8 +143,8 @@ def train_lora(
             output_dir=str(out_dir / "trainer"),
             num_train_epochs=epochs,
             learning_rate=lr,
-            per_device_train_batch_size=2,
-            gradient_accumulation_steps=2,
+            per_device_train_batch_size=1,
+            gradient_accumulation_steps=4,
             save_strategy="no",
             logging_steps=1,
             bf16=use_cuda,

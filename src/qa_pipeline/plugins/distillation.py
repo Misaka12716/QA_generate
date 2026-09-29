@@ -58,11 +58,19 @@ def _to_pair(q: Question, payload: dict, model: str, cot: bool) -> QAPair:
             "cot_enabled": cot,
             "generation_timestamp": utc_now(),
             "q_type": q.q_type,
+            "evol_level": q.evol_level,
+            "hard": bool(q.metadata.get("hard")),
         },
         metadata=dict(q.metadata),
     )
     pair.log("distillation", "write", teacher_model=model, cot=cot)
     return pair
+
+
+def _needs_cot(q: Question) -> bool:
+    if q.metadata.get("cot"):
+        return True
+    return q.q_type == "multihop" or int(q.evol_level or 0) >= 2
 
 
 def _ask(q: Question, ctx, cot: bool, model: str) -> dict:
@@ -129,7 +137,7 @@ class CotMixed:
         out = []
         for q in questions:
             model = q.metadata.get("teacher_model") or ctx.model_for("default")
-            cot = q.q_type == "reasoning"
+            cot = _needs_cot(q)
             out.append(_to_pair(q, _ask(q, ctx, cot=cot, model=model), model, cot))
         return [p for p in out if p.answer]
 
@@ -148,7 +156,7 @@ class MultiTeacherJudge:
             cands = []
             for tier in tiers:
                 model = ctx.model_for(tier)
-                payload = _ask(q, ctx, cot=q.q_type == "reasoning", model=model)
+                payload = _ask(q, ctx, cot=_needs_cot(q), model=model)
                 cands.append((model, payload))
             judged = []
             for model, payload in cands:
@@ -175,10 +183,27 @@ class MultiTeacherJudge:
                 judged.append((total, model, payload, score))
             judged.sort(key=lambda x: -x[0])
             _, model, payload, score = judged[0]
-            pair = _to_pair(q, payload, model, q.q_type == "reasoning")
+            pair = _to_pair(q, payload, model, _needs_cot(q))
             pair.generation_trace["multi_teacher"] = [
                 {"model": m, "score": sc} for _, m, _, sc in judged
             ]
             pair.log("distillation", self.name, picked=model, judge=score)
             out.append(pair)
         return [p for p in out if p.answer]
+
+
+@register("distillation", "routed_teacher")
+class RoutedTeacher:
+    """简单题走单教师，hard 标记的难题才走多教师 + Judge。"""
+
+    name = "routed_teacher"
+
+    def __init__(self, teachers: list[str] | None = None, **_: object) -> None:
+        self.teachers = teachers
+
+    def run(self, questions: list[Question], ctx) -> list[QAPair]:
+        easy = [q for q in questions if not q.metadata.get("hard")]
+        hard = [q for q in questions if q.metadata.get("hard")]
+        out = CotMixed().run(easy, ctx)
+        out.extend(MultiTeacherJudge(teachers=self.teachers).run(hard, ctx))
+        return out

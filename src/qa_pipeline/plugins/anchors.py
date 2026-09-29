@@ -153,6 +153,60 @@ def _textrank_sentences(text: str, top_k: int = 2) -> list[tuple[str, float]]:
     return ranked[:top_k]
 
 
+@register("anchor", "ner_tfidf")
+class NerTfidfAnchor:
+    """实体 + TF-IDF，不含关键句。对应锚点消融 C3。"""
+
+    name = "ner_tfidf"
+
+    def __init__(self, top_k: int = 5, **_: object) -> None:
+        self.top_k = int(top_k)
+
+    def run(self, chunks: list[Chunk], ctx) -> list[Chunk]:
+        TfidfKeywordAnchor(top_k=self.top_k).run(chunks, ctx)
+        for c in chunks:
+            keywords = _anchors_from_meta(c)
+            ents = []
+            for m in _ENTITY.finditer(c.text):
+                t = m.group(0)
+                if t in _STOP:
+                    continue
+                ents.append(
+                    Anchor(
+                        anchor_text=t,
+                        anchor_type="entity",
+                        position_in_chunk=m.start(),
+                        chunk_id=c.chunk_id,
+                        score=1.0,
+                    )
+                )
+            merged: list[Anchor] = []
+            seen = set()
+            for a in ents + keywords:
+                if a.anchor_type == "sentence":
+                    continue
+                key = a.anchor_text.strip()
+                if key in seen or len(key) < 2:
+                    continue
+                seen.add(key)
+                merged.append(a)
+                if len(merged) >= self.top_k:
+                    break
+            _attach(c, merged, {"anchor_backend": "ner_tfidf"})
+        return chunks
+
+
+def _anchors_from_meta(chunk: Chunk) -> list[Anchor]:
+    raw = chunk.metadata.get("anchors") or []
+    out = []
+    for item in raw:
+        try:
+            out.append(Anchor.model_validate(item) if not isinstance(item, Anchor) else item)
+        except Exception:
+            continue
+    return out
+
+
 @register("anchor", "ner_rake_textrank")
 class NerRakeTextrankAnchor:
     name = "ner_rake_textrank"

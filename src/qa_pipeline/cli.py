@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import sys
 from pathlib import Path
 
 from .adapters.zhixun import export_zhixun
 from .config import load_recipe
 from .experiments.runner import run_suite
-from .llm import FakeLLM, LLMClient
+from .llm import FakeLLM, LLMClient, LocalLLM
 from .pipeline import Pipeline
 from .registry import list_strategies
 from .store import load_pairs, save_result
@@ -19,6 +20,9 @@ from .store import load_pairs, save_result
 def _client(args) -> LLMClient:
     if getattr(args, "fake", False):
         return FakeLLM()
+    local_model = getattr(args, "local_model", None)
+    if local_model:
+        return LocalLLM(local_model)
     return LLMClient(
         api_key=getattr(args, "api_key", None),
         base_url=getattr(args, "base_url", None),
@@ -39,12 +43,14 @@ def cmd_run(args) -> int:
 
 
 def cmd_experiment(args) -> int:
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     payload = run_suite(
         args.suite,
         out_dir=args.out,
         fake=args.fake,
         skip_sft=not args.sft,
         llm=_client(args),
+        base_model=getattr(args, "local_model", None),
     )
     print(json.dumps({"suite": payload.get("suite"), "n": len(payload.get("experiments") or [])}, ensure_ascii=False))
     out = Path(args.out) if args.out else None
@@ -88,6 +94,7 @@ def main(argv: list[str] | None = None) -> int:
 
     def add_llm(p):
         p.add_argument("--fake", action="store_true", help="使用 FakeLLM，不调用真实 API")
+        p.add_argument("--local-model", dest="local_model", default=None, help="本地 HuggingFace 模型目录，同时作为教师和学生基座")
         p.add_argument("--model", default=None)
         p.add_argument("--api-key", dest="api_key", default=None)
         p.add_argument("--base-url", dest="base_url", default=None)
