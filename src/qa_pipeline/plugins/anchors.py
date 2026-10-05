@@ -6,6 +6,7 @@ import math
 import re
 from collections import defaultdict
 
+from ..llm import json_payload
 from ..registry import register
 from ..schemas import Anchor, Chunk
 from ..textutil import sentences, tokenize
@@ -259,7 +260,7 @@ class LLMExtractAnchor:
 
     def run(self, chunks: list[Chunk], ctx) -> list[Chunk]:
         for c in chunks:
-            data = ctx.llm.chat_json(
+            data = json_payload(ctx.llm.chat_json(
                 [
                     {
                         "role": "system",
@@ -272,7 +273,7 @@ class LLMExtractAnchor:
                     {"role": "user", "content": f"文本块：{c.text[:3000]}"},
                 ],
                 model=ctx.model_for("cheap"),
-            ) or {}
+            ))
             anchors = []
             for i, item in enumerate((data.get("anchors") or [])[: self.top_k]):
                 if not isinstance(item, dict) or not item.get("anchor_text"):

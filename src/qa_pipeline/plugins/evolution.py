@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ..llm import json_payload
 from ..registry import register
 from ..schemas import Q_TYPES, Question, canon_qtype
 from ..textutil import tokenize
@@ -63,7 +64,7 @@ def _evolve_one(
             f"进化操作：{hint}。"
             f'输出 JSON：{{"question":"...","evolution_type":"...","q_type":"{qtype_doc}"}}'
         )
-    data = ctx.llm.chat_json(
+    data = json_payload(ctx.llm.chat_json(
         [
             {"role": "system", "content": system},
             {
@@ -75,7 +76,7 @@ def _evolve_one(
             },
         ],
         model=ctx.model_for("default"),
-    ) or {}
+    ))
     qtext = str(data.get("question") or "").strip()
     if len(tokenize(qtext)) < 5:
         return None

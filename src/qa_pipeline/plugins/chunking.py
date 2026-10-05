@@ -3,30 +3,73 @@
 from __future__ import annotations
 
 from ..registry import register
-from ..schemas import Chunk, Document
-from ..textutil import approx_tokens, heading_sections, sliding_windows
+from ..schemas import Chunk, Document, refresh_chunk_id
+from ..textutil import approx_tokens, heading_sections, sentences, sliding_windows
 
 _MIN_TOKENS = 32
 _MAX_TOKENS = 2048
 
 
-def _emit(doc: Document, text: str, path: list[str], start: int, end: int, strategy: str) -> Chunk | None:
+def _complete_piece(text: str) -> tuple[str, str]:
+    """尽量在句号处结束。无法保全规则或例外时标记，而不是静默截断结论。"""
     body = text.strip()
+    if not body:
+        return "", ""
+    if body[-1] in "。！？!?；;":
+        return body, ""
+    parts = sentences(body)
+    if len(parts) >= 2 and parts[-1] and parts[-1][-1] not in "。！？!?；;":
+        kept = "".join(parts[:-1]).strip()
+        if kept:
+            return kept, "boundary_split"
+    return body, "incomplete_boundary"
+
+
+def _emit(
+    doc: Document,
+    text: str,
+    path: list[str],
+    start: int,
+    end: int,
+    strategy: str,
+    params: dict | None = None,
+) -> Chunk | None:
+    body, boundary = _complete_piece(text)
     if not body:
         return None
     tokens = approx_tokens(body)
     if tokens < _MIN_TOKENS and path:
         return None
-    return Chunk(
+    identity = {
+        "generic_name": doc.metadata.get("generic_name") or "",
+        "strength": doc.metadata.get("strength") or "",
+        "dosage_form": doc.metadata.get("dosage_form") or "",
+        "version": doc.source_version or doc.metadata.get("version") or "",
+    }
+    chunk = Chunk(
         text=body,
         doc_id=doc.doc_id,
         source_doc=doc.title or doc.path or doc.doc_id,
         title_path=path,
         char_start=start,
-        char_end=end,
+        char_end=start + len(body),
         token_count=tokens,
-        metadata={"chunking": strategy, "source_group": doc.source_group or doc.doc_id},
+        source_hash=doc.source_hash,
+        source_family_id=doc.source_family_id,
+        dataset_version=doc.dataset_version,
+        tokenizer_id=doc.tokenizer_id or "approx-v1",
+        location=" / ".join(path),
+        metadata={
+            "chunking": strategy,
+            "source_group": doc.source_group or doc.doc_id,
+            "clean_version": doc.clean_version,
+            "chunk_params": params or {},
+            "identity": identity,
+            "boundary_note": boundary,
+            "offset_origin": start,
+        },
     )
+    return chunk
 
 
 def _merge_short(chunks: list[Chunk], min_tokens: int = 128) -> list[Chunk]:
@@ -43,6 +86,7 @@ def _merge_short(chunks: list[Chunk], min_tokens: int = 128) -> list[Chunk]:
             buf.text = (buf.text + "\n\n" + ch.text).strip()
             buf.char_end = ch.char_end
             buf.token_count = approx_tokens(buf.text)
+            refresh_chunk_id(buf)
         else:
             out.append(buf)
             buf = ch
@@ -115,7 +159,22 @@ class HeadingWindowChunking:
                             out.append(ch)
                 cursor = start + len(body)
         merged = _merge_short(out, min_tokens=self.min_tokens)
-        return [c for c in merged if c.token_count <= _MAX_TOKENS or True]
+        kept = []
+        for chunk in merged:
+            if chunk.token_count <= _MAX_TOKENS:
+                kept.append(chunk)
+                continue
+            chunk.metadata["dropped_reason"] = "over_max_tokens"
+            if ctx is not None:
+                dropped = ctx.extras.setdefault("dropped_chunks", [])
+                dropped.append(
+                    {
+                        "chunk_id": chunk.chunk_id,
+                        "reason": "over_max_tokens",
+                        "token_count": chunk.token_count,
+                    }
+                )
+        return kept
 
 
 @register("chunking", "semantic_boundary")

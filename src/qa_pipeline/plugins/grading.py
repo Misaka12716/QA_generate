@@ -113,7 +113,7 @@ class SABGrade:
         return out
 
 
-_PASS_CLAIM = {"supported", "not_applicable"}
+_PASS_CLAIM = {"supported"}
 
 
 @register("grading", "validity_tier")
@@ -131,6 +131,9 @@ class ValidityTier:
             if pair.evidence_state == "missing" and pair.expected_action == "state_insufficient" and pair.action == "pass":
                 pair.grade = "A"
                 pair.selection_role = "behavior"
+            elif pair.action == "needs_escalation":
+                pair.grade = "quarantine"
+                pair.action = "quarantine"
             elif pair.action in {"reject", "quarantine"} or pair.grade == "quarantine":
                 if pair.action == "reject":
                     pair.grade = "reject"

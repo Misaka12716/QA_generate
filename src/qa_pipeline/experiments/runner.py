@@ -211,7 +211,7 @@ def run_suite(
     cache_pairs: dict[str, list[QAPair]] = {}
     cache_kept: dict[str, list[QAPair]] = {}
     cache_questions: dict[str, list] = {}
-    sft_done: dict[tuple[str, ...], dict[str, Any]] = {}
+    sft_done: dict[str, dict[str, Any]] = {}
     adapters: dict[str, str] = {}
     rows: list[dict[str, Any]] = []
     notes = list(suite.get("notes") or [
@@ -234,6 +234,12 @@ def run_suite(
             devices=list(devices),
             skip_sft=skip_sft,
             notes=notes,
+            client_config={
+                "api_key": getattr(client, "api_key", None),
+                "base_url": getattr(client, "base_url", None),
+                "default_model": getattr(client, "default_model", None),
+                "timeout": getattr(client, "timeout", None),
+            },
         )
     if not fake and devices and len(devices) == 1:
         os.environ["CUDA_VISIBLE_DEVICES"] = str(devices[0])
@@ -248,14 +254,41 @@ def run_suite(
         if qkey:
             cache_questions[qkey] = list(result.questions)
 
-    def maybe_sft(entry: dict[str, Any], pairs: list[QAPair], exp_dir: Path) -> dict[str, Any]:
+    def maybe_sft(entry: dict[str, Any], pairs: list[QAPair], exp_dir: Path, recipe: Recipe | None = None) -> dict[str, Any]:
         if skip_sft or not entry.get("sft"):
             return {"skipped": True, "reason": "skip_sft" if skip_sft else "not_requested"}
         if hasattr(client, "release"):
             client.release()
-        sig = tuple(sorted(p.qa_id for p in pairs))
-        if not sig:
+        from .scoring import cache_signature
+
+        sig = cache_signature(
+            {
+                "samples": [
+                    {
+                        "id": pair.qa_id,
+                        "question": pair.question,
+                        "answer": pair.answer,
+                        "context": pair.metadata.get("student_context", pair.chunk_text),
+                        "loss_weight": pair.loss_weight,
+                        "included": pair.included_in_this_run,
+                        "hash": pair.validation_subject_hash,
+                    }
+                    for pair in pairs
+                ],
+                "recipe": recipe.dump() if recipe else {},
+                "model": student,
+                "seed": recipe.seed if recipe else None,
+            }
+        )
+        if not pairs:
             return {"skipped": True, "reason": "empty_train"}
+        if not Path(heldout).is_file():
+            return {
+                "skipped": True,
+                "reason": "missing_heldout",
+                "heldout": str(heldout),
+                "note": "主测试清单缺失。不回退到历史题干清单。",
+            }
         if sig in sft_done:
             return {**sft_done[sig], "reused": True}
         report = evaluate_sft(pairs, heldout, exp_dir / "sft", llm=client, base_model=student, skip_sft=False)
@@ -284,7 +317,7 @@ def run_suite(
             "recipe": recipe.name if recipe else entry.get("recipe", ""),
             "recipe_snapshot": recipe_snapshot(recipe) if recipe else {},
             "metrics": metrics,
-            "sft": maybe_sft(entry, result.pairs, exp_dir),
+            "sft": maybe_sft(entry, result.pairs, exp_dir, recipe),
             "note": note,
         }
         (exp_dir / "metrics.json").write_text(json.dumps(metrics, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -390,16 +423,59 @@ def run_suite(
         recipe = _recipe_from_entry(entry, recipes_dir)
         pipe = Pipeline(recipe, llm=client)
         q_source = entry.get("from_questions")
+        accepted_source = entry.get("from_accepted")
         kept_source = entry.get("from_kept")
         raw_source = entry.get("from_cache")
-        if q_source and q_source in cache_questions:
+        if q_source:
+            if q_source not in cache_questions:
+                rows.append(
+                    {
+                        "id": exp_id,
+                        "purpose": entry.get("purpose", ""),
+                        "recipe": recipe.name,
+                        "recipe_snapshot": recipe_snapshot(recipe),
+                        "metrics": {},
+                        "sft": {"skipped": True, "reason": "missing_cache"},
+                        "note": f"缺少必需问题缓存 {q_source}，已停止而不是重新生成",
+                    }
+                )
+                continue
             result = pipe.distill_from_questions(cache_questions[q_source])
+            result.recipe_name = recipe.name
+        elif accepted_source:
+            if accepted_source not in cache_kept:
+                rows.append(
+                    {
+                        "id": exp_id,
+                        "purpose": entry.get("purpose", ""),
+                        "recipe": recipe.name,
+                        "recipe_snapshot": recipe_snapshot(recipe),
+                        "metrics": {},
+                        "sft": {"skipped": True, "reason": "missing_cache"},
+                        "note": f"缺少共同合格池 {accepted_source}",
+                    }
+                )
+                continue
+            result = pipe.select_only(cache_kept[accepted_source])
             result.recipe_name = recipe.name
         elif kept_source and kept_source in cache_kept:
             pairs = _apply_grades(cache_kept[kept_source], entry.get("grades"))
             result = _empty_result(recipe.name, pairs)
             entry = {**entry, "grades": None}
-        elif raw_source and raw_source in cache_pairs:
+        elif raw_source:
+            if raw_source not in cache_pairs:
+                rows.append(
+                    {
+                        "id": exp_id,
+                        "purpose": entry.get("purpose", ""),
+                        "recipe": recipe.name,
+                        "recipe_snapshot": recipe_snapshot(recipe),
+                        "metrics": {},
+                        "sft": {"skipped": True, "reason": "missing_cache"},
+                        "note": f"缺少必需原始缓存 {raw_source}",
+                    }
+                )
+                continue
             result = pipe.refilter(_reset_pairs(cache_pairs[raw_source]), llm=client)
             result.recipe_name = recipe.name
         else:

@@ -8,7 +8,7 @@ import logging
 import sys
 from pathlib import Path
 
-from .adapters.zhixun import export_zhixun
+from .adapters.zhixun import ReleaseRejected, export_zhixun
 from .config import load_recipe
 from .experiments.runner import run_suite
 from .llm import FakeLLM, LLMClient
@@ -77,7 +77,11 @@ def cmd_experiment(args) -> int:
 def cmd_export(args) -> int:
     pairs = load_pairs(args.run if args.run.endswith(".jsonl") else str(Path(args.run) / "qa.kept.jsonl"))
     dest = Path(args.out or Path(args.run).parent / "zhixun.jsonl")
-    export_zhixun(pairs, dest, split=args.split)
+    try:
+        export_zhixun(pairs, dest, split=args.split)
+    except ReleaseRejected as exc:
+        print(f"拒绝导出：{exc}", file=sys.stderr)
+        return 1
     print(f"exported {len(pairs)} rows -> {dest}")
     return 0
 

@@ -4,13 +4,18 @@ from __future__ import annotations
 
 import hashlib
 import math
+import random
 import re
 from collections import Counter
+from typing import Any, Callable
 
 _WS = re.compile(r"\s+")
 _SENT_SPLIT = re.compile(r"(?<=[。！？!?\n])")
-_HEADING = re.compile(r"^(#{1,6})\s+(.+)$", re.M)
+_MD_HEADING = re.compile(r"^(#{1,6})\s+(.+)$", re.M)
+_MANUAL_HEADING = re.compile(r"^【([^】\n]{1,40})】\s*$", re.M)
 _TOKEN = re.compile(r"[\u4e00-\u9fff]|[A-Za-z0-9_]+|[^\s]")
+SCORING_TOKENIZER_ID = "locked-char-v1"
+_REPLACEMENT = "\ufffd"
 
 
 def approx_tokens(text: str) -> int:
@@ -48,12 +53,15 @@ def paragraphs(text: str) -> list[str]:
 
 
 def tokenize(text: str) -> list[str]:
-    try:
-        import jieba  # type: ignore
+    """评分与去重使用锁定分词，不随 jieba 是否安装而改变口径。"""
+    return _TOKEN.findall(text or "")
 
-        return [t.strip() for t in jieba.lcut(text or "") if t.strip()]
-    except Exception:
-        return _TOKEN.findall(text or "")
+
+def student_token_count(text: str, tokenizer=None) -> int:
+    """学生序列长度。传入真实 tokenizer 时用其计数，否则退回近似长度。"""
+    if tokenizer is not None:
+        return len(tokenizer.encode(text or ""))
+    return approx_tokens(text)
 
 
 def ngrams(tokens: list[str], n: int = 3) -> list[tuple[str, ...]]:
@@ -143,30 +151,98 @@ def longest_overlap_span(needle: str, haystack: str, min_len: int = 8) -> str:
     return best
 
 
+def _heading_matches(text: str) -> list[tuple[int, int, int, str]]:
+    """返回 (start, end, level, title)。Markdown 用井号级数，说明书栏目为 2 级。"""
+    found: list[tuple[int, int, int, str]] = []
+    for match in _MD_HEADING.finditer(text or ""):
+        found.append((match.start(), match.end(), len(match.group(1)), match.group(2).strip()))
+    for match in _MANUAL_HEADING.finditer(text or ""):
+        found.append((match.start(), match.end(), 2, match.group(1).strip()))
+    found.sort(key=lambda item: item[0])
+    return found
+
+
 def heading_sections(text: str) -> list[tuple[list[str], str]]:
-    """按 Markdown 标题切成 (title_path, body) 段。无标题则整篇一段。"""
-    matches = list(_HEADING.finditer(text or ""))
+    """按 Markdown 标题或说明书【栏目】切成 (title_path, body)。无标题则整篇一段。"""
+    matches = _heading_matches(text or "")
     if not matches:
         return [([], text or "")]
     sections: list[tuple[list[str], str]] = []
     stack: list[tuple[int, str]] = []
-    if matches[0].start() > 0:
-        lead = text[: matches[0].start()].strip()
+    if matches[0][0] > 0:
+        lead = text[: matches[0][0]].strip()
         if lead:
             sections.append(([], lead))
-    for idx, m in enumerate(matches):
-        level = len(m.group(1))
-        title = m.group(2).strip()
+    for idx, (start, end, level, title) in enumerate(matches):
         while stack and stack[-1][0] >= level:
             stack.pop()
         stack.append((level, title))
-        start = m.end()
-        end = matches[idx + 1].start() if idx + 1 < len(matches) else len(text)
-        body = text[start:end].strip()
-        path = [t for _, t in stack]
+        body_end = matches[idx + 1][0] if idx + 1 < len(matches) else len(text)
+        body = text[end:body_end].strip()
+        path = [item for _, item in stack]
         if body:
             sections.append((path, body))
     return sections or [([], text or "")]
+
+
+def offset_map(original: str, cleaned: str) -> list[int]:
+    """清洗文本每个字符对应原文字符下标。无法对齐的位置记为 -1。"""
+    mapping: list[int] = []
+    i = 0
+    for ch in cleaned:
+        while i < len(original) and original[i] != ch:
+            i += 1
+        if i < len(original) and original[i] == ch:
+            mapping.append(i)
+            i += 1
+        else:
+            mapping.append(-1)
+    return mapping
+
+
+def char_ngram_jaccard(left: str, right: str, n: int = 5) -> float:
+    a = set(compact(left)[i : i + n] for i in range(max(0, len(compact(left)) - n + 1)))
+    b = set(compact(right)[i : i + n] for i in range(max(0, len(compact(right)) - n + 1)))
+    return jaccard(a, b)
+
+
+def parse_quality(text: str) -> dict[str, Any]:
+    """解析质量与“能否读出文本”分开。坏表格、缺主体、断句不进入正式测试。"""
+    raw = text or ""
+    readable = bool(raw.strip())
+    reasons: list[str] = []
+    if _REPLACEMENT in raw:
+        reasons.append("replacement_char")
+    if raw.count("目录") >= 3 and raw.count("【") <= 1:
+        reasons.append("repeated_navigation")
+    sections = heading_sections(raw)
+    headings = [path[-1] for path, _body in sections if path]
+    if readable and not headings and "【" not in raw and "#" not in raw:
+        reasons.append("missing_section_boundary")
+    if re.search(r"\d+(?:\.\d+)?\s*(?:mg|g|ml|μg).{0,8}\d+(?:\.\d+)?\s*(?:mg|g|ml|μg)", raw, re.I):
+        if "规格" not in raw:
+            reasons.append("strength_glued")
+    lines = [line.strip() for line in raw.splitlines() if line.strip()]
+    pipe_lines = [line for line in lines if line.count("|") >= 2]
+    if pipe_lines:
+        header = pipe_lines[0]
+        if "---" not in raw and not re.search(r"[A-Za-z\u4e00-\u9fff]", header.replace("|", "")):
+            reasons.append("table_missing_header")
+        elif len(pipe_lines) >= 2 and any(cell.strip() == "" for cell in pipe_lines[1].split("|")):
+            reasons.append("table_missing_row_key")
+        if pipe_lines and max(line.count("|") for line in pipe_lines) >= 6:
+            reasons.append("complex_table_isolated")
+    if raw.rstrip().endswith(("，", ",", "、", "【")):
+        reasons.append("truncated_sentence")
+    identity = bool(re.search(r"(通用名称|药品名称|【成份】|【成分】)", raw))
+    if readable and len(raw) > 400 and not identity and not headings:
+        reasons.append("missing_subject")
+    return {
+        "readable": readable,
+        "parse_ok": readable and not reasons,
+        "reasons": reasons,
+        "heading_count": len(headings),
+    }
 
 
 def sliding_windows(text: str, max_tokens: int, overlap: float) -> list[tuple[int, int, str]]:
@@ -188,6 +264,24 @@ def sliding_windows(text: str, max_tokens: int, overlap: float) -> list[tuple[in
             break
         i += step
     return [w for w in windows if w[2]]
+
+
+def balanced_take(items: list, limit: int | None, keyfn: Callable, seed: int = 0) -> list:
+    """按来源轮转截取工作清单，而不是保留输入前缀。"""
+    if not limit or limit <= 0 or len(items) <= int(limit):
+        return list(items)
+    groups: dict[str, list] = {}
+    for item in items:
+        groups.setdefault(str(keyfn(item)), []).append(item)
+    keys = sorted(groups)
+    random.Random(seed).shuffle(keys)
+    out: list = []
+    while len(out) < int(limit) and any(groups.values()):
+        for key in keys:
+            bucket = groups[key]
+            if bucket and len(out) < int(limit):
+                out.append(bucket.pop(0))
+    return out
 
 
 def entropy(counts: dict[str, int]) -> float:

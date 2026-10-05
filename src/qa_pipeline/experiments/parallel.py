@@ -26,7 +26,7 @@ def split_waves(entries: list[dict[str, Any]]) -> tuple[list, list, list, list]:
             refusal.append(entry)
         elif kind in {"annotate", "cost", "subset", "skipped"}:
             light.append(entry)
-        elif entry.get("from_questions") or entry.get("from_kept") or entry.get("from_cache"):
+        elif entry.get("from_questions") or entry.get("from_kept") or entry.get("from_cache") or entry.get("from_accepted"):
             dependent.append(entry)
         else:
             independent.append(entry)
@@ -105,6 +105,12 @@ def _run_pipeline_job(job: dict[str, Any], client) -> dict[str, Any]:
             raise FileNotFoundError(f"缺少问题缓存 {job['questions_path']}")
         result = pipe.distill_from_questions(questions)
         result.recipe_name = recipe.name
+    elif job.get("accepted_path"):
+        accepted = _load_pairs(Path(job["accepted_path"]))
+        if not accepted:
+            raise FileNotFoundError(f"缺少共同合格池 {job['accepted_path']}")
+        result = pipe.select_only(accepted)
+        result.recipe_name = recipe.name
     elif job.get("raw_path"):
         raw = _load_pairs(Path(job["raw_path"]))
         if not raw:
@@ -141,7 +147,9 @@ def _gpu_worker(jobs: list[dict[str, Any]], model_path: str, result_queue) -> No
     del model_path
     from ..llm import LLMClient
 
-    client = LLMClient()
+    cfg = (jobs[0].get("client") if jobs else None) or {}
+    kwargs = {key: cfg[key] for key in ("api_key", "base_url", "default_model", "timeout") if cfg.get(key)}
+    client = LLMClient(**kwargs)
     try:
         for job in jobs:
             exp_id = job["entry"]["id"]
@@ -163,7 +171,9 @@ def _sft_worker(jobs: list[dict[str, Any]], model_path: str, result_queue) -> No
     from ..llm import LLMClient
     from .sft import evaluate_sft
 
-    client = LLMClient()
+    cfg = (jobs[0].get("client") if jobs else None) or {}
+    kwargs = {key: cfg[key] for key in ("api_key", "base_url", "default_model", "timeout") if cfg.get(key)}
+    client = LLMClient(**kwargs)
     try:
         for job in jobs:
             try:
@@ -249,8 +259,11 @@ def _pipeline_job(entry: dict[str, Any], ctx: dict[str, Any]) -> dict[str, Any]:
     }
     if entry.get("from_questions"):
         job["questions_path"] = str(cache_dir / f"{entry['from_questions']}.questions.jsonl")
+    if entry.get("from_accepted"):
+        job["accepted_path"] = str(cache_dir / f"{entry['from_accepted']}.kept.jsonl")
     if entry.get("from_cache"):
         job["raw_path"] = str(cache_dir / f"{entry['from_cache']}.raw.jsonl")
+    job["client"] = ctx.get("client") or {}
     return job
 
 
@@ -284,6 +297,7 @@ def _write_payload(
     notes: list[str],
     order: list[str],
     rows_by_id: dict[str, dict[str, Any]],
+    teacher_model: str = "qwen3.8-27b",
 ) -> dict[str, Any]:
     from .runner import _render_report
 
@@ -292,7 +306,7 @@ def _write_payload(
         "suite": suite.get("name"),
         "input": str(input_path),
         "llm": "live",
-        "teacher_model": "qwen3.8-27b",
+        "teacher_model": teacher_model,
         "base_model": student,
         "devices": devices,
         "limitations": notes,
@@ -385,7 +399,9 @@ def _load_cache_kept(cache_dir: Path) -> dict[str, list]:
 
 
 def _sft_plan(entries: list[dict[str, Any]], out: Path, heldout: Path, student: str) -> tuple[list[dict], list[tuple[str, str]]]:
-    owners: dict[tuple[str, ...], str] = {}
+    from .scoring import cache_signature
+
+    owners: dict[str, str] = {}
     jobs: list[dict[str, Any]] = []
     reuse: list[tuple[str, str]] = []
     for entry in entries:
@@ -393,9 +409,26 @@ def _sft_plan(entries: list[dict[str, Any]], out: Path, heldout: Path, student: 
             continue
         exp_id = entry["id"]
         pairs = _load_pairs(out / exp_id / "qa.kept.jsonl")
-        sig = tuple(sorted(p.qa_id for p in pairs))
-        if not sig:
+        if not pairs:
             continue
+        sig = cache_signature(
+            {
+                "samples": [
+                    {
+                        "id": pair.qa_id,
+                        "question": pair.question,
+                        "answer": pair.answer,
+                        "context": pair.metadata.get("student_context", pair.chunk_text),
+                        "loss_weight": pair.loss_weight,
+                        "included": pair.included_in_this_run,
+                        "hash": pair.validation_subject_hash,
+                    }
+                    for pair in pairs
+                ],
+                "model": student,
+                "heldout": str(heldout),
+            }
+        )
         if sig in owners:
             reuse.append((exp_id, owners[sig]))
             continue
@@ -408,6 +441,7 @@ def _sft_plan(entries: list[dict[str, Any]], out: Path, heldout: Path, student: 
                 "heldout": str(heldout),
                 "out_dir": str(out / exp_id / "sft"),
                 "base_model": student,
+                "client": {},
             }
         )
     return jobs, reuse
@@ -425,28 +459,31 @@ def run_parallel(
     devices: list[int],
     skip_sft: bool,
     notes: list[str],
+    client_config: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     entries = list(suite.get("experiments") or [])
     order = [entry["id"] for entry in entries]
     independent, dependent, light, refusal = split_waves(entries)
     cache_dir = out / "_cache"
     cache_dir.mkdir(parents=True, exist_ok=True)
-    notes = list(notes) + [f"管线并行于 GPU {devices}。教师为 qwen3.8-27b，实验卡只加载 NLI、向量和 LoRA。"]
+    teacher_model = (client_config or {}).get("default_model") or "qwen3.8-27b"
+    notes = list(notes) + [f"管线并行于 GPU {devices}。教师为 {teacher_model}，实验卡只加载 NLI、向量和 LoRA。"]
     ctx = {
         "out": str(out),
         "recipes_dir": str(recipes_dir),
         "input_path": str(input_path),
         "cache_dir": str(cache_dir),
         "skip_sft": skip_sft,
+        "client": client_config or {},
     }
     rows_by_id: dict[str, dict[str, Any]] = {}
-    _write_payload(out, suite, input_path, student, devices, notes, order, rows_by_id)
+    _write_payload(out, suite, input_path, student, devices, notes, order, rows_by_id, teacher_model)
 
     def accept_row(row: dict[str, Any]) -> None:
         if not row.get("id"):
             return
         rows_by_id[row["id"]] = row
-        _write_payload(out, suite, input_path, student, devices, notes, order, rows_by_id)
+        _write_payload(out, suite, input_path, student, devices, notes, order, rows_by_id, teacher_model)
 
     def on_pipeline(msg: dict[str, Any]) -> None:
         if "recipe" in msg or "note" in msg:
@@ -468,6 +505,8 @@ def run_parallel(
     adapters: dict[str, str] = {}
     if not skip_sft:
         jobs, reuse = _sft_plan(entries, out, heldout, student)
+        for job in jobs:
+            job["client"] = client_config or {}
         for entry in entries:
             if not entry.get("sft"):
                 continue
@@ -538,4 +577,4 @@ def run_parallel(
                     "refusal": report,
                 }
             )
-    return _write_payload(out, suite, input_path, student, devices, notes, order, rows_by_id)
+    return _write_payload(out, suite, input_path, student, devices, notes, order, rows_by_id, teacher_model)

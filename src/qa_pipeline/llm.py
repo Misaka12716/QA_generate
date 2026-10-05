@@ -10,6 +10,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
+from .schemas import request_id
 from .textutil import approx_tokens
 
 logger = logging.getLogger(__name__)
@@ -55,6 +56,49 @@ def default_credentials() -> tuple[str, str, str]:
     return key, base, model
 
 
+class LLMResponse:
+    """一次教师调用的终态。失败不再伪装成空字典。"""
+
+    def __init__(
+        self,
+        status: str,
+        data: dict[str, Any] | None = None,
+        *,
+        model: str = "",
+        request_id_value: str = "",
+        finish_reason: str = "",
+        raw_summary: str = "",
+        error: str = "",
+    ) -> None:
+        self.status = status
+        self.data = data
+        self.model = model
+        self.request_id = request_id_value or request_id("llm_")
+        self.finish_reason = finish_reason
+        self.raw_summary = raw_summary[:240]
+        self.error = error
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "status": self.status,
+            "request_id": self.request_id,
+            "model": self.model,
+            "finish_reason": self.finish_reason,
+            "raw_summary": self.raw_summary,
+            "error": self.error,
+        }
+
+
+def json_payload(result: LLMResponse | dict | None) -> dict[str, Any]:
+    if isinstance(result, LLMResponse):
+        if result.status == "ok" and isinstance(result.data, dict):
+            return result.data
+        return {}
+    if isinstance(result, dict):
+        return result
+    return {}
+
+
 class LLMClient:
     def __init__(
         self,
@@ -73,7 +117,10 @@ class LLMClient:
         self.completion_tokens = 0
         self.estimated_cost_usd = 0.0
         self.budget_cap_usd: float | None = None
+        self.max_calls: int | None = None
+        self.max_prompt_tokens: int | None = None
         self.budget_stops: list[str] = []
+        self.call_log: list[dict[str, Any]] = []
         self._client = None
         self._lock = threading.Lock()
 
@@ -97,13 +144,22 @@ class LLMClient:
 
     def over_budget(self) -> bool:
         cap = self.budget_cap_usd
-        if cap is None:
-            return False
-        if self.estimated_cost_usd >= float(cap):
+        if cap is not None and self.estimated_cost_usd >= float(cap):
             if "budget_cap" not in self.budget_stops:
                 self.budget_stops.append("budget_cap")
             return True
+        if self.max_calls is not None and self.calls >= int(self.max_calls):
+            if "call_cap" not in self.budget_stops:
+                self.budget_stops.append("call_cap")
+            return True
+        if self.max_prompt_tokens is not None and self.prompt_tokens >= int(self.max_prompt_tokens):
+            if "token_cap" not in self.budget_stops:
+                self.budget_stops.append("token_cap")
+            return True
         return False
+
+    def _stopped(self, model: str) -> LLMResponse:
+        return LLMResponse(status="budget_stopped", model=model or self.default_model, finish_reason="budget")
 
     def _charge(self, model: str, pin: int, pout: int) -> None:
         self.calls += 1
@@ -121,6 +177,7 @@ class LLMClient:
     ) -> str:
         model = model or self.default_model
         if self.over_budget():
+            self.call_log.append({"status": "budget_stopped", "model": model})
             return ""
         client = self._get()
         resp = client.chat.completions.create(
@@ -143,10 +200,12 @@ class LLMClient:
         model: str | None = None,
         temperature: float = 0.2,
         max_tokens: int = 3000,
-    ) -> dict[str, Any] | None:
+    ) -> LLMResponse:
         model = model or self.default_model
         if self.over_budget():
-            return None
+            result = self._stopped(model)
+            self.call_log.append(result.as_dict())
+            return result
         client = self._get()
         try:
             resp = client.chat.completions.create(
@@ -162,10 +221,32 @@ class LLMClient:
             pin = getattr(usage, "prompt_tokens", None) or sum(approx_tokens(m["content"]) for m in messages)
             pout = getattr(usage, "completion_tokens", None) or approx_tokens(raw)
             self._charge(model, pin, pout)
-            return json.loads(raw)
+            choice = resp.choices[0]
+            finish = str(getattr(choice, "finish_reason", "") or "")
         except Exception as exc:
             logger.warning("chat_json failed: %s", exc)
-            return None
+            result = LLMResponse(status="transport_failed", model=model, error=str(exc))
+            self.call_log.append(result.as_dict())
+            return result
+        try:
+            data = json.loads(raw)
+        except json.JSONDecodeError:
+            result = LLMResponse(status="parse_failed", model=model, finish_reason=finish, raw_summary=raw)
+            self.call_log.append(result.as_dict())
+            return result
+        if not isinstance(data, dict):
+            result = LLMResponse(
+                status="schema_failed",
+                model=model,
+                finish_reason=finish,
+                raw_summary=raw,
+                error=type(data).__name__,
+            )
+            self.call_log.append(result.as_dict())
+            return result
+        result = LLMResponse(status="ok", data=data, model=model, finish_reason=finish, raw_summary=raw)
+        self.call_log.append(result.as_dict())
+        return result
 
     def reset_usage(self) -> None:
         self.calls = 0
@@ -216,16 +297,26 @@ class FakeLLM(LLMClient):
         return text
 
     def chat_json(self, messages, model=None, temperature=0.2, max_tokens=3000):
+        model_name = model or self.default_model
         if self.over_budget():
-            return None
+            result = self._stopped(model_name)
+            self.call_log.append(result.as_dict())
+            return result
         self.history.append(messages)
         blob = " ".join(m.get("content", "") for m in messages)
         user = messages[-1]["content"] if messages else ""
+        if getattr(self, "fail_mode", ""):
+            result = LLMResponse(status=self.fail_mode, model=model_name, error=self.fail_mode, raw_summary=self.fail_mode)
+            self.call_log.append(result.as_dict())
+            self._charge(model_name, 1, 1)
+            return result
         pin = sum(approx_tokens(m["content"]) for m in messages)
         data = _fake_json(blob, user)
         raw = json.dumps(data, ensure_ascii=False)
-        self._charge(model or self.default_model, pin, approx_tokens(raw))
-        return data
+        self._charge(model_name, pin, approx_tokens(raw))
+        result = LLMResponse(status="ok", data=data, model=model_name, finish_reason="stop", raw_summary=raw)
+        self.call_log.append(result.as_dict())
+        return result
 
 
 def _pick_sentence(text: str) -> str:
@@ -463,15 +554,21 @@ class LocalLLM(LLMClient):
         model: str | None = None,
         temperature: float = 0.2,
         max_tokens: int = 3000,
-    ) -> dict[str, Any] | None:
+    ) -> LLMResponse:
+        model_name = model or self.default_model
         text = self.chat(messages, model=model, temperature=temperature, max_tokens=max_tokens)
+        if not text and self.over_budget():
+            return self._stopped(model_name)
         data = _extract_json_obj(text)
         if data is not None:
-            return data
+            return LLMResponse(status="ok", data=data, model=model_name, finish_reason="stop", raw_summary=text)
         retry = self.chat(
             messages + [{"role": "user", "content": "上一次没有输出合法 JSON。请只输出一个 JSON 对象。"}],
             model=model,
             temperature=0.1,
             max_tokens=max_tokens,
         )
-        return _extract_json_obj(retry)
+        data = _extract_json_obj(retry)
+        if data is not None:
+            return LLMResponse(status="ok", data=data, model=model_name, finish_reason="stop", raw_summary=retry)
+        return LLMResponse(status="parse_failed", model=model_name, raw_summary=text or retry)

@@ -1,16 +1,20 @@
 name: drug_v21
 input: data/campus_hospital_drug_instructions/frozen/subset
-heldout: data/campus_hospital_drug_instructions/frozen/heldout.jsonl
-refusal: data/campus_hospital_drug_instructions/frozen/heldout.jsonl
+heldout: data/campus_hospital_drug_instructions/frozen/heldout_protocol.jsonl
+heldout_legacy: data/campus_hospital_drug_instructions/frozen/heldout.jsonl
+refusal: fixtures/refusal.jsonl
 recipes_dir: configs/recipes/drug
 notes:
   - 输入是校医院说明书 train 分区的 60 篇冻结子集，最多 100 个 chunk、150 条样本。不是全库 2552 篇都经过每条实验臂。
+  - 主测试使用新协议清单 heldout_protocol.jsonl。旧 heldout.jsonl 题干歧义，不可用于主效果结论，只作历史回归。
+  - 拒答评测使用 fixtures/refusal.jsonl，不再把旧 heldout 同时当成拒答负例。
   - 锁定测试不进入生成。覆盖目录是原文句子加子串核对，不是人工金标，覆盖率只对这份目录有效。
   - 教师为 192.168.4.110:4000 的 qwen3.8-27b。接口费用按 0 美元记录，同时报告 token。学生是本地 Qwen2.5-7B-Instruct。
-  - 没有业务给定的 retention_max_drop。分数变化不写成上线通过。
+  - 未配置 delta_min 与 retention_max_drop。报告只给效应和区间，不写通过判定，也不写抗遗忘有效。
   - 第二种预算设定（新数据条数固定后再追加回放）本次未跑，记为未检验交互。
-  - 跨文档多跳、复杂表格、多轮和 DPO 不发布。E8 只报告规模、格式和增量文档数。
+  - 跨文档多跳、复杂表格、多轮和 DPO 不发布。E8 只导出现有子集，不是规模梯度。
   - 全库只做清洗和分区清点。覆盖率的分母是冻结目录里的句子单元，不是全库知识单元。
+  - G0–G3、配额、自然分布、缺口和行为样本都从 E1_direct 冻结的共同合格池出发。学生探测未配置时记 not_executed。保留池缺失时回放记未执行。
 experiments:
   - id: E1_direct
     purpose: direct_grounded
@@ -35,12 +39,19 @@ experiments:
     recipe: e1_mix.yaml
 
   - id: E2_fixed
-    purpose: 固定比例对照
+    purpose: 同一合格池上的配额选样
     recipe: e2_fixed.yaml
+    from_accepted: e1_direct
+
+  - id: E2_natural
+    purpose: 同一合格池的自然分布对照
+    recipe: e2_natural.yaml
+    from_accepted: e1_direct
 
   - id: E2_gap
-    purpose: 默认可生成性路径，含行为样本
+    purpose: 同一合格池上的目录缺口规划
     recipe: e2_gap.yaml
+    from_accepted: e1_direct
     cache_as: e2_gap
     sft: true
     answer_sheet: true
@@ -48,25 +59,25 @@ experiments:
   - id: E3_g0
     purpose: 无诊断、无专门回放
     recipe: e3_g0.yaml
-    from_questions: q_direct
+    from_accepted: e1_direct
     sft: true
 
   - id: E3_g1
     purpose: 诊断选样，无专门回放
     recipe: e3_g1.yaml
-    from_questions: q_direct
+    from_accepted: e1_direct
     sft: true
 
   - id: E3_g2
-    purpose: G0 选样加回放替换
+    purpose: 保留回放。清单缺失则本臂未执行，不把列表尾部改名为保留
     recipe: e3_g2.yaml
-    from_questions: q_direct
+    from_accepted: e1_direct
     sft: true
 
   - id: E3_g3
     purpose: G1 诊断加 G2 回放
     recipe: e3_g3.yaml
-    from_questions: q_direct
+    from_accepted: e1_direct
     sft: true
 
   - id: E4_multi
@@ -80,9 +91,9 @@ experiments:
     source: E2_gap
 
   - id: E6_behavior
-    purpose: 缺证据行为
+    purpose: 构造行为数据。本臂未单独训练，不报告行为学习增益
     recipe: e6_behavior.yaml
-    from_questions: q_direct
+    from_accepted: e1_direct
 
   - id: E6_conflict
     purpose: 冲突行为通道
@@ -90,12 +101,12 @@ experiments:
     reason: 未在冻结子集中确认可合法使用且内容冲突的成对说明书。不编造冲突，本臂未执行。
 
   - id: E7_rationale
-    purpose: 只打开解释文本
+    purpose: 解释监督仅当已审核依据进入回答目标。本臂未训练，不报告增益
     recipe: e7_rationale.yaml
     from_questions: q_direct
 
   - id: E8_scale
-    purpose: 发布子集。跨文档多跳和复杂表格不在一期发布。
+    purpose: 导出现有子集，不是规模梯度。跨文档多跳和复杂表格不在一期发布。
     kind: subset
     from_kept: e2_gap
     grades: [S, A]

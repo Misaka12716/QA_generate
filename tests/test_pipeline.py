@@ -272,7 +272,7 @@ def test_k_sequential_ignores_same_call_samples():
     sequential = KnowledgeUnitQG(per_chunk=1).run([chunk], ctx)
     assert sequential
     assert sequential[0].generation_route == "k_sequential"
-    assert sequential[0].metadata["verification_status"] == "verified"
+    assert sequential[0].metadata["verification_status"] == "semantically_verified"
     joint = KnowledgeUnitJointQG(per_chunk=1).run([chunk], ctx)
     assert joint
     assert joint[0].generation_route == "k_joint"

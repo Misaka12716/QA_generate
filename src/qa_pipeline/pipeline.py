@@ -13,7 +13,7 @@ from .config import Recipe, load_recipe
 from .llm import FakeLLM, LLMClient
 from .registry import build_strategy, ensure_plugins
 from .schemas import Chunk, Document, QAPair, Question, UsageStats
-from .textutil import approx_tokens, heading_sections, normalize
+from .textutil import approx_tokens, balanced_take, heading_sections, normalize
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +79,12 @@ class Pipeline:
         chunks = self._timed("chunking", lambda: self.chunker.run(docs, ctx), ctx)
         _stamp_source_group(docs, chunks)
         if self.recipe.max_chunks:
-            chunks = chunks[: self.recipe.max_chunks]
+            chunks = balanced_take(
+                chunks,
+                self.recipe.max_chunks,
+                lambda chunk: chunk.source_family_id or chunk.doc_id or chunk.source_doc,
+                self.recipe.seed,
+            )
         chunks = self._fit_budget(chunks, ctx)
         ctx.stats.produced["chunks"] = len(chunks)
 
@@ -88,7 +93,12 @@ class Pipeline:
         questions = self._timed("evolution", lambda: self.evolver.run(questions, ctx), ctx)
         questions = self._timed("question_filter", lambda: self.question_filter.run(questions, ctx), ctx)
         if self.recipe.max_samples:
-            questions = questions[: self.recipe.max_samples]
+            questions = balanced_take(
+                questions,
+                self.recipe.max_samples,
+                lambda question: question.metadata.get("source_doc") or question.chunk_id,
+                self.recipe.seed,
+            )
         ctx.stats.produced["questions"] = len(questions)
         return self._finish(docs, chunks, questions, ctx, t0)
 
@@ -103,7 +113,12 @@ class Pipeline:
         self._arm_budget()
         cloned = [q.model_copy(deep=True) for q in questions]
         if self.recipe.max_samples:
-            cloned = cloned[: self.recipe.max_samples]
+            cloned = balanced_take(
+                cloned,
+                self.recipe.max_samples,
+                lambda question: question.metadata.get("source_doc") or question.chunk_id,
+                self.recipe.seed,
+            )
         ctx.stats.produced["questions"] = len(cloned)
         return self._finish([], [], cloned, ctx, t0)
 
@@ -137,6 +152,7 @@ class Pipeline:
                 rejected.append(p)
         ctx.stats.produced["kept"] = len(kept)
         ctx.stats.produced["rejected"] = len(rejected)
+        ctx.stats.stage_counts = _stage_counts(questions, pairs, kept)
         snap = self.llm.usage_snapshot()
         ctx.stats.llm_calls = snap["llm_calls"]
         ctx.stats.prompt_tokens = snap["prompt_tokens"]
@@ -145,7 +161,7 @@ class Pipeline:
         for reason in getattr(self.llm, "budget_stops", []):
             ctx.note_fallback(reason)
         ctx.stats.budget_stops = list(getattr(self.llm, "budget_stops", []))
-        ctx.stats.ledger = _ledger(ctx.stats.estimated_cost_usd, self.recipe.budget_cap_usd)
+        ctx.stats.ledger = _ledger(ctx.stats.estimated_cost_usd, self.recipe.budget_cap_usd, self.llm)
         ctx.stats.stage_seconds["total"] = round(time.perf_counter() - t0, 3)
         return PipelineResult(
             recipe_name=self.recipe.name,
@@ -174,8 +190,22 @@ class Pipeline:
         ctx = PipelineContext(recipe=self.recipe, llm=llm or self.llm, rng=random.Random(self.recipe.seed))
         pairs, ctx = self._apply_filters([p.model_copy(deep=True) for p in pairs], ctx)
         pairs = self.grader.run(pairs, ctx)
-        kept = [p for p in pairs if _publishable(p)]
-        rejected = [p for p in pairs if not _publishable(p)]
+        kept = []
+        rejected = []
+        for pair in pairs:
+            if _publishable(pair):
+                if pair.data_stage is None:
+                    pair.data_stage = "accepted"
+                kept.append(pair)
+            else:
+                rejected.append(pair)
+        snap = self.llm.usage_snapshot()
+        ctx.stats.llm_calls = snap["llm_calls"]
+        ctx.stats.prompt_tokens = snap["prompt_tokens"]
+        ctx.stats.completion_tokens = snap["completion_tokens"]
+        ctx.stats.estimated_cost_usd = snap["estimated_cost_usd"]
+        ctx.stats.stage_counts = _stage_counts([], pairs, kept)
+        ctx.stats.ledger = _ledger(ctx.stats.estimated_cost_usd, self.recipe.budget_cap_usd, self.llm)
         return PipelineResult(
             recipe_name=self.recipe.name,
             documents=[],
@@ -187,8 +217,47 @@ class Pipeline:
             raw_pairs=pairs,
         )
 
+    def select_only(self, pairs: list[QAPair]) -> PipelineResult:
+        """在已冻结的 accepted 池上只跑本配方的选择过滤器。"""
+        self._arm_budget()
+        ctx = PipelineContext(recipe=self.recipe, llm=self.llm, rng=random.Random(self.recipe.seed))
+        current = [pair.model_copy(deep=True) for pair in pairs]
+        for filt in self.filters:
+            before = len(current)
+            name = getattr(filt, "name", type(filt).__name__)
+            current = filt.run(current, ctx)
+            ctx.stats.funnel[name] = {"in": before, "out": len(current), "dropped": before - len(current)}
+        current = self.grader.run(current, ctx)
+        kept, rejected = [], []
+        for pair in current:
+            if (
+                pair.included_in_this_run is False
+                or pair.exclude_reason
+                or pair.action in {"reject", "quarantine"}
+                or not _publishable(pair)
+            ):
+                rejected.append(pair)
+            else:
+                pair.data_stage = "selected"
+                pair.included_in_this_run = True
+                kept.append(pair)
+        ctx.stats.stage_counts = {"accepted": len(pairs), "selected": len(kept)}
+        return PipelineResult(
+            recipe_name=self.recipe.name,
+            documents=[],
+            chunks=[],
+            questions=[],
+            pairs=kept,
+            rejected=rejected,
+            stats=ctx.stats,
+            raw_pairs=current,
+        )
+
     def _arm_budget(self) -> None:
         self.llm.budget_cap_usd = self.recipe.budget_cap_usd
+        extra = self.recipe.extra or {}
+        self.llm.max_calls = extra.get("max_llm_calls")
+        self.llm.max_prompt_tokens = extra.get("max_prompt_tokens")
         self.llm.budget_stops = []
 
     def _fit_budget(self, chunks: list, ctx: PipelineContext) -> list:
@@ -210,7 +279,10 @@ class Pipeline:
         return out
 
 
-def _ledger(spent: float, cap: float | None) -> dict:
+def _ledger(spent: float, cap: float | None, llm: LLMClient | None = None) -> dict:
+    calls = getattr(llm, "calls", 0) if llm else 0
+    prompt = getattr(llm, "prompt_tokens", 0) if llm else 0
+    completion = getattr(llm, "completion_tokens", 0) if llm else 0
     return {
         "spent_settled": round(float(spent), 6),
         "reserved_inflight": 0.0,
@@ -218,15 +290,33 @@ def _ledger(spent: float, cap: float | None) -> dict:
         "required_process_reserve": 0.0,
         "safety_margin": 0.0,
         "authorized_cap": cap,
+        "llm_calls": calls,
+        "prompt_tokens": prompt,
+        "completion_tokens": completion,
+        "sequence_tokens": prompt + completion,
+        "supervised_tokens": None,
+        "note": "美元、调用数、序列 token 与监督 token 分开记账",
+    }
+
+
+def _stage_counts(questions: list, pairs: list[QAPair], kept: list[QAPair]) -> dict:
+    return {
+        "candidate": len(questions) if questions else len(pairs),
+        "format_valid": len(questions) if questions else None,
+        "semantic_valid": len([item for item in questions if getattr(item, "verification_status", "") != "failed"]) if questions else None,
+        "accepted": len(kept),
+        "derived": len([pair for pair in pairs if pair.parent_sample_id]),
     }
 
 
 def _publishable(pair: QAPair) -> bool:
+    if pair.included_in_this_run is False:
+        return False
     if pair.grade == "B":
         return False
-    if pair.metadata.get("verification_status") == "pending":
+    if pair.metadata.get("verification_status") == "pending" or pair.verification_status == "pending":
         return False
-    return pair.action not in {"reject", "quarantine"} and pair.grade not in {"reject", "quarantine"}
+    return pair.action not in {"reject", "quarantine", "needs_escalation"} and pair.grade not in {"reject", "quarantine"}
 
 
 def _stamp_source_group(docs: list[Document], chunks: list[Chunk]) -> None:

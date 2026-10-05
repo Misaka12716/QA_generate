@@ -5,9 +5,10 @@ from __future__ import annotations
 import json
 import re
 
+from ..llm import json_payload
 from ..registry import register
 from ..schemas import QAPair, Question, canon_intent, qtype_for_intent, utc_now
-from ..textutil import is_substring, longest_overlap_span, sentences
+from ..textutil import is_substring
 
 
 def _parse_answer(raw: str | dict | None) -> dict:
@@ -32,11 +33,9 @@ def _to_pair(q: Question, payload: dict, model: str, cot: bool) -> QAPair:
     answer = str(payload.get("answer") or payload.get("a") or "").strip()
     if not answer and q.answer_hint:
         answer = q.answer_hint
-    evidence = str(payload.get("evidence_span") or q.evidence_span or "").strip()
-    if evidence and not is_substring(evidence, chunk_text):
-        evidence = longest_overlap_span(evidence, chunk_text) or q.evidence_span
-    if not evidence:
-        evidence = longest_overlap_span(answer, chunk_text) or (sentences(chunk_text)[:1] or [""])[0]
+    requested = str(payload.get("evidence_span") or q.requested_evidence or q.evidence_span or "").strip()
+    evidence = requested if requested and is_substring(requested, chunk_text) else ""
+    repair = "located" if evidence else ("missing" if not requested else "repair_pending")
     intent = canon_intent(q.intent_primary or q.q_type)
     points = [str(item) for item in (q.answer_points or []) if str(item).strip()]
     pair = QAPair(
@@ -55,6 +54,15 @@ def _to_pair(q: Question, payload: dict, model: str, cot: bool) -> QAPair:
         evidence_state=q.evidence_state,
         expected_action=q.expected_action,
         answer_points=points,
+        requested_evidence=requested,
+        located_evidence=evidence,
+        repair_status=repair,
+        family_id=q.family_id,
+        source_family_id=q.source_family_id,
+        source_hash=q.source_hash,
+        requested_type=q.requested_type,
+        actual_type=q.actual_type or q.intent_primary,
+        verification_status=q.verification_status,
         generation_route=q.generation_route,
         construction_evidence_refs=[q.evidence_span] if q.evidence_span else [],
         teacher_context_refs=[chunk_text] if chunk_text else [],
@@ -107,13 +115,15 @@ def _ask(q: Question, ctx, cot: bool, model: str) -> dict:
             "3. 语言简洁，不啰嗦\n"
             '输出 JSON：{"answer":"...","evidence_span":"...","confidence":0.0}'
         )
-    data = ctx.llm.chat_json(
+    response = ctx.llm.chat_json(
         [
             {"role": "system", "content": system},
             {"role": "user", "content": f"参考文本：{chunk_text}\n问题：{q.question}"},
         ],
         model=model,
     )
+    ctx.stats.call_statuses[response.status] = ctx.stats.call_statuses.get(response.status, 0) + 1
+    data = json_payload(response)
     if data:
         return data
     raw = ctx.llm.chat(
@@ -145,15 +155,20 @@ class ConciseResponse:
 class CotMixed:
     name = "cot_mixed"
 
-    def __init__(self, **_: object) -> None:
-        pass
+    def __init__(self, supervise_rationale: bool = False, **_: object) -> None:
+        self.supervise_rationale = bool(supervise_rationale)
 
     def run(self, questions: list[Question], ctx) -> list[QAPair]:
         out = []
         for q in questions:
             model = q.metadata.get("teacher_model") or ctx.model_for("default")
             cot = _needs_cot(q)
-            out.append(_to_pair(q, _ask(q, ctx, cot=cot, model=model), model, cot))
+            pair = _to_pair(q, _ask(q, ctx, cot=cot, model=model), model, cot)
+            if self.supervise_rationale and pair.located_evidence and pair.repair_status == "located":
+                pair.metadata["assistant_target"] = f"{pair.answer}\n依据：{pair.located_evidence}"
+                pair.metadata["rationale_audited"] = True
+                pair.generation_trace["supervise_rationale"] = True
+            out.append(pair)
         return [p for p in out if p.answer]
 
 
@@ -175,7 +190,7 @@ class MultiTeacherJudge:
                 cands.append((model, payload))
             judged = []
             for model, payload in cands:
-                score = ctx.llm.chat_json(
+                score = json_payload(ctx.llm.chat_json(
                     [
                         {
                             "role": "system",
@@ -193,7 +208,7 @@ class MultiTeacherJudge:
                         },
                     ],
                     model=ctx.model_for("strong"),
-                ) or {}
+                ))
                 total = float(score.get("accuracy") or 0) + float(score.get("completeness") or 0) + float(score.get("clarity") or 0)
                 judged.append((total, model, payload, score))
             judged.sort(key=lambda x: -x[0])
@@ -223,12 +238,14 @@ class ReuseCandidate:
             hint = (q.answer_hint or "").strip()
             evidence = (q.evidence_span or "").strip()
             if hint and evidence and is_substring(evidence, chunk_text):
+                model = q.metadata.get("teacher_model") or ctx.model_for("default")
                 pair = _to_pair(
                     q,
                     {"answer": hint, "evidence_span": evidence, "confidence": 0.8},
-                    "candidate_reuse",
+                    model,
                     False,
                 )
+                pair.generation_trace["operation"] = "reuse_candidate"
                 pair.generation_trace["reused_candidate"] = True
                 pair.log("distillation", self.name, reused=True)
                 out.append(pair)

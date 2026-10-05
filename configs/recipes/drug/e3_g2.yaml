@@ -1,5 +1,5 @@
 name: drug_e3_g2
-description: G0 选样加保留回放替换。
+description: 同一合格池加保留回放。缺少保留清单时记为未执行。
 goal: rag_grounded
 chunking: {name: heading_window, max_tokens: 512, overlap: 0.1}
 evolution: {name: none}
@@ -16,8 +16,4 @@ seed: 42
 anchor: {name: none}
 question_gen: {name: direct_grounded}
 filters:
-  - {name: rule_clean, min_answer_tokens: 4}
-  - {name: evidence_substring, on_fail: quarantine}
-  - {name: claim_evidence}
   - {name: replay_replace, fraction: 0.2}
-  - {name: joint_dedup}

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 首次与 GitHub 同步（需能访问 github.com 或配置好代理后执行）
+# 首次与 GitHub 同步（推荐 SSH：见 scripts/github-ssh-key.pub 添加到 GitHub）
 set -euo pipefail
 cd "$(dirname "$0")/.."
 

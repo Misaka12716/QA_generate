@@ -1,0 +1,2 @@
+{"family_id": "demo_fact", "kind": "fact", "points": ["成人一次 0.5 g"], "location": "用法用量"}
+{"family_id": "demo_exception", "kind": "exception", "points": ["肾功能不全者慎用"], "location": "注意事项"}

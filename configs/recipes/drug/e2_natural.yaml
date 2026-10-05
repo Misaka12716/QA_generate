@@ -1,10 +1,10 @@
-name: drug_e7_rationale
-description: 解释监督只在已定位依据写入回答目标时成立。本臂不训练，不报告增益。
+name: drug_e2_natural
+description: 同一合格池的自然分布对照，不按配额删样本。
 goal: rag_grounded
 chunking: {name: heading_window, max_tokens: 512, overlap: 0.1}
 evolution: {name: none}
 question_filter: {name: none}
-distillation: {name: cot_mixed, supervise_rationale: true}
+distillation: {name: reuse_candidate}
 teacher_router: {name: single}
 grading: validity_tier
 questions_per_chunk: 0
@@ -16,6 +16,4 @@ seed: 42
 anchor: {name: none}
 question_gen: {name: direct_grounded}
 filters:
-  - {name: rule_clean, min_answer_tokens: 4}
-  - {name: evidence_substring, on_fail: quarantine}
-  - {name: claim_evidence}
+  - {name: natural_distribution}

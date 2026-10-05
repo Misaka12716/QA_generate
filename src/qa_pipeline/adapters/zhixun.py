@@ -9,15 +9,85 @@ from typing import Any, Iterable
 
 from ..schemas import Chunk, Document, QAPair
 from ..store import json_line, read_jsonl, write_jsonl
-from ..textutil import is_substring, longest_overlap_span, normalize
+from ..textutil import is_substring, normalize
+
+GROUNDED_POLICY = "仅依据提供的资料回答；资料不足时说明缺少的信息。"
+CLOSED_POLICY = "可以运用已有领域知识回答。不确定时说明依据不足。"
+
+
+class ReleaseRejected(Exception):
+    """样本未通过发布资格检查。"""
 
 
 def ensure_evidence(pair: QAPair) -> str:
-    ev = (pair.evidence_span or "").strip()
+    ev = (pair.located_evidence or pair.evidence_span or "").strip()
     if ev and is_substring(ev, pair.chunk_text):
         return ev
-    recovered = longest_overlap_span(ev or pair.answer, pair.chunk_text)
-    return recovered
+    return ""
+
+
+def validation_subject(pair: QAPair) -> dict[str, Any]:
+    goal = pair.goal or "rag_grounded"
+    policy = CLOSED_POLICY if goal == "closed_book_domain" else GROUNDED_POLICY
+    return {
+        "goal": goal,
+        "policy": policy,
+        "question": pair.question,
+        "student_context": _student_context(pair) if goal != "closed_book_domain" else "",
+        "answer": assistant_content(pair),
+        "expected_action": pair.expected_action,
+        "evidence_span": pair.located_evidence or pair.evidence_span,
+        "visible_support_refs": list(pair.visible_support_refs),
+    }
+
+
+def bind_validation_hash(pair: QAPair) -> str:
+    digest = hashlib.sha256(
+        json.dumps(validation_subject(pair), ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    if pair.validation_subject_hash and pair.validation_subject_hash != digest:
+        raise ReleaseRejected("validation_subject_hash 与最终训练对象不一致，需要重新验证")
+    pair.validation_subject_hash = digest
+    return digest
+
+
+def assistant_content(pair: QAPair) -> str:
+    target = pair.metadata.get("assistant_target")
+    if target:
+        return str(target)
+    return pair.answer
+
+
+def build_messages(pair: QAPair, *, include_assistant: bool = True) -> list[dict[str, str]]:
+    goal = pair.goal or "rag_grounded"
+    if goal == "closed_book_domain":
+        messages = [
+            {"role": "system", "content": CLOSED_POLICY},
+            {"role": "user", "content": pair.question},
+        ]
+    else:
+        context = _student_context(pair)
+        if context:
+            user = f"资料：\n{context}\n\n问题：{pair.question}"
+        else:
+            user = f"资料：\n（当前未提供可回答该问题的资料）\n\n问题：{pair.question}"
+        messages = [
+            {"role": "system", "content": GROUNDED_POLICY},
+            {"role": "user", "content": user},
+        ]
+    if include_assistant:
+        messages.append({"role": "assistant", "content": assistant_content(pair)})
+    return messages
+
+
+def assert_releasable(pair: QAPair) -> None:
+    if pair.grade in {None, "B", "reject", "quarantine"} or pair.action in {"reject", "quarantine", "needs_escalation"}:
+        raise ReleaseRejected(f"样本 {pair.qa_id} 未达到发布等级")
+    if pair.metadata.get("verification_status") == "pending" or pair.verification_status == "pending":
+        raise ReleaseRejected(f"样本 {pair.qa_id} 仍待核验")
+    if pair.grade not in {"S", "A"}:
+        raise ReleaseRejected(f"样本 {pair.qa_id} 等级不可发布")
+    bind_validation_hash(pair)
 
 
 def _student_context(pair: QAPair) -> str:
@@ -28,39 +98,12 @@ def _student_context(pair: QAPair) -> str:
     return pair.chunk_text
 
 
-def to_zhixun_row(pair: QAPair, split: str | None = None) -> dict[str, Any]:
+def to_zhixun_row(pair: QAPair, split: str | None = None, *, bind: bool = True) -> dict[str, Any]:
     evidence = ensure_evidence(pair)
     goal = pair.goal or "rag_grounded"
-    if goal == "closed_book_domain":
-        messages = [
-            {"role": "system", "content": "回答许可范围内的领域知识。"},
-            {"role": "user", "content": pair.question},
-            {"role": "assistant", "content": pair.answer},
-        ]
-    else:
-        context = _student_context(pair)
-        if context:
-            user = f"资料：\n{context}\n\n问题：{pair.question}"
-        else:
-            user = f"资料：\n（当前未提供可回答该问题的资料）\n\n问题：{pair.question}"
-        messages = [
-            {"role": "system", "content": "仅依据提供的资料回答；资料不足时说明缺少的信息。"},
-            {"role": "user", "content": user},
-            {"role": "assistant", "content": pair.answer},
-        ]
-    subject = {
-        "goal": goal,
-        "policy": messages[0]["content"],
-        "question": pair.question,
-        "student_context": _student_context(pair) if goal != "closed_book_domain" else "",
-        "answer": pair.answer,
-        "expected_action": pair.expected_action,
-    }
-    pair.validation_subject_hash = hashlib.sha256(
-        json.dumps(subject, ensure_ascii=False, sort_keys=True).encode("utf-8")
-    ).hexdigest()
-    if pair.data_stage == "accepted" and pair.grade in {"S", "A"}:
-        pair.data_stage = "released"
+    messages = build_messages(pair, include_assistant=True)
+    if bind and not pair.validation_subject_hash:
+        bind_validation_hash(pair)
     return {
         "id": pair.qa_id,
         "split": split or pair.split,
@@ -98,13 +141,22 @@ def to_zhixun_row(pair: QAPair, split: str | None = None) -> dict[str, Any]:
             "kb_gain": pair.kb_gain,
             "teacher_model": pair.teacher_model,
             "review_history": pair.audit,
+            "family_id": pair.family_id,
+            "source_family_id": pair.source_family_id,
+            "task_variant_id": pair.task_variant_id,
+            "parent_id": pair.parent_sample_id,
         },
     }
 
 
 def export_zhixun(pairs: Iterable[QAPair], path: str | Path, split: str | None = None) -> Path:
     path = Path(path)
-    rows = [to_zhixun_row(p, split=split) for p in pairs]
+    rows = []
+    for pair in pairs:
+        assert_releasable(pair)
+        if pair.data_stage in {None, "accepted", "selected"}:
+            pair.data_stage = "released"
+        rows.append(to_zhixun_row(pair, split=split, bind=False))
     write_jsonl(path, rows)
     return path
 

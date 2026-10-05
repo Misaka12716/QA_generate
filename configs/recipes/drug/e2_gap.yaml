@@ -1,5 +1,5 @@
 name: drug_e2_gap
-description: 默认管线，含行为样本和抽样诊断。
+description: 从同一合格池按目录缺口规划回填，不另改验证过滤器。
 goal: rag_grounded
 chunking: {name: heading_window, max_tokens: 512, overlap: 0.1}
 evolution: {name: none}
@@ -13,14 +13,9 @@ max_samples: 150
 content_repair_max: 1
 escalation_max: 1
 seed: 42
+extra:
+  catalog_path: fixtures/drug_gap_catalog.jsonl
 anchor: {name: none}
 question_gen: {name: direct_grounded}
 filters:
-  - {name: rule_clean, min_answer_tokens: 4}
-  - {name: evidence_substring, on_fail: quarantine}
-  - {name: exact_hash_dedup}
-  - {name: claim_evidence}
-  - {name: risk_escalate}
-  - {name: behavior_insufficient, max_new: 8}
-  - {name: student_diagnostic, sample_size: 8}
-  - {name: joint_dedup}
+  - {name: gap_fill}

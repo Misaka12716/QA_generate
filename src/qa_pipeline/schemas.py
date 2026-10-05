@@ -2,15 +2,28 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
+
+
+def request_id(prefix: str = "req_") -> str:
+    """随机 ID 只用于请求，不用于文档或切块。"""
+    return f"{prefix}{uuid.uuid4().hex[:12]}"
 
 
 def _uid(prefix: str = "") -> str:
-    return f"{prefix}{uuid.uuid4().hex[:12]}"
+    return request_id(prefix)
+
+
+def content_id(prefix: str, payload: Any) -> str:
+    """由规范化内容生成稳定 ID。同输入同参数得到相同结果。"""
+    blob = json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str)
+    return f"{prefix}{hashlib.sha256(blob.encode('utf-8')).hexdigest()[:20]}"
 
 
 def utc_now() -> str:
@@ -77,7 +90,27 @@ DATA_STAGES = ("accepted", "selected", "released", "actually_trained")
 DataStage = Literal["accepted", "selected", "released", "actually_trained"]
 SelectionRole = Literal["learning", "retention", "behavior"]
 Grade = Literal["S", "A", "B", "quarantine", "reject"]
-FilterAction = Literal["pass", "reject", "downgrade", "quarantine"]
+FilterAction = Literal["pass", "reject", "downgrade", "quarantine", "needs_escalation"]
+CALL_STATUSES = (
+    "ok",
+    "generated_empty",
+    "parse_failed",
+    "schema_failed",
+    "transport_failed",
+    "budget_stopped",
+    "semantic_rejected",
+)
+CallStatus = Literal[
+    "ok",
+    "generated_empty",
+    "parse_failed",
+    "schema_failed",
+    "transport_failed",
+    "budget_stopped",
+    "semantic_rejected",
+]
+VERIFICATION_STATUSES = ("evidence_located", "semantically_verified", "pending", "failed")
+SCORING_TOKENIZER_ID = "locked-char-v1"
 AnchorType = Literal["entity", "keyword", "sentence"]
 
 
@@ -120,17 +153,57 @@ def canon_route(value: object, default: str = "direct_grounded") -> str:
 
 
 class Document(BaseModel):
-    doc_id: str = Field(default_factory=lambda: _uid("doc_"))
+    doc_id: str = ""
     path: str = ""
     title: str = ""
     text: str
     source_group: str = ""
     source_version: str = ""
+    dataset_version: str = ""
+    source_hash: str = ""
+    source_family_id: str = ""
+    clean_version: str = ""
+    tokenizer_id: str = "approx-v1"
+    location: str = ""
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _content_identity(self) -> Document:
+        if not self.source_hash:
+            self.source_hash = hashlib.sha256((self.text or "").encode("utf-8")).hexdigest()
+        if not self.doc_id:
+            self.doc_id = content_id(
+                "doc_",
+                {
+                    "source_hash": self.source_hash,
+                    "clean_version": self.clean_version,
+                    "text": self.text,
+                    "tokenizer_id": self.tokenizer_id,
+                },
+            )
+        return self
+
+
+def chunk_identity_payload(chunk: Chunk) -> dict[str, Any]:
+    return {
+        "source_hash": chunk.source_hash,
+        "clean_version": chunk.metadata.get("clean_version") or "",
+        "text": chunk.text,
+        "char_start": chunk.char_start,
+        "char_end": chunk.char_end,
+        "chunking": chunk.metadata.get("chunking"),
+        "chunk_params": chunk.metadata.get("chunk_params") or {},
+        "tokenizer_id": chunk.tokenizer_id or "approx-v1",
+    }
+
+
+def refresh_chunk_id(chunk: Chunk) -> Chunk:
+    chunk.chunk_id = content_id("chk_", chunk_identity_payload(chunk))
+    return chunk
 
 
 class Chunk(BaseModel):
-    chunk_id: str = Field(default_factory=lambda: _uid("chk_"))
+    chunk_id: str = ""
     text: str
     doc_id: str = ""
     source_doc: str = ""
@@ -138,7 +211,18 @@ class Chunk(BaseModel):
     char_start: int = 0
     char_end: int = 0
     token_count: int = 0
+    source_hash: str = ""
+    source_family_id: str = ""
+    dataset_version: str = ""
+    tokenizer_id: str = "approx-v1"
+    location: str = ""
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def _content_identity(self) -> Chunk:
+        if not self.chunk_id:
+            refresh_chunk_id(self)
+        return self
 
 
 class Anchor(BaseModel):
@@ -167,6 +251,22 @@ class Question(BaseModel):
     expected_action: ExpectedAction = "answer"
     answer_points: list[str] = Field(default_factory=list)
     generation_route: GenerationRoute = "direct_grounded"
+    family_id: str = ""
+    task_variant_id: str = ""
+    source_family_id: str = ""
+    dataset_version: str = ""
+    source_hash: str = ""
+    location: str = ""
+    requested_type: str = ""
+    actual_type: str = ""
+    requested_evidence: str = ""
+    located_evidence: str = ""
+    repair_status: str = ""
+    verification_status: str = ""
+    rubric_version: str = ""
+    review_status: str = ""
+    critical_constraints: list[str] = Field(default_factory=list)
+    acceptable_variants: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("q_type", mode="before")
@@ -225,7 +325,29 @@ class QAPair(BaseModel):
     student_context_score: float | None = None
     student_closed_score: float | None = None
     family_id: str = ""
+    task_variant_id: str = ""
     parent_sample_id: str = ""
+    dataset_version: str = ""
+    source_hash: str = ""
+    source_family_id: str = ""
+    location: str = ""
+    rubric_version: str = ""
+    review_status: str = ""
+    critical_constraints: list[str] = Field(default_factory=list)
+    acceptable_variants: list[str] = Field(default_factory=list)
+    selection_weight: float = 1.0
+    included_in_this_run: bool | None = None
+    exclude_reason: str = ""
+    requested_type: str = ""
+    actual_type: str = ""
+    requested_evidence: str = ""
+    located_evidence: str = ""
+    repair_status: str = ""
+    verification_status: str = ""
+    exposure_count: int = 0
+    assistant_target_tokens: int = 0
+    sequence_tokens: int = 0
+    loss_weight: float = 1.0
     filter_trace: dict[str, Any] = Field(default_factory=dict)
     generation_trace: dict[str, Any] = Field(default_factory=dict)
     audit: list[dict[str, Any]] = Field(default_factory=list)
@@ -277,3 +399,82 @@ class UsageStats(BaseModel):
     fallbacks: list[str] = Field(default_factory=list)
     budget_stops: list[str] = Field(default_factory=list)
     ledger: dict[str, Any] = Field(default_factory=dict)
+    call_statuses: dict[str, int] = Field(default_factory=dict)
+    stage_counts: dict[str, Any] = Field(default_factory=dict)
+
+
+def lineage_record(pair: QAPair) -> dict[str, Any]:
+    return {
+        "dataset_version": pair.dataset_version,
+        "source_group": pair.metadata.get("source_group") or pair.source_doc,
+        "source_hash": pair.source_hash,
+        "chunk_id": pair.chunk_id,
+        "location": pair.location,
+        "split": pair.split,
+        "sample_id": pair.qa_id,
+        "family_id": pair.family_id,
+        "task_variant_id": pair.task_variant_id,
+        "parent_id": pair.parent_sample_id,
+        "route": pair.generation_route,
+        "teacher_revision": pair.teacher_model,
+        "source_family_id": pair.source_family_id,
+    }
+
+
+def sample_gold_record(pair: QAPair) -> dict[str, Any]:
+    visible = pair.student_context_refs or ([pair.chunk_text] if pair.chunk_text else [])
+    return {
+        "question": pair.question,
+        "visible_context_refs": visible,
+        "context_hash": hashlib.sha256("\n".join(visible).encode("utf-8")).hexdigest(),
+        "evidence_state": pair.evidence_state,
+        "expected_action": pair.expected_action,
+        "answer_points": list(pair.answer_points),
+        "critical_constraints": list(pair.critical_constraints),
+        "acceptable_variants": list(pair.acceptable_variants),
+        "rubric_version": pair.rubric_version,
+        "review_status": pair.review_status,
+    }
+
+
+def training_consumption_record(pair: QAPair, run_id: str = "") -> dict[str, Any]:
+    return {
+        "run_id": run_id,
+        "sample_id": pair.qa_id,
+        "validation_subject_hash": pair.validation_subject_hash,
+        "selected": pair.included_in_this_run is not False and not pair.exclude_reason,
+        "skip_reason": pair.exclude_reason,
+        "exposure_count": pair.exposure_count,
+        "assistant_target_tokens": pair.assistant_target_tokens,
+        "sequence_tokens": pair.sequence_tokens,
+        "loss_weight": pair.loss_weight,
+    }
+
+
+def prediction_record(
+    *,
+    case_id: str,
+    model_revision: str = "",
+    adapter_hash: str = "",
+    input_hash: str = "",
+    answer: str = "",
+    generated_tokens: int = 0,
+    stop_reason: str = "",
+    per_point_scores: dict[str, Any] | None = None,
+    critical_errors: list[str] | None = None,
+    actual_action: str = "",
+    judge_revision: str = "",
+) -> dict[str, Any]:
+    return {
+        "case_id": case_id,
+        "model_revision": model_revision,
+        "adapter_hash": adapter_hash,
+        "input_hash": input_hash,
+        "answer": answer,
+        "generated_tokens": generated_tokens,
+        "stop_reason": stop_reason,
+        "per_point_scores": per_point_scores or {},
+        "critical_errors": critical_errors or [],
+        "actual_action": actual_action,
+        "judge_revision": judge_revision,
+    }

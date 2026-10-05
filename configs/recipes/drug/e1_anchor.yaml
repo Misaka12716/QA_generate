@@ -13,6 +13,8 @@ max_samples: 150
 content_repair_max: 1
 escalation_max: 1
 seed: 42
+extra:
+  anchor_in_prompt: true
 anchor: {name: tfidf_keyword, top_k: 4}
 question_gen: {name: direct_grounded}
 filters:

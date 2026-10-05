@@ -101,6 +101,7 @@ class Recipe(BaseModel):
             "split": self.split,
             "seed": self.seed,
             "teacher_models": self.teacher_models,
+            "extra": self.extra,
         }
 
 
