@@ -10,7 +10,7 @@ from collections import defaultdict
 import numpy as np
 
 from ..registry import register
-from ..schemas import QAPair
+from ..schemas import QAPair, _uid
 from ..textutil import (
     compact,
     exact_match,
@@ -92,23 +92,29 @@ class RuleClean:
 
 @register("filter", "evidence_substring")
 class EvidenceSubstring:
-    """智训硬门：evidence 必须是 chunk 连续子串。"""
+    """智训硬门：evidence 必须是 chunk 连续子串。on_fail=quarantine 时留在流中，不发布。"""
 
     name = "evidence_substring"
 
-    def __init__(self, **_: object) -> None:
-        pass
+    def __init__(self, on_fail: str = "reject", **_: object) -> None:
+        self.on_fail = on_fail
 
     def run(self, pairs: list[QAPair], ctx) -> list[QAPair]:
         kept = []
         for p in pairs:
-            ok = is_substring(p.evidence_span, p.chunk_text)
-            p.filter_trace[self.name] = {"action": "pass" if ok else "reject", "ok": ok}
-            p.log("filter", self.name, ok=ok)
-            if not ok:
-                p.action = "reject"
+            ok = bool(p.evidence_span) and is_substring(p.evidence_span, p.chunk_text)
+            action = "pass" if ok else self.on_fail
+            p.filter_trace[self.name] = {"action": action, "ok": ok}
+            p.log("filter", self.name, ok=ok, action=action)
+            if ok:
+                kept.append(p)
                 continue
-            kept.append(p)
+            if self.on_fail == "quarantine":
+                p.action = "quarantine"
+                p.grade = "quarantine"
+                kept.append(p)
+                continue
+            p.action = "reject"
         return kept
 
 
@@ -581,3 +587,339 @@ class DiversitySample:
         for p in pairs:
             p.filter_trace[self.name] = {"kept": id(p) in ids}
         return [p for p in chosen if p.action != "reject"]
+
+
+_OK_CLAIM = {"supported", "not_applicable"}
+
+
+def _claim_texts(pair: QAPair) -> list[str]:
+    points = [item.strip() for item in pair.answer_points if item and item.strip()]
+    if points:
+        return points
+    parts = [item.strip() for item in sentences(pair.answer) if item.strip()]
+    return parts or ([pair.answer.strip()] if pair.answer.strip() else [])
+
+
+def _apply_claim_payload(pair: QAPair, data: dict) -> None:
+    raw = data.get("claims") or []
+    claims = []
+    if isinstance(raw, list):
+        for item in raw:
+            if isinstance(item, dict):
+                status = str(item.get("status") or "insufficient")
+                claims.append({"text": str(item.get("text") or ""), "status": status})
+            elif isinstance(item, str):
+                claims.append({"text": item, "status": "insufficient"})
+    if not claims:
+        claims = [{"text": text, "status": "insufficient"} for text in _claim_texts(pair)]
+    pair.claims = claims
+
+
+@register("filter", "claim_evidence")
+class ClaimEvidence:
+    """一次独立验证：按主张与证据的支持关系判定，相似度不参与通过条件。"""
+
+    name = "claim_evidence"
+
+    def __init__(self, **_: object) -> None:
+        pass
+
+    def run(self, pairs: list[QAPair], ctx) -> list[QAPair]:
+        kept = []
+        for pair in pairs:
+            if pair.action == "quarantine":
+                pair.filter_trace[self.name] = {"skipped": "already_quarantine"}
+                kept.append(pair)
+                continue
+            visible = pair.metadata.get("student_context")
+            if visible is None:
+                visible = "\n".join(pair.student_context_refs) or pair.chunk_text
+            visible = str(visible)
+            if pair.goal != "closed_book_domain" and pair.evidence_state == "sufficient":
+                if not pair.evidence_span or not is_substring(pair.evidence_span, visible):
+                    pair.action = "quarantine"
+                    pair.grade = "quarantine"
+                    pair.filter_trace[self.name] = {"action": "quarantine", "reason": "hidden_or_missing_support"}
+                    kept.append(pair)
+                    continue
+            elif pair.evidence_state == "sufficient" and not is_substring(pair.evidence_span, pair.chunk_text):
+                pair.action = "quarantine"
+                pair.grade = "quarantine"
+                pair.filter_trace[self.name] = {"action": "quarantine", "reason": "evidence_not_located"}
+                kept.append(pair)
+                continue
+            data = ctx.llm.chat_json(
+                [
+                    {
+                        "role": "system",
+                        "content": (
+                            "你是独立验证器。把答案拆成主张，逐条判断证据的支持关系。"
+                            "status 只能是 supported、contradicted、insufficient、not_applicable。"
+                            '只输出 JSON：{"claims":[{"text":"...","status":"supported"}]}'
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            f"问题：{pair.question}\n答案：{pair.answer}\n"
+                            f"要点：{'；'.join(_claim_texts(pair))}\n证据：{pair.evidence_span}"
+                        ),
+                    },
+                ],
+                model=ctx.model_for("cheap"),
+                max_tokens=400,
+            ) or {}
+            _apply_claim_payload(pair, data)
+            bad = [item for item in pair.claims if item.get("status") not in _OK_CLAIM]
+            if bad:
+                pair.action = "quarantine"
+                pair.grade = "quarantine"
+                action = "quarantine"
+            else:
+                action = "pass"
+                if pair.generation_route == "k_joint":
+                    pair.metadata["verification_status"] = "verified"
+            pair.filter_trace[self.name] = {"action": action, "claims": pair.claims}
+            pair.log("filter", self.name, action=action)
+            kept.append(pair)
+        return kept
+
+
+@register("filter", "risk_escalate")
+class RiskEscalate:
+    """只对矛盾、数值或验证分歧样本再验一次。"""
+
+    name = "risk_escalate"
+
+    def __init__(self, **_: object) -> None:
+        pass
+
+    def run(self, pairs: list[QAPair], ctx) -> list[QAPair]:
+        limit = int(getattr(ctx.recipe, "escalation_max", 1) or 0)
+        for pair in pairs:
+            if pair.action != "pass" or limit <= 0:
+                pair.filter_trace[self.name] = {"escalated": False}
+                continue
+            statuses = {str(item.get("status")) for item in pair.claims}
+            numeric = any(ch.isdigit() for ch in pair.answer)
+            risky = "contradicted" in statuses or (numeric and statuses - _OK_CLAIM)
+            if not risky:
+                pair.filter_trace[self.name] = {"escalated": False}
+                continue
+            data = ctx.llm.chat_json(
+                [
+                    {
+                        "role": "system",
+                        "content": (
+                            "升级验证。隐藏生成器自评，只根据证据复核主张。"
+                            '只输出 JSON：{"claims":[{"text":"...","status":"supported"}]}'
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": f"问题：{pair.question}\n答案：{pair.answer}\n证据：{pair.evidence_span}",
+                    },
+                ],
+                model=ctx.model_for("strong"),
+                max_tokens=400,
+            ) or {}
+            _apply_claim_payload(pair, data)
+            bad = [item for item in pair.claims if item.get("status") not in _OK_CLAIM]
+            if bad:
+                pair.action = "quarantine"
+                pair.grade = "quarantine"
+            pair.filter_trace[self.name] = {"escalated": True, "action": pair.action}
+            pair.log("filter", self.name, escalated=True, action=pair.action)
+        return pairs
+
+
+@register("filter", "behavior_insufficient")
+class BehaviorInsufficient:
+    """从已通过样本复制一条学生不可见黄金证据的说明不足样本。"""
+
+    name = "behavior_insufficient"
+
+    def __init__(self, max_new: int = 1, **_: object) -> None:
+        self.max_new = int(max_new)
+
+    def run(self, pairs: list[QAPair], ctx) -> list[QAPair]:
+        parents = [
+            pair
+            for pair in pairs
+            if pair.action == "pass" and pair.evidence_state == "sufficient" and pair.evidence_span
+        ]
+        created: list[QAPair] = []
+        for parent in parents[: max(0, self.max_new)]:
+            child = parent.model_copy(deep=True)
+            family = parent.family_id or parent.qa_id
+            parent.family_id = family
+            child.qa_id = _uid("qa_")
+            child.family_id = family
+            child.parent_sample_id = parent.qa_id
+            child.evidence_state = "missing"
+            child.expected_action = "state_insufficient"
+            child.answer = "当前资料不足，无法根据给定材料回答。"
+            child.selection_role = "behavior"
+            child.student_context_refs = []
+            child.claims = [{"text": child.answer, "status": "supported"}]
+            child.action = "pass"
+            child.grade = None
+            child.metadata["student_context"] = ""
+            child.metadata["removed_evidence"] = parent.evidence_span
+            child.filter_trace[self.name] = {"parent": parent.qa_id}
+            child.log("filter", self.name, parent=parent.qa_id)
+            created.append(child)
+        return pairs + created
+
+
+@register("filter", "student_diagnostic")
+class StudentDiagnostic:
+    """抽样记录有上下文与无上下文的内容判断，不因无上下文答对而删除。"""
+
+    name = "student_diagnostic"
+
+    def __init__(self, sample_size: int = 2, **_: object) -> None:
+        self.sample_size = int(sample_size)
+
+    def run(self, pairs: list[QAPair], ctx) -> list[QAPair]:
+        targets = [pair for pair in pairs if pair.action == "pass"][: max(0, self.sample_size)]
+        chosen = {id(pair) for pair in targets}
+        for pair in pairs:
+            if id(pair) not in chosen:
+                pair.filter_trace[self.name] = {"sampled": False}
+                continue
+            with_text = ctx.llm.chat(
+                [
+                    {"role": "system", "content": "诊断：给定参考文本，用简短句子回答问题。"},
+                    {"role": "user", "content": f"参考文本：{pair.chunk_text}\n问题：{pair.question}"},
+                ],
+                model=ctx.model_for("cheap"),
+                max_tokens=120,
+            )
+            closed_text = ctx.llm.chat(
+                [
+                    {"role": "system", "content": "无上下文诊断。不要阅读资料，只按已有知识简短回答。"},
+                    {"role": "user", "content": f"问题：{pair.question}"},
+                ],
+                model=ctx.model_for("cheap"),
+                max_tokens=120,
+            )
+            pair.student_context_score = round(token_f1(with_text, pair.answer), 4)
+            pair.student_closed_score = round(token_f1(closed_text, pair.answer), 4)
+            pair.filter_trace[self.name] = {
+                "sampled": True,
+                "student_context_score": pair.student_context_score,
+                "student_closed_score": pair.student_closed_score,
+            }
+            pair.log("filter", self.name, sampled=True)
+        return pairs
+
+
+@register("filter", "stable_known_downsample")
+class StableKnownDownsample:
+    """只在诊断分数都高时降低训练权重。未抽样或分数缺失的样本不删除。"""
+
+    name = "stable_known_downsample"
+
+    def __init__(self, min_score: float = 0.8, **_: object) -> None:
+        self.min_score = float(min_score)
+
+    def run(self, pairs: list[QAPair], ctx) -> list[QAPair]:
+        for pair in pairs:
+            ctx_score = pair.student_context_score
+            closed = pair.student_closed_score
+            if ctx_score is None or closed is None:
+                pair.filter_trace[self.name] = {"applied": False, "reason": "no_diagnostic"}
+                continue
+            if ctx_score >= self.min_score and closed >= self.min_score:
+                pair.selection_role = "retention"
+                pair.metadata["diagnostic_downsample"] = True
+                pair.filter_trace[self.name] = {"applied": True}
+            else:
+                pair.filter_trace[self.name] = {"applied": False}
+        return pairs
+
+
+@register("filter", "replay_replace")
+class ReplayReplace:
+    """固定监督条数：用保留角色样本替换同等数量的新样本，不增加训练条数。"""
+
+    name = "replay_replace"
+
+    def __init__(self, fraction: float = 0.2, **_: object) -> None:
+        self.fraction = float(fraction)
+
+    def run(self, pairs: list[QAPair], ctx) -> list[QAPair]:
+        eligible = [pair for pair in pairs if pair.action == "pass"]
+        count = int(len(eligible) * self.fraction)
+        if count <= 0:
+            return pairs
+        for pair in eligible[-count:]:
+            pair.selection_role = "retention"
+            pair.metadata["replay"] = True
+        learning = [pair for pair in eligible if not pair.metadata.get("replay")]
+        for pair in learning[:count]:
+            pair.metadata["replaced_by_replay"] = True
+        return pairs
+
+
+@register("filter", "conflict_behavior")
+class ConflictBehavior:
+    """默认关闭。没有已确认的合法冲突时不构造样本。"""
+
+    name = "conflict_behavior"
+
+    def __init__(self, **_: object) -> None:
+        pass
+
+    def run(self, pairs: list[QAPair], ctx) -> list[QAPair]:
+        enabled = (getattr(ctx.recipe, "extra", None) or {}).get("conflict_behavior") == "enabled"
+        if not enabled:
+            return pairs
+        created = []
+        for pair in pairs:
+            conflict = pair.metadata.get("confirmed_conflict")
+            if not conflict or pair.action != "pass":
+                continue
+            child = pair.model_copy(deep=True)
+            child.qa_id = _uid("qa_")
+            child.evidence_state = "conflict"
+            child.expected_action = "state_conflict"
+            child.answer = "两份资料的说法不一致，当前无法确定哪一个是有效结论。"
+            child.selection_role = "behavior"
+            child.metadata["confirmed_conflict"] = conflict
+            created.append(child)
+        return pairs + created
+
+
+@register("filter", "joint_dedup")
+class JointDedup:
+    """按目标、问题、要点、证据和证据状态去重。证据状态不同的对照样本保留。"""
+
+    name = "joint_dedup"
+
+    def __init__(self, **_: object) -> None:
+        pass
+
+    def run(self, pairs: list[QAPair], ctx) -> list[QAPair]:
+        seen = set()
+        kept = []
+        for pair in pairs:
+            points = "\n".join(pair.answer_points)
+            key = (
+                pair.goal,
+                compact(pair.question),
+                points,
+                compact(pair.evidence_span),
+                pair.evidence_state,
+                pair.expected_action,
+            )
+            duplicate = key in seen
+            pair.filter_trace[self.name] = {"duplicate": duplicate}
+            if duplicate:
+                pair.action = "reject"
+                pair.log("filter", self.name, action="reject")
+                continue
+            seen.add(key)
+            kept.append(pair)
+        return kept

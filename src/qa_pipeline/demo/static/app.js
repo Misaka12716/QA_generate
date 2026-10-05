@@ -1,5 +1,31 @@
 const NAMES = {
   E1_baseline: "基线",
+  E1_direct: "直接生成",
+  E1_anchor: "传统锚点",
+  E1_ku: "知识单元",
+  E1_ours_full: "推荐 S+A",
+  E1_ours_s_only: "推荐仅 S",
+  E2_fixed: "固定比例",
+  E2_gap: "缺口回填",
+  E3_diagnostic: "抽样诊断",
+  E4_multi: "多次验证",
+  E6_behavior: "不足证据",
+  E7_rationale: "解释蒸馏",
+  E8_scale: "规模子集",
+  E2_a1: "Self-Instruct",
+  E2_a2: "锚点提问",
+  E2_a3: "Tag-Evol",
+  E2_a4: "无约束进化",
+  E2_a5: "难度采样",
+  E3_b1: "廉价教师",
+  E3_b2: "强教师",
+  E3_b3: "分级路由",
+  E3_b4: "难题多教师",
+  E4_c1: "无锚点",
+  E4_c2: "TF-IDF",
+  E4_c3: "NER+TF-IDF",
+  E4_c4: "NER+关键句",
+  E4_c5: "LLM 锚点",
   E2_recommended: "推荐栈",
   E3_evol: "深度进化",
   E4_full: "全过滤",
@@ -9,6 +35,13 @@ const NAMES = {
   E5_cost_min: "成本下界",
   E5_quality_max: "质量上界",
 };
+
+const COMPARE_GROUPS = [
+  ["e1", "方案"],
+  ["e2", "提问"],
+  ["e3", "蒸馏"],
+  ["e4", "锚点"],
+];
 
 const METRICS = [
   { key: "retention", label: "保留率", scale: "unit" },
@@ -51,7 +84,10 @@ const state = {
   experiments: [],
   left: { id: "", status: "kept", offset: 0 },
   right: { id: "", status: "kept", offset: 0 },
+  compare: { group: "e1", status: "kept", offset: 0 },
 };
+
+let refreshTimer = 0;
 
 function shortName(exp) {
   return NAMES[exp.id] || exp.recipe || exp.id;
@@ -249,7 +285,9 @@ function fillSelect(select, experiments, current) {
 }
 
 function sampleMeta(sample) {
-  const bits = [sample.q_type || "未分类", sample.grade || "未分层"];
+  const bits = [sample.intent_primary || sample.q_type || "未分类", sample.grade || "未分层"];
+  if (sample.evidence_state) bits.push(sample.evidence_state);
+  if (sample.expected_action) bits.push(sample.expected_action);
   if (sample.nli_score !== null && sample.nli_score !== undefined) bits.push(`NLI ${fmt(sample.nli_score, 2)}`);
   if (sample.judge_overall !== null && sample.judge_overall !== undefined) bits.push(`Judge ${fmt(sample.judge_overall, 2)}`);
   if (sample.kb_gain !== null && sample.kb_gain !== undefined) bits.push(`增益 ${fmt(sample.kb_gain, 2)}`);
@@ -359,12 +397,149 @@ function renderSamples(groups) {
   loadPane("right");
 }
 
+function traceText(trace) {
+  if (!trace || typeof trace !== "object") return "";
+  return Object.entries(trace).map(([name, info]) => {
+    const action = info && typeof info === "object" ? info.action : "";
+    return action ? `${name}:${action}` : name;
+  }).join("，");
+}
+
+function sampleBlock(sample) {
+  const trace = traceText(sample.filter_trace);
+  return el("div", { class: "cell-qa" }, [
+    el("div", { class: "meta" }, [sampleMeta(sample)]),
+    el("p", { class: "q" }, [sample.question || "（无问题）"]),
+    el("p", { class: "a" }, [sample.answer || "（无答案）"]),
+    el("p", { class: "ev" }, [sample.evidence_span || "（无证据片段）"]),
+    trace ? el("p", { class: "trace" }, [trace]) : null,
+  ]);
+}
+
+async function loadCompare() {
+  const section = document.getElementById("compare");
+  const params = new URLSearchParams({
+    group: state.compare.group,
+    status: state.compare.status,
+    offset: String(state.compare.offset),
+    limit: "4",
+  });
+  const response = await fetch(`/api/compare?${params}`);
+  const board = document.getElementById("compare-board");
+  if (!response.ok || !board) {
+    if (board) board.replaceChildren(el("p", { class: "error" }, ["对照样本读取失败。"]));
+    return;
+  }
+  const data = await response.json();
+  const present = data.columns.some((col) => (data.rows || []).some((row) => (row.cells[col.id] || []).length));
+  const start = data.total ? data.offset + 1 : 0;
+  const end = Math.min(data.total, data.offset + data.rows.length);
+  const page = document.getElementById("compare-page");
+  if (page) page.textContent = data.total ? `${start}–${end} / ${data.total}` : "0";
+  const prev = document.getElementById("compare-prev");
+  const next = document.getElementById("compare-next");
+  if (prev) prev.disabled = data.offset <= 0;
+  if (next) next.disabled = data.offset + data.limit >= data.total;
+  if (!data.rows.length || !present) {
+    board.replaceChildren(el("p", { class: "empty" }, ["这组还没有可对照的样本。实验跑完一批后会自动出现。"]));
+    return;
+  }
+  const head = el("tr", {}, [
+    el("th", { class: "stick" }, ["材料"]),
+    ...data.columns.map((col) => el("th", { class: "eid", title: col.purpose || col.id }, [NAMES[col.id] || col.id])),
+  ]);
+  const body = el("tbody", {}, data.rows.map((row) => el("tr", {}, [
+    el("td", { class: "source" }, [row.source || "（无材料片段）"]),
+    ...data.columns.map((col) => {
+      const samples = row.cells[col.id] || [];
+      if (!samples.length) return el("td", { class: "empty" }, ["—"]);
+      return el("td", {}, samples.map(sampleBlock));
+    }),
+  ])));
+  board.replaceChildren(el("div", { class: "scroller" }, [
+    el("table", { class: "compare-table" }, [el("thead", {}, [head]), body]),
+  ]));
+  section.hidden = false;
+}
+
+function renderCompare() {
+  const section = document.getElementById("compare");
+  section.replaceChildren();
+  section.hidden = false;
+  const buttons = COMPARE_GROUPS.map(([group, label]) => {
+    const button = el("button", {
+      type: "button",
+      "aria-pressed": state.compare.group === group ? "true" : "false",
+      onclick: () => {
+        state.compare.group = group;
+        state.compare.offset = 0;
+        renderCompare();
+      },
+    }, [label]);
+    button.dataset.group = group;
+    return button;
+  });
+  const kept = el("button", {
+    type: "button",
+    "aria-pressed": state.compare.status === "kept" ? "true" : "false",
+    onclick: () => {
+      state.compare.status = "kept";
+      state.compare.offset = 0;
+      renderCompare();
+    },
+  }, ["保留"]);
+  const rejected = el("button", {
+    type: "button",
+    "aria-pressed": state.compare.status === "rejected" ? "true" : "false",
+    onclick: () => {
+      state.compare.status = "rejected";
+      state.compare.offset = 0;
+      renderCompare();
+    },
+  }, ["淘汰"]);
+  const prev = el("button", {
+    type: "button",
+    id: "compare-prev",
+    onclick: () => {
+      state.compare.offset = Math.max(0, state.compare.offset - 4);
+      loadCompare();
+    },
+  }, ["上一页"]);
+  const next = el("button", {
+    type: "button",
+    id: "compare-next",
+    onclick: () => {
+      state.compare.offset += 4;
+      loadCompare();
+    },
+  }, ["下一页"]);
+  section.append(
+    el("h2", { id: "compare-title" }, ["同源文本对照"]),
+    el("p", { class: "hint" }, ["同一行是同一段材料或同一道题。列是不同方法生成的问题、答案、证据和分层。"]),
+    el("div", { class: "controls" }, [
+      ...buttons,
+      kept,
+      rejected,
+      el("div", { class: "pager" }, [prev, el("span", { id: "compare-page" }, ["0"]), next]),
+    ]),
+    el("div", { id: "compare-board" }, []),
+  );
+  loadCompare();
+}
+
 function setStatus(which, status) {
   state[which].status = status;
   state[which].offset = 0;
   document.getElementById(`${which}-kept`).setAttribute("aria-pressed", status === "kept" ? "true" : "false");
   document.getElementById(`${which}-rejected`).setAttribute("aria-pressed", status === "rejected" ? "true" : "false");
   loadPane(which);
+}
+
+function teacherMode(payload) {
+  const name = payload.teacher_model;
+  if (payload.llm === "live") return name ? `教师 ${name}` : "真实教师";
+  if (payload.llm === "local") return "本地教师";
+  return "离线对照";
 }
 
 async function main() {
@@ -378,17 +553,25 @@ async function main() {
   state.experiments = payload.experiments || [];
   const groups = ordered(state.experiments);
   const file = (payload.input || "").split("/").filter(Boolean).pop() || "未记录文档";
-  const mode = payload.llm === "live" ? "真实教师" : "离线对照";
-  document.getElementById("lede").textContent =
-    `${payload.suite || "实验"}，${mode}，材料是${file}，共 ${groups.all.length} 组。`;
+  const progress = payload.progress;
+  const progressText = progress ? `，已完成 ${progress.done}/${progress.total}` : "";
+  const lede = document.getElementById("lede");
+  lede.classList.remove("error");
+  lede.textContent =
+    `${payload.suite || "实验"}，${teacherMode(payload)}，材料是${file}，共 ${groups.all.length} 组${progressText}。`;
   if (!groups.all.length) {
-    showError("实验目录里没有方案。");
+    showError("实验目录里还没有完成的方案。");
+    if (refreshTimer) clearTimeout(refreshTimer);
+    if (progress && progress.done < progress.total) refreshTimer = setTimeout(main, 15000);
     return;
   }
   renderMetrics(groups);
   renderRecipes(groups);
   renderFilters(groups);
+  renderCompare();
   renderSamples(groups);
+  if (refreshTimer) clearTimeout(refreshTimer);
+  if (progress && progress.done < progress.total) refreshTimer = setTimeout(main, 15000);
 }
 
 main().catch(() => showError("对照台没有加载完成。"));

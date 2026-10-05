@@ -1,24 +1,27 @@
 name: recommended
-description: 设计稿推荐栈——锚点反向提问 + Tag-Evol + 分级蒸馏 + 六级过滤 + SAB。
-chunking: {name: heading_window, max_tokens: 768, overlap: 0.12}
-anchor: {name: ner_rake_textrank, top_k: 5}
-question_gen: {name: anchor_reverse, per_anchor: 1}
-evolution: {name: tag_evol, sample_ratio: 0.3}
+description: 一期默认路径——直接证据生成、复用候选答案、一次主张验证、不足证据行为样本与抽样诊断。
+goal: rag_grounded
+chunking: {name: heading_window, max_tokens: 512, overlap: 0.1}
+anchor: {name: none}
+question_gen: {name: direct_grounded}
+evolution: {name: none}
 question_filter: {name: none}
-distillation: {name: cot_mixed}
-teacher_router: {name: grade_by_qtype}
+distillation: {name: reuse_candidate}
+teacher_router: {name: single}
 filters:
   - {name: rule_clean, min_answer_tokens: 4}
-  - {name: nli_fact, pass: 0.7, downgrade: 0.5}
-  - {name: roundtrip, k: 3, pass_sim: 0.75, mean_sim: 0.6}
-  - {name: knowledge_ablation, f1_drop: 0.8}
-  - {name: selfcheck, n: 5, min_consistency: 0.6}
-  - {name: llm_judge, min_overall: 2.5}
+  - {name: evidence_substring, on_fail: quarantine}
   - {name: exact_hash_dedup}
-  - {name: semdedup, threshold: 0.9}
-  - {name: diversity_sample, quota: {factual: 0.4, procedural: 0.2, conditional: 0.15, comparative: 0.15, multihop: 0.1}}
-grading: sab
-questions_per_chunk: 3
-max_chunks: 4
-max_samples: 16
+  - {name: claim_evidence}
+  - {name: risk_escalate}
+  - {name: behavior_insufficient, max_new: 1}
+  - {name: student_diagnostic, sample_size: 2}
+  - {name: joint_dedup}
+grading: validity_tier
+questions_per_chunk: 0
+max_chunks: 3
+max_samples: 8
+budget_cap_usd: null
+content_repair_max: 1
+escalation_max: 1
 seed: 42

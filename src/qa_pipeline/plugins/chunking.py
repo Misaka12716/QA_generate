@@ -25,7 +25,7 @@ def _emit(doc: Document, text: str, path: list[str], start: int, end: int, strat
         char_start=start,
         char_end=end,
         token_count=tokens,
-        metadata={"chunking": strategy},
+        metadata={"chunking": strategy, "source_group": doc.source_group or doc.doc_id},
     )
 
 

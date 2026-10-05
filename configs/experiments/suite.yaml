@@ -1,145 +1,75 @@
-name: design_e1_e8
+name: design_v2
 input: fixtures/sample_manual.md
 heldout: fixtures/heldout.jsonl
 refusal: fixtures/refusal.jsonl
 recipes_dir: configs/recipes
 experiments:
   - id: E1_baseline
-    purpose: 智训现状方案，一次生成 Q+A+证据并做规则过滤
+    purpose: 强基线。同样给定材料，一次生成问题、答案和证据，并做基本验证
     recipe: baseline_platform.yaml
     cache_as: e1_baseline
     sft: true
 
-  - id: E1_ours_full
-    purpose: 推荐路线全量，训练时使用 S+A
+  - id: E1_direct
+    purpose: 路线 D，直接证据约束生成
+    recipe: e1_direct.yaml
+    cache_as: e1_direct
+    cache_questions: q_direct
+
+  - id: E1_anchor
+    purpose: 传统锚点路径，后续验证与直接路径相同
+    recipe: e1_anchor.yaml
+
+  - id: E1_ku
+    purpose: 知识单元路径，单元经原文核验后才出题
+    recipe: e1_ku.yaml
+
+  - id: E2_fixed
+    purpose: 固定题型比例对照
+    recipe: e2_fixed_quota.yaml
+
+  - id: E2_gap
+    purpose: 默认路径。允许零题，并做行为样本与抽样诊断
     recipe: recommended.yaml
-    cache_as: e1_ours
-    grades: [S, A]
-    sft: true
+    cache_as: e2_gap
 
-  - id: E1_ours_s_only
-    purpose: 推荐路线仅 S 级
-    kind: subset
-    from_kept: e1_ours
-    grades: [S]
-    sft: true
+  - id: E3_diagnostic
+    purpose: 抽样诊断。无上下文答对不删除样本
+    recipe: e3_diagnostic.yaml
+    from_questions: q_direct
 
-  - id: E2_a1
-    purpose: 纯 Self-Instruct，无锚点无进化
-    recipe: e2_a1_self_instruct.yaml
-
-  - id: E2_a2
-    purpose: 锚点反向提问，不进化
-    recipe: e2_a2_anchor.yaml
-    cache_questions: q_anchor
-
-  - id: E2_a3
-    purpose: 锚点 + Tag-Evol 受控进化
-    recipe: e2_a3_tag_evol.yaml
-
-  - id: E2_a4
-    purpose: 锚点 + 无约束 Evol-Instruct
-    recipe: e2_a4_unconstrained.yaml
-
-  - id: E2_a5
-    purpose: 锚点 + Tag-Evol + 难度感知采样
-    recipe: e2_a5_difficulty.yaml
-
-  - id: E3_b1
-    purpose: 全量低成本单教师
-    recipe: e3_b1_cheap.yaml
-    from_questions: q_anchor
-
-  - id: E3_b2
-    purpose: 全量强教师
-    recipe: e3_b2_strong.yaml
-    from_questions: q_anchor
-
-  - id: E3_b3
-    purpose: 按题型分级路由
-    recipe: e3_b3_graded.yaml
-    from_questions: q_anchor
-
-  - id: E3_b4
-    purpose: 仅难题子集多教师选优
-    recipe: e3_b4_multi_hard.yaml
-    from_questions: q_anchor
-
-  - id: E4_c1
-    purpose: 无锚点，纯 LLM 自由生成
-    from: e4_anchor_base.yaml
-    override:
-      name: e4_c1_none
-      anchor: {name: none}
-      question_gen: {name: self_instruct, per_chunk: 3}
-
-  - id: E4_c2
-    purpose: 仅 TF-IDF 关键词
-    from: e4_anchor_base.yaml
-    override:
-      name: e4_c2_tfidf
-      anchor: {name: tfidf_keyword, top_k: 5}
-
-  - id: E4_c3
-    purpose: NER + TF-IDF
-    from: e4_anchor_base.yaml
-    override:
-      name: e4_c3_ner_tfidf
-      anchor: {name: ner_tfidf, top_k: 5}
-
-  - id: E4_c4
-    purpose: NER + TF-IDF + 关键句
-    from: e4_anchor_base.yaml
-    override:
-      name: e4_c4_ner_sentence
-      anchor: {name: ner_rake_textrank, top_k: 5}
-
-  - id: E4_c5
-    purpose: 纯 LLM 抽取锚点
-    from: e4_anchor_base.yaml
-    override:
-      name: e4_c5_llm
-      anchor: {name: llm_extract, top_k: 5}
+  - id: E4_multi
+    purpose: 固定多次复验对照
+    recipe: e4_fixed_multi.yaml
+    from_cache: e1_direct
 
   - id: E5_annotation
-    purpose: 导出 S/A 抽检表；无人工标签则不计算 Kappa
+    purpose: 导出通过门槛的 S/A 抽检表
     kind: annotate
-    from_kept: e1_ours
+    from_kept: e2_gap
     grades: [S, A]
 
   - id: E6_cost
-    purpose: 汇总推荐路线的过滤漏斗、token 与费用
+    purpose: 汇总默认路径的过滤漏斗、token 与费用
     kind: cost
-    source: E1_ours_full
+    source: E2_gap
+
+  - id: E6_behavior
+    purpose: 充分证据之外的说明不足行为样本
+    recipe: e6_behavior.yaml
+
+  - id: E7_rationale
+    purpose: 解释文本作为单独蒸馏因素
+    recipe: e7_rationale.yaml
 
   - id: E7_refusal
-    purpose: 对比基线与推荐路线在干扰上下文上的拒答
+    purpose: 对比基线与默认路径在干扰上下文上的行为
     kind: refusal
-    compare: [E1_baseline, E1_ours_full]
+    compare: [E1_baseline, E2_gap]
 
-  - id: E8_d1
-    purpose: 基线全量训练数据
+  - id: E8_scale
+    purpose: 发布子集。只保留通过门槛的 S/A，隔离样本不进入该子集
     kind: subset
-    from_kept: e1_baseline
-    sft: true
-
-  - id: E8_d2
-    purpose: 仅 S 级
-    kind: subset
-    from_kept: e1_ours
-    grades: [S]
-    sft: true
-
-  - id: E8_d3
-    purpose: S+A
-    kind: subset
-    from_kept: e1_ours
+    from_kept: e2_gap
     grades: [S, A]
-    sft: true
-
-  - id: E8_d4
-    purpose: S+A+B
-    kind: subset
-    from_kept: e1_ours
-    grades: [S, A, B]
     sft: true

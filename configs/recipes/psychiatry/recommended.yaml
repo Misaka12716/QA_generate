@@ -1,0 +1,27 @@
+name: recommended
+description: 一期默认路径——直接证据生成、复用候选答案、一次主张验证、不足证据行为样本与抽样诊断。
+goal: rag_grounded
+chunking: {name: heading_window, max_tokens: 512, overlap: 0.1}
+anchor: {name: none}
+question_gen: {name: direct_grounded}
+evolution: {name: none}
+question_filter: {name: none}
+distillation: {name: reuse_candidate}
+teacher_router: {name: single}
+filters:
+  - {name: rule_clean, min_answer_tokens: 4}
+  - {name: evidence_substring, on_fail: quarantine}
+  - {name: exact_hash_dedup}
+  - {name: claim_evidence}
+  - {name: risk_escalate}
+  - {name: behavior_insufficient, max_new: 1}
+  - {name: student_diagnostic, sample_size: 2}
+  - {name: joint_dedup}
+grading: validity_tier
+questions_per_chunk: 0
+max_chunks: 30
+max_samples: 80
+budget_cap_usd: null
+content_repair_max: 1
+escalation_max: 1
+seed: 42

@@ -1,0 +1,20 @@
+name: e2_fixed_quota
+description: 固定题型比例对照。默认路径不使用该配额。
+goal: rag_grounded
+chunking: {name: heading_window, max_tokens: 512, overlap: 0.1}
+anchor: {name: none}
+question_gen: {name: direct_grounded}
+evolution: {name: none}
+question_filter: {name: none}
+distillation: {name: reuse_candidate}
+teacher_router: {name: single}
+filters:
+  - {name: rule_clean, min_answer_tokens: 4}
+  - {name: evidence_substring, on_fail: quarantine}
+  - {name: claim_evidence}
+  - {name: diversity_sample, quota: {factual: 0.4, procedural: 0.2, conditional: 0.15, comparative: 0.15, multihop: 0.1}}
+grading: validity_tier
+questions_per_chunk: 0
+max_chunks: 30
+max_samples: 80
+seed: 42

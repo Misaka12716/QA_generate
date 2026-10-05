@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from ..registry import register
 from ..schemas import QAPair
+from ..textutil import is_substring
 
 
 _S_DIMS = ("accuracy", "relevancy", "completeness", "quality")
@@ -109,4 +110,54 @@ class SABGrade:
             p.filter_trace["grading"] = {"mode": "sab", "score": score, "nli": nli, "grade": p.grade}
             p.log("grading", self.name, grade=p.grade, score=score)
             out.append(p)
+        return out
+
+
+_PASS_CLAIM = {"supported", "not_applicable"}
+
+
+@register("grading", "validity_tier")
+class ValidityTier:
+    """共同有效性门槛之上区分 S/A。未解决样本标为 quarantine，不发布。"""
+
+    name = "validity_tier"
+
+    def __init__(self, **_: object) -> None:
+        pass
+
+    def run(self, pairs: list[QAPair], ctx) -> list[QAPair]:
+        out = []
+        for pair in pairs:
+            if pair.evidence_state == "missing" and pair.expected_action == "state_insufficient" and pair.action == "pass":
+                pair.grade = "A"
+                pair.selection_role = "behavior"
+            elif pair.action in {"reject", "quarantine"} or pair.grade == "quarantine":
+                if pair.action == "reject":
+                    pair.grade = "reject"
+                else:
+                    pair.grade = "quarantine"
+                    pair.action = "quarantine"
+            elif pair.claims and any(str(item.get("status")) not in _PASS_CLAIM for item in pair.claims):
+                pair.grade = "quarantine"
+                pair.action = "quarantine"
+            elif (
+                pair.evidence_state == "sufficient"
+                and pair.chunk_text
+                and not is_substring(pair.evidence_span, pair.chunk_text)
+            ):
+                pair.grade = "quarantine"
+                pair.action = "quarantine"
+            elif pair.claims and all(str(item.get("status")) in _PASS_CLAIM for item in pair.claims):
+                pair.grade = "S"
+                pair.selection_role = pair.selection_role or "learning"
+            else:
+                pair.grade = "A"
+                pair.selection_role = pair.selection_role or "learning"
+            pair.filter_trace["grading"] = {
+                "mode": "validity_tier",
+                "grade": pair.grade,
+                "role": pair.selection_role,
+            }
+            pair.log("grading", self.name, grade=pair.grade)
+            out.append(pair)
         return out

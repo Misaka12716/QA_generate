@@ -1,0 +1,24 @@
+name: drug_e3_g0
+description: 不使用诊断，不额外回放。
+goal: rag_grounded
+chunking: {name: heading_window, max_tokens: 512, overlap: 0.1}
+evolution: {name: none}
+question_filter: {name: none}
+distillation: {name: reuse_candidate}
+teacher_router: {name: single}
+grading: validity_tier
+questions_per_chunk: 0
+max_chunks: 100
+max_samples: 150
+content_repair_max: 1
+escalation_max: 1
+seed: 42
+anchor: {name: none}
+question_gen: {name: direct_grounded}
+filters:
+  - {name: rule_clean, min_answer_tokens: 4}
+  - {name: evidence_substring, on_fail: quarantine}
+  - {name: exact_hash_dedup}
+  - {name: claim_evidence}
+  - {name: risk_escalate}
+  - {name: joint_dedup}

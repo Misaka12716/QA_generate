@@ -22,9 +22,20 @@ DEFAULT_BASE = os.environ.get(
 
 def write_sft_jsonl(pairs: list[QAPair], path: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
+    trainable = [
+        pair
+        for pair in pairs
+        if pair.grade in {"S", "A"}
+        and pair.grade != "B"
+        and not pair.metadata.get("replaced_by_replay")
+        and not pair.metadata.get("diagnostic_downsample")
+        and pair.metadata.get("verification_status") != "pending"
+    ]
     with path.open("w", encoding="utf-8") as f:
-        for p in pairs:
-            f.write(json.dumps(to_zhixun_row(p), ensure_ascii=False) + "\n")
+        for pair in trainable:
+            row = to_zhixun_row(pair)
+            pair.data_stage = "released"
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
     return path
 
 
@@ -214,6 +225,143 @@ def generate_answers(
     return answers
 
 
+def _prompt_for(row: dict, context_key: str = "context") -> str:
+    question = str(row.get("question") or "")
+    context = str(row.get(context_key) or "")
+    if not context:
+        return question
+    return (
+        f"资料：\n{context}\n\n问题：{question}\n"
+        "仅依据提供的资料回答；资料不足时说明缺少的信息。"
+    )
+
+
+def _delta_label(base: str, tuned: str, gold: str) -> str:
+    base_f1 = token_f1(base, gold)
+    tuned_f1 = token_f1(tuned, gold)
+    refuse_words = ("资料不足", "无法确定", "缺少的信息", "无法根据")
+    base_refuses = any(word in base for word in refuse_words)
+    tuned_refuses = any(word in tuned for word in refuse_words)
+    if base_refuses and not tuned_refuses:
+        return "从拒答变成作答"
+    if tuned_refuses and not base_refuses:
+        return "从作答变成拒答"
+    if base.strip() == tuned.strip():
+        return "实质相同"
+    if tuned_f1 > base_f1 + 0.05:
+        return "变好"
+    if base_f1 > tuned_f1 + 0.05:
+        return "变差"
+    return "实质相同"
+
+
+def write_answer_sheet(
+    heldout: list[dict],
+    base_preds: list[str],
+    tuned_preds: list[str],
+    path: Path,
+    distractor_base: list[str] | None = None,
+    distractor_tuned: list[str] | None = None,
+) -> Path:
+    """锁定测试每一题的全文对照。数字只放在文首索引。"""
+    groups: dict[str, list[int]] = {}
+    blocks = []
+    for index, row in enumerate(heldout):
+        gold = str(row.get("answer") or "")
+        base = base_preds[index] if index < len(base_preds) else ""
+        tuned = tuned_preds[index] if index < len(tuned_preds) else ""
+        label = _delta_label(base, tuned, gold)
+        groups.setdefault(label, []).append(index + 1)
+        context = str(row.get("context") or "")
+        blocks.append(
+            "\n".join(
+                [
+                    f"## 题 {index + 1}",
+                    "",
+                    f"变化：{label}",
+                    "",
+                    "### 问题",
+                    str(row.get("question") or ""),
+                    "",
+                    "### 学生看见的资料",
+                    context or "（无）",
+                    "",
+                    "### 微调前",
+                    base or "（空）",
+                    "",
+                    "### 微调后",
+                    tuned or "（空）",
+                    "",
+                    "### 参考答案",
+                    gold or "（空）",
+                ]
+            )
+        )
+    lines = ["# 微调前后回答对照", "", "下列是完整回答，不是摘要。", ""]
+    for label, nums in groups.items():
+        lines.append(f"- {label}：题 {', '.join(str(n) for n in nums)}")
+    lines.append("")
+    lines.extend(blocks)
+    if distractor_base and distractor_tuned:
+        lines.extend(["", "# 干扰资料下的回答", ""])
+        for index, row in enumerate(heldout):
+            lines.extend(
+                [
+                    f"## 干扰题 {index + 1}",
+                    "",
+                    "### 问题",
+                    str(row.get("question") or ""),
+                    "",
+                    "### 干扰资料",
+                    str(row.get("distractor") or ""),
+                    "",
+                    "### 微调前",
+                    distractor_base[index] if index < len(distractor_base) else "",
+                    "",
+                    "### 微调后",
+                    distractor_tuned[index] if index < len(distractor_tuned) else "",
+                    "",
+                ]
+            )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return path
+
+
+def assemble_answer_book(out_dir: Path, entries: list[dict]) -> None:
+    """默认管线的全文对照放在套件根目录，其余已训组别只附变化最大的几题。"""
+    primary = next((entry for entry in entries if entry.get("answer_sheet")), None)
+    if not primary:
+        return
+    source = out_dir / primary["id"] / "sft" / "answers.md"
+    if not source.is_file():
+        return
+    parts = [source.read_text(encoding="utf-8").rstrip(), ""]
+    for entry in entries:
+        if entry.get("id") == primary["id"] or not entry.get("sft"):
+            continue
+        sheet = out_dir / entry["id"] / "sft" / "answers.md"
+        if not sheet.is_file():
+            continue
+        picked = _changed_sections(sheet.read_text(encoding="utf-8"), limit=4)
+        if not picked:
+            continue
+        parts.append(f"# {entry['id']} 变化最明显的回答")
+        parts.append("")
+        parts.extend(picked)
+    (out_dir / "answers.md").write_text("\n".join(parts).rstrip() + "\n", encoding="utf-8")
+
+
+def _changed_sections(text: str, limit: int = 4) -> list[str]:
+    chunks = text.split("\n## 题 ")
+    ranked = []
+    for chunk in chunks[1:]:
+        if "变化：实质相同" in chunk.split("###", 1)[0]:
+            continue
+        ranked.append("## 题 " + chunk.strip())
+    return ranked[:limit]
+
+
 def evaluate_sft(
     pairs: list[QAPair],
     heldout_path: str | Path,
@@ -225,7 +373,7 @@ def evaluate_sft(
     out_dir.mkdir(parents=True, exist_ok=True)
     train_path = write_sft_jsonl(pairs, out_dir / "train.jsonl")
     heldout = load_heldout(heldout_path)
-    questions = [h["question"] for h in heldout]
+    questions = [_prompt_for(h) for h in heldout]
     golds = [h["answer"] for h in heldout]
     report: dict[str, Any] = {"train_samples": len(pairs), "heldout": len(heldout), "train_jsonl": str(train_path)}
     if skip_sft:
@@ -246,6 +394,26 @@ def evaluate_sft(
     report["tuned"] = score_generations(tuned_preds, golds)
     report["delta_f1"] = round(report["tuned"]["f1"] - report["base"]["f1"], 4)
     report["delta_em"] = round(report["tuned"]["em"] - report["base"]["em"], 4)
+    distractor_prompts = [_prompt_for(h, "distractor") for h in heldout if h.get("distractor")]
+    distractor_base = distractor_tuned = None
+    if distractor_prompts:
+        distractor_base = generate_answers(distractor_prompts, base_model)
+        distractor_tuned = generate_answers(distractor_prompts, base_model, adapter=adapter)
+        if isinstance(distractor_base, dict) or isinstance(distractor_tuned, dict):
+            distractor_base = distractor_tuned = None
+    sheet = write_answer_sheet(
+        heldout,
+        base_preds,
+        tuned_preds,
+        out_dir / "answers.md",
+        distractor_base if isinstance(distractor_base, list) else None,
+        distractor_tuned if isinstance(distractor_tuned, list) else None,
+    )
+    report["answer_sheet"] = str(sheet)
+    delta = report["delta_f1"]
+    report["effect_note"] = (
+        "看不出稳定提升" if abs(delta) < 0.02 else ("微调后 token F1 更高" if delta > 0 else "微调后 token F1 更低")
+    )
     if llm is not None:
         report["judge_base"] = judge_vs_reference(llm, questions, base_preds, golds)
         report["judge_tuned"] = judge_vs_reference(llm, questions, tuned_preds, golds)

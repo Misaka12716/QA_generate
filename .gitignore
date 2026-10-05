@@ -1,8 +1,12 @@
 runs/
+data/
+.cursor/
+.vscode/
 .pytest_cache/
 __pycache__/
 *.egg-info/
 .venv/
+.pydeps/
 dist/
 build/
 *.pyc

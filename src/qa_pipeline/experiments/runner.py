@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from copy import deepcopy
 from pathlib import Path
 from typing import Any
@@ -182,6 +183,7 @@ def run_suite(
     skip_sft: bool = True,
     llm: LLMClient | None = None,
     base_model: str | None = None,
+    devices: list[int] | None = None,
 ) -> dict[str, Any]:
     from ..adapters.zhixun import export_zhixun
     from .sft import DEFAULT_BASE
@@ -212,11 +214,30 @@ def run_suite(
     sft_done: dict[tuple[str, ...], dict[str, Any]] = {}
     adapters: dict[str, str] = {}
     rows: list[dict[str, Any]] = []
-    notes = [
+    notes = list(suite.get("notes") or [
         "语料仅为 fixtures/sample_manual.md，规模小于设计稿的 500 chunk / 1 万条。",
-        "教师与学生均为本地 Qwen2.5-7B-Instruct 时，API 费用记 0 美元，并报告等价 token。",
+        "教师为 192.168.4.110:4000 的 qwen3.8-27b，API 费用记 0 美元，并报告等价 token。学生基座为本地 Qwen2.5-7B-Instruct。",
         "E5 无人工标签，不计算 Cohen's Kappa。事实遵循使用 NLI 与证据子串，未接入 RAGAS。",
-    ]
+    ])
+    if not fake and devices and len(devices) >= 2:
+        from .parallel import run_parallel
+
+        return run_parallel(
+            suite=suite,
+            out=out,
+            recipes_dir=recipes_dir,
+            input_path=input_path,
+            heldout=heldout,
+            refusal_path=refusal_path,
+            model_path=student,
+            student=student,
+            devices=list(devices),
+            skip_sft=skip_sft,
+            notes=notes,
+        )
+    if not fake and devices and len(devices) == 1:
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(devices[0])
+        notes.append(f"单卡运行，CUDA_VISIBLE_DEVICES={devices[0]}。")
 
     def remember(entry: dict[str, Any], result: PipelineResult) -> None:
         key = entry.get("cache_as")
@@ -242,6 +263,10 @@ def run_suite(
         adapter = (report.get("train") or {}).get("adapter")
         if adapter:
             adapters[entry["id"]] = adapter
+        sheet = (exp_dir / "sft" / "answers.md")
+        if entry.get("answer_sheet") and sheet.is_file():
+            target = exp_dir.parent / "answers.md"
+            target.write_text(sheet.read_text(encoding="utf-8"), encoding="utf-8")
         return report
 
     def finalize(entry: dict[str, Any], result: PipelineResult, recipe: Recipe | None, exp_dir: Path, note: str = "") -> None:
@@ -273,6 +298,20 @@ def run_suite(
         if hasattr(client, "reset_usage"):
             client.reset_usage()
 
+        if kind == "skipped":
+            rows.append(
+                {
+                    "id": exp_id,
+                    "purpose": entry.get("purpose", ""),
+                    "recipe": "",
+                    "recipe_snapshot": {},
+                    "metrics": {},
+                    "sft": {},
+                    "note": entry.get("reason") or "未执行",
+                }
+            )
+            continue
+
         if kind == "annotate":
             source = cache_kept.get(entry.get("from_kept") or "") or []
             ann = _export_annotation(source, exp_dir / "annotation.jsonl", entry.get("grades"))
@@ -295,7 +334,7 @@ def run_suite(
             found = next((row for row in rows if row["id"] == source_id), None)
             metrics = dict((found or {}).get("metrics") or {})
             metrics["api_cost_usd"] = metrics.get("estimated_cost_usd")
-            metrics["cost_note"] = "本地教师 API 费用按 0 计，tokens_per_10k_kept 为等价 token。"
+            metrics["cost_note"] = "教师 qwen3.8-27b 为内网接口，API 费用按 0 计，tokens_per_10k_kept 为等价 token。"
             rows.append(
                 {
                     "id": exp_id,
@@ -371,6 +410,7 @@ def run_suite(
         "suite": suite.get("name"),
         "input": str(input_path),
         "llm": llm_label,
+        "teacher_model": getattr(client, "default_model", ""),
         "base_model": student,
         "limitations": notes,
         "experiments": rows,
@@ -378,4 +418,7 @@ def run_suite(
     (out / "metrics.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     report = _render_report(suite.get("name", "suite"), rows, notes)
     (out / "report.md").write_text(report, encoding="utf-8")
+    from .sft import assemble_answer_book
+
+    assemble_answer_book(out, list(suite.get("experiments") or []))
     return payload

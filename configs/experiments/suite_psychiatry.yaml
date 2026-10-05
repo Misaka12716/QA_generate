@@ -1,0 +1,76 @@
+name: design_v2
+input: data/psychiatry/train
+heldout: data/psychiatry/eval/heldout.jsonl
+refusal: data/psychiatry/eval/refusal.jsonl
+recipes_dir: configs/recipes/psychiatry
+experiments:
+  - id: E1_baseline
+    purpose: 强基线。同样给定材料，一次生成问题、答案和证据，并做基本验证
+    recipe: baseline_platform.yaml
+    cache_as: e1_baseline
+    sft: true
+
+  - id: E1_direct
+    purpose: 路线 D，直接证据约束生成
+    recipe: e1_direct.yaml
+    cache_as: e1_direct
+    cache_questions: q_direct
+
+  - id: E1_anchor
+    purpose: 传统锚点路径，后续验证与直接路径相同
+    recipe: e1_anchor.yaml
+
+  - id: E1_ku
+    purpose: 知识单元路径，单元经原文核验后才出题
+    recipe: e1_ku.yaml
+
+  - id: E2_fixed
+    purpose: 固定题型比例对照
+    recipe: e2_fixed_quota.yaml
+
+  - id: E2_gap
+    purpose: 默认路径。允许零题，并做行为样本与抽样诊断
+    recipe: recommended.yaml
+    cache_as: e2_gap
+    sft: true
+
+  - id: E3_diagnostic
+    purpose: 抽样诊断。无上下文答对不删除样本
+    recipe: e3_diagnostic.yaml
+    from_questions: q_direct
+
+  - id: E4_multi
+    purpose: 固定多次复验对照
+    recipe: e4_fixed_multi.yaml
+    from_cache: e1_direct
+
+  - id: E5_annotation
+    purpose: 导出通过门槛的 S/A 抽检表
+    kind: annotate
+    from_kept: e2_gap
+    grades: [S, A]
+
+  - id: E6_cost
+    purpose: 汇总默认路径的过滤漏斗、token 与费用
+    kind: cost
+    source: E2_gap
+
+  - id: E6_behavior
+    purpose: 充分证据之外的说明不足行为样本
+    recipe: e6_behavior.yaml
+
+  - id: E7_rationale
+    purpose: 解释文本作为单独蒸馏因素
+    recipe: e7_rationale.yaml
+
+  - id: E7_refusal
+    purpose: 对比基线与默认路径在干扰上下文上的行为
+    kind: refusal
+    compare: [E1_baseline, E2_gap]
+
+  - id: E8_scale
+    purpose: 发布子集。只保留通过门槛的 S/A，隔离样本不进入该子集
+    kind: subset
+    from_kept: e2_gap
+    grades: [S, A]
+    sft: true

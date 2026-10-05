@@ -1,0 +1,101 @@
+name: drug_v21
+input: data/campus_hospital_drug_instructions/frozen/subset
+heldout: data/campus_hospital_drug_instructions/frozen/heldout.jsonl
+refusal: data/campus_hospital_drug_instructions/frozen/heldout.jsonl
+recipes_dir: configs/recipes/drug
+notes:
+  - 输入是校医院说明书 train 分区的 60 篇冻结子集，最多 100 个 chunk、150 条样本。不是全库 2552 篇都经过每条实验臂。
+  - 锁定测试不进入生成。覆盖目录是原文句子加子串核对，不是人工金标，覆盖率只对这份目录有效。
+  - 教师为 192.168.4.110:4000 的 qwen3.8-27b。接口费用按 0 美元记录，同时报告 token。学生是本地 Qwen2.5-7B-Instruct。
+  - 没有业务给定的 retention_max_drop。分数变化不写成上线通过。
+  - 第二种预算设定（新数据条数固定后再追加回放）本次未跑，记为未检验交互。
+  - 跨文档多跳、复杂表格、多轮和 DPO 不发布。E8 只报告规模、格式和增量文档数。
+  - 全库只做清洗和分区清点。覆盖率的分母是冻结目录里的句子单元，不是全库知识单元。
+experiments:
+  - id: E1_direct
+    purpose: direct_grounded
+    recipe: e1_direct.yaml
+    cache_as: e1_direct
+    cache_questions: q_direct
+
+  - id: E1_anchor
+    purpose: anchor_assisted
+    recipe: e1_anchor.yaml
+
+  - id: E1_kseq
+    purpose: k_sequential
+    recipe: e1_kseq.yaml
+
+  - id: E1_kjoint
+    purpose: k_joint
+    recipe: e1_kjoint.yaml
+
+  - id: E1_mix
+    purpose: 混合路由，样本仍记录实际路线
+    recipe: e1_mix.yaml
+
+  - id: E2_fixed
+    purpose: 固定比例对照
+    recipe: e2_fixed.yaml
+
+  - id: E2_gap
+    purpose: 默认可生成性路径，含行为样本
+    recipe: e2_gap.yaml
+    cache_as: e2_gap
+    sft: true
+    answer_sheet: true
+
+  - id: E3_g0
+    purpose: 无诊断、无专门回放
+    recipe: e3_g0.yaml
+    from_questions: q_direct
+    sft: true
+
+  - id: E3_g1
+    purpose: 诊断选样，无专门回放
+    recipe: e3_g1.yaml
+    from_questions: q_direct
+    sft: true
+
+  - id: E3_g2
+    purpose: G0 选样加回放替换
+    recipe: e3_g2.yaml
+    from_questions: q_direct
+    sft: true
+
+  - id: E3_g3
+    purpose: G1 诊断加 G2 回放
+    recipe: e3_g3.yaml
+    from_questions: q_direct
+    sft: true
+
+  - id: E4_multi
+    purpose: 固定多次验证
+    recipe: e4_multi.yaml
+    from_cache: e1_direct
+
+  - id: E5_cost
+    purpose: 默认管线相对直接路线的费用，不把几种预算口径写成等价
+    kind: cost
+    source: E2_gap
+
+  - id: E6_behavior
+    purpose: 缺证据行为
+    recipe: e6_behavior.yaml
+    from_questions: q_direct
+
+  - id: E6_conflict
+    purpose: 冲突行为通道
+    kind: skipped
+    reason: 未在冻结子集中确认可合法使用且内容冲突的成对说明书。不编造冲突，本臂未执行。
+
+  - id: E7_rationale
+    purpose: 只打开解释文本
+    recipe: e7_rationale.yaml
+    from_questions: q_direct
+
+  - id: E8_scale
+    purpose: 发布子集。跨文档多跳和复杂表格不在一期发布。
+    kind: subset
+    from_kept: e2_gap
+    grades: [S, A]

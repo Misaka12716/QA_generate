@@ -106,14 +106,30 @@ def test_zhixun_export_evidence():
         source_doc="手册",
         q_type="factual",
         grade="A",
+        goal="rag_grounded",
+        evidence_state="sufficient",
+        expected_action="answer",
     )
     row = to_zhixun_row(pair)
-    assert row["messages"][0]["role"] == "user"
-    assert row["messages"][1]["content"] == "65℃"
+    assert row["messages"][1]["role"] == "user"
+    assert "资料" in row["messages"][1]["content"]
+    assert "阈值是多少？" in row["messages"][1]["content"]
+    assert row["messages"][2]["content"] == "65℃"
+    assert row["metadata"]["goal"] == "rag_grounded"
+    assert row["metadata"]["evidence_state"] == "sufficient"
     assert "65℃" in row["metadata"]["evidence"]
     compact_ev = "".join(row["metadata"]["evidence"].split())
     compact_chunk = "".join(pair.chunk_text.split())
     assert compact_ev in compact_chunk
+
+    hidden = pair.model_copy(deep=True)
+    hidden.evidence_state = "missing"
+    hidden.expected_action = "state_insufficient"
+    hidden.metadata["student_context"] = ""
+    hidden.answer = "当前资料不足，无法根据给定材料回答。"
+    withheld = to_zhixun_row(hidden)
+    assert "过温保护阈值" not in withheld["messages"][1]["content"]
+    assert withheld["metadata"]["expected_action"] == "state_insufficient"
 
 
 def test_metrics_retention():
@@ -140,6 +156,24 @@ def test_metrics_retention():
     assert 0 < m["type_entropy"]
 
 
+def test_free_gpu_parse_and_waves():
+    from qa_pipeline.experiments.devices import parse_gpu_table
+    from qa_pipeline.experiments.parallel import split_waves
+    from qa_pipeline.experiments.runner import load_suite
+
+    assert parse_gpu_table("0, 16561\n3, 18\n4, 18 MiB\n7, 47099\n") == [3, 4]
+    suite = load_suite(ROOT / "configs/experiments/suite.yaml")
+    independent, dependent, light, refusal = split_waves(suite["experiments"])
+    assert {item["id"] for item in independent} >= {"E1_baseline", "E1_direct", "E1_ku", "E2_gap"}
+    assert {item["id"] for item in dependent} == {"E3_diagnostic", "E4_multi"}
+    assert "E8_scale" in {item["id"] for item in light}
+    assert "E7_refusal" in {item["id"] for item in refusal}
+    assert "E1_baseline" not in {item["id"] for item in dependent}
+    drug = load_suite(ROOT / "configs/experiments/suite_drug.yaml")
+    _, _, drug_light, _ = split_waves(drug["experiments"])
+    assert "E6_conflict" in {item["id"] for item in drug_light}
+
+
 def test_suite_fake(tmp_path):
     from qa_pipeline.experiments.runner import run_suite
 
@@ -147,10 +181,11 @@ def test_suite_fake(tmp_path):
     payload = run_suite(suite, out_dir=tmp_path, fake=True, skip_sft=True)
     ids = [e["id"] for e in payload["experiments"]]
     assert "E1_baseline" in ids
-    assert "E1_ours_full" in ids
-    assert "E2_a3" in ids
-    assert "E4_c3" in ids
+    assert "E1_direct" in ids
+    assert "E1_ku" in ids
+    assert "E2_gap" in ids
     assert "E6_cost" in ids
+    assert "E6_behavior" in ids
     assert "E7_refusal" in ids
     assert (tmp_path / "report.md").is_file()
     assert (tmp_path / "metrics.json").is_file()
@@ -167,12 +202,112 @@ def test_suite_fake(tmp_path):
         "evidence_substring",
         "llm_supported",
     ]
-    ours = next(row for row in payload["experiments"] if row["id"] == "E1_ours_full")
-    assert ours["recipe_snapshot"]["question_gen"]["name"] == "anchor_reverse"
-    assert ours["recipe_snapshot"]["evolution"]["name"] == "tag_evol"
+    ours = next(row for row in payload["experiments"] if row["id"] == "E2_gap")
+    assert ours["recipe_snapshot"]["question_gen"]["name"] == "direct_grounded"
+    assert ours["recipe_snapshot"]["evolution"]["name"] == "none"
+    assert "knowledge_ablation" not in [item["name"] for item in ours["recipe_snapshot"]["filters"]]
+    assert "roundtrip" not in [item["name"] for item in ours["recipe_snapshot"]["filters"]]
+    assert "tag_evol" != ours["recipe_snapshot"]["evolution"]["name"]
     assert payload["llm"] == "fake"
     cost = next(row for row in payload["experiments"] if row["id"] == "E6_cost")
     assert "funnel" in (cost.get("metrics") or {})
+
+
+def test_recommended_path_and_budget():
+    rec = load_recipe(ROOT / "configs/recipes/recommended.yaml")
+    names = [item.name for item in rec.filters]
+    assert rec.question_gen.name == "direct_grounded"
+    assert rec.evolution.name == "none"
+    assert rec.grading == "validity_tier"
+    assert "knowledge_ablation" not in names
+    assert "roundtrip" not in names
+    assert "selfcheck" not in names
+    result = Pipeline(rec, llm=FakeLLM()).run(MANUAL)
+    assert result.pairs
+    assert all(pair.grade in {"S", "A"} for pair in result.pairs)
+    assert all(pair.action not in {"reject", "quarantine"} for pair in result.pairs)
+    from qa_pipeline.adapters.zhixun import to_zhixun_row
+
+    row = to_zhixun_row(result.pairs[0])
+    assert "资料" in row["messages"][1]["content"]
+
+    blocked = load_recipe(ROOT / "configs/recipes/e1_direct.yaml")
+    blocked.budget_cap_usd = 0
+    stopped = Pipeline(blocked, llm=FakeLLM()).run(MANUAL)
+    assert stopped.pairs == []
+    assert "budget_cap" in stopped.stats.fallbacks
+
+
+def test_quarantine_not_released():
+    recipe = load_recipe(SMOKE)
+    recipe.filters = []
+    recipe.grading = "validity_tier"
+    from qa_pipeline.schemas import QAPair
+
+    sample = QAPair(
+        question="阈值是多少？",
+        answer="资料里没有写这个数值。",
+        evidence_span="这句话不在原文中",
+        chunk_text="出厂默认将过温保护阈值设置为 65℃，用户可调整。",
+        evidence_state="sufficient",
+        action="pass",
+    )
+    result = Pipeline(recipe, llm=FakeLLM()).refilter([sample])
+    assert result.pairs == []
+    assert result.rejected
+    assert result.rejected[0].grade == "quarantine"
+
+
+def test_k_sequential_ignores_same_call_samples():
+    from qa_pipeline.pipeline import PipelineContext
+    from qa_pipeline.plugins.question_gen import KnowledgeUnitQG, KnowledgeUnitJointQG
+    from qa_pipeline.schemas import Chunk
+    import random
+
+    recipe = load_recipe(ROOT / "configs/recipes/e1_ku.yaml")
+    recipe.max_chunks = 1
+    recipe.max_samples = 2
+    ctx = PipelineContext(recipe=recipe, llm=FakeLLM(), rng=random.Random(0))
+    chunk = Chunk(text="过温保护阈值设置为 65℃。用户可调整。", source_doc="手册")
+    sequential = KnowledgeUnitQG(per_chunk=1).run([chunk], ctx)
+    assert sequential
+    assert sequential[0].generation_route == "k_sequential"
+    assert sequential[0].metadata["verification_status"] == "verified"
+    joint = KnowledgeUnitJointQG(per_chunk=1).run([chunk], ctx)
+    assert joint
+    assert joint[0].generation_route == "k_joint"
+    assert joint[0].metadata["verification_status"] == "pending"
+
+
+def test_pending_joint_not_accepted():
+    recipe = load_recipe(ROOT / "configs/recipes/e1_direct.yaml")
+    recipe.question_gen.name = "k_joint"
+    recipe.filters = [item for item in recipe.filters if item.name != "claim_evidence"]
+    result = Pipeline(recipe, llm=FakeLLM()).run(MANUAL)
+    assert result.pairs == []
+    assert any(pair.metadata.get("verification_status") == "pending" for pair in result.rejected)
+
+
+def test_hidden_evidence_does_not_pass():
+    from qa_pipeline.plugins.filters import ClaimEvidence
+    from qa_pipeline.pipeline import PipelineContext
+    from qa_pipeline.schemas import QAPair
+    import random
+
+    recipe = load_recipe(SMOKE)
+    pair = QAPair(
+        question="阈值是多少？",
+        answer="65℃",
+        evidence_span="过温保护阈值设置为 65℃",
+        chunk_text="过温保护阈值设置为 65℃，用户可调整。",
+        evidence_state="sufficient",
+        goal="rag_grounded",
+        metadata={"student_context": "这里没有阈值。"},
+        student_context_refs=["这里没有阈值。"],
+    )
+    ctx = PipelineContext(recipe=recipe, llm=FakeLLM(), rng=random.Random(0))
+    out = ClaimEvidence().run([pair], ctx)
+    assert out[0].grade == "quarantine"
 
 
 def test_sft_skip(tmp_path):

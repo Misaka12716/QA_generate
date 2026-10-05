@@ -1,0 +1,19 @@
+name: e7_rationale
+description: 解释文本单独生成，用于观察额外 token。事实门槛与直接路径相同。
+goal: rag_grounded
+chunking: {name: heading_window, max_tokens: 512, overlap: 0.1}
+anchor: {name: none}
+question_gen: {name: direct_grounded}
+evolution: {name: none}
+question_filter: {name: none}
+distillation: {name: cot_mixed}
+teacher_router: {name: single}
+filters:
+  - {name: rule_clean, min_answer_tokens: 4}
+  - {name: evidence_substring, on_fail: quarantine}
+  - {name: claim_evidence}
+grading: validity_tier
+questions_per_chunk: 0
+max_chunks: 30
+max_samples: 80
+seed: 42

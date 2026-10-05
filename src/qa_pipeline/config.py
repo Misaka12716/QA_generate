@@ -37,18 +37,22 @@ class Recipe(BaseModel):
     distillation: StrategySpec = Field(default_factory=lambda: StrategySpec(name="concise_response"))
     teacher_router: StrategySpec = Field(default_factory=lambda: StrategySpec(name="single"))
     filters: list[StrategySpec] = Field(default_factory=list)
-    grading: Literal["sab", "binary", "none"] = "sab"
-    questions_per_chunk: int = 4
+    grading: Literal["sab", "binary", "none", "validity_tier"] = "sab"
+    questions_per_chunk: int = 0
     max_chunks: int | None = None
     max_samples: int | None = 200
     retries: int = 1
+    goal: Literal["rag_grounded", "closed_book_domain"] = "rag_grounded"
+    budget_cap_usd: float | None = None
+    content_repair_max: int = 1
+    escalation_max: int = 1
     split: Literal["train", "validation", "test"] = "train"
     seed: int = 42
     teacher_models: dict[str, str] = Field(
         default_factory=lambda: {
-            "default": "deepseek-chat",
-            "cheap": "deepseek-chat",
-            "strong": "deepseek-chat",
+            "default": "qwen3.8-27b",
+            "cheap": "qwen3.8-27b",
+            "strong": "qwen3.8-27b",
         }
     )
     extra: dict[str, Any] = Field(default_factory=dict)
@@ -90,6 +94,10 @@ class Recipe(BaseModel):
             "max_chunks": self.max_chunks,
             "max_samples": self.max_samples,
             "retries": self.retries,
+            "goal": self.goal,
+            "budget_cap_usd": self.budget_cap_usd,
+            "content_repair_max": self.content_repair_max,
+            "escalation_max": self.escalation_max,
             "split": self.split,
             "seed": self.seed,
             "teacher_models": self.teacher_models,

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -18,21 +20,64 @@ def ensure_evidence(pair: QAPair) -> str:
     return recovered
 
 
+def _student_context(pair: QAPair) -> str:
+    if "student_context" in pair.metadata:
+        return str(pair.metadata.get("student_context") or "")
+    if pair.student_context_refs:
+        return "\n".join(pair.student_context_refs)
+    return pair.chunk_text
+
+
 def to_zhixun_row(pair: QAPair, split: str | None = None) -> dict[str, Any]:
     evidence = ensure_evidence(pair)
+    goal = pair.goal or "rag_grounded"
+    if goal == "closed_book_domain":
+        messages = [
+            {"role": "system", "content": "回答许可范围内的领域知识。"},
+            {"role": "user", "content": pair.question},
+            {"role": "assistant", "content": pair.answer},
+        ]
+    else:
+        context = _student_context(pair)
+        if context:
+            user = f"资料：\n{context}\n\n问题：{pair.question}"
+        else:
+            user = f"资料：\n（当前未提供可回答该问题的资料）\n\n问题：{pair.question}"
+        messages = [
+            {"role": "system", "content": "仅依据提供的资料回答；资料不足时说明缺少的信息。"},
+            {"role": "user", "content": user},
+            {"role": "assistant", "content": pair.answer},
+        ]
+    subject = {
+        "goal": goal,
+        "policy": messages[0]["content"],
+        "question": pair.question,
+        "student_context": _student_context(pair) if goal != "closed_book_domain" else "",
+        "answer": pair.answer,
+        "expected_action": pair.expected_action,
+    }
+    pair.validation_subject_hash = hashlib.sha256(
+        json.dumps(subject, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()
+    if pair.data_stage == "accepted" and pair.grade in {"S", "A"}:
+        pair.data_stage = "released"
     return {
         "id": pair.qa_id,
         "split": split or pair.split,
-        "messages": [
-            {"role": "user", "content": pair.question},
-            {"role": "assistant", "content": pair.answer},
-        ],
+        "messages": messages,
         "metadata": {
             "source": pair.source_doc,
             "source_file_id": pair.metadata.get("source_file_id"),
             "location": " / ".join(pair.metadata.get("title_path") or []) or pair.chunk_id,
             "evidence": evidence,
-            "goal": "qa",
+            "goal": goal,
+            "evidence_state": pair.evidence_state,
+            "expected_action": pair.expected_action,
+            "generation_route": pair.generation_route,
+            "data_stage": pair.data_stage,
+            "validation_subject_hash": pair.validation_subject_hash,
+            "intent_primary": pair.intent_primary,
+            "selection_role": pair.selection_role,
             "kind": {
                 "factual": "事实问答",
                 "procedural": "步骤说明",

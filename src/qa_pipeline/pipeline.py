@@ -1,4 +1,4 @@
-"""管线编排：按 Recipe 组装策略，串联 Chunk → Q → Evol → Distill → Filter → Grade。"""
+"""管线编排：切分 → 生成 → 复用候选答案 → 验证 → 分层。未过门槛的样本不发布。"""
 
 from __future__ import annotations
 
@@ -48,7 +48,7 @@ class PipelineResult:
 
     @property
     def kept(self) -> list[QAPair]:
-        return [p for p in self.pairs if p.action != "reject" and p.grade != "reject"]
+        return [p for p in self.pairs if _publishable(p)]
 
 
 class Pipeline:
@@ -74,10 +74,13 @@ class Pipeline:
             rng=random.Random(self.recipe.seed),
         )
         t0 = time.perf_counter()
+        self._arm_budget()
 
         chunks = self._timed("chunking", lambda: self.chunker.run(docs, ctx), ctx)
+        _stamp_source_group(docs, chunks)
         if self.recipe.max_chunks:
             chunks = chunks[: self.recipe.max_chunks]
+        chunks = self._fit_budget(chunks, ctx)
         ctx.stats.produced["chunks"] = len(chunks)
 
         anchored = self._timed("anchor", lambda: self.anchorer.run(chunks, ctx), ctx)
@@ -97,6 +100,7 @@ class Pipeline:
             rng=random.Random(self.recipe.seed),
         )
         t0 = time.perf_counter()
+        self._arm_budget()
         cloned = [q.model_copy(deep=True) for q in questions]
         if self.recipe.max_samples:
             cloned = cloned[: self.recipe.max_samples]
@@ -123,10 +127,14 @@ class Pipeline:
         kept, rejected = [], []
         for p in pairs:
             p.split = self.recipe.split
-            if p.action == "reject" or p.grade == "reject":
-                rejected.append(p)
-            else:
+            p.goal = self.recipe.goal
+            if p.goal == "closed_book_domain":
+                p.student_context_refs = []
+            if _publishable(p) and p.grade in {"S", "A"} and p.grade != "B":
+                p.data_stage = "accepted"
                 kept.append(p)
+            else:
+                rejected.append(p)
         ctx.stats.produced["kept"] = len(kept)
         ctx.stats.produced["rejected"] = len(rejected)
         snap = self.llm.usage_snapshot()
@@ -134,6 +142,10 @@ class Pipeline:
         ctx.stats.prompt_tokens = snap["prompt_tokens"]
         ctx.stats.completion_tokens = snap["completion_tokens"]
         ctx.stats.estimated_cost_usd = snap["estimated_cost_usd"]
+        for reason in getattr(self.llm, "budget_stops", []):
+            ctx.note_fallback(reason)
+        ctx.stats.budget_stops = list(getattr(self.llm, "budget_stops", []))
+        ctx.stats.ledger = _ledger(ctx.stats.estimated_cost_usd, self.recipe.budget_cap_usd)
         ctx.stats.stage_seconds["total"] = round(time.perf_counter() - t0, 3)
         return PipelineResult(
             recipe_name=self.recipe.name,
@@ -158,11 +170,12 @@ class Pipeline:
         return pairs, ctx
 
     def refilter(self, pairs: list[QAPair], llm: LLMClient | None = None) -> PipelineResult:
+        self._arm_budget()
         ctx = PipelineContext(recipe=self.recipe, llm=llm or self.llm, rng=random.Random(self.recipe.seed))
         pairs, ctx = self._apply_filters([p.model_copy(deep=True) for p in pairs], ctx)
         pairs = self.grader.run(pairs, ctx)
-        kept = [p for p in pairs if p.action != "reject" and p.grade != "reject"]
-        rejected = [p for p in pairs if p not in kept]
+        kept = [p for p in pairs if _publishable(p)]
+        rejected = [p for p in pairs if not _publishable(p)]
         return PipelineResult(
             recipe_name=self.recipe.name,
             documents=[],
@@ -174,12 +187,52 @@ class Pipeline:
             raw_pairs=pairs,
         )
 
+    def _arm_budget(self) -> None:
+        self.llm.budget_cap_usd = self.recipe.budget_cap_usd
+        self.llm.budget_stops = []
+
+    def _fit_budget(self, chunks: list, ctx: PipelineContext) -> list:
+        """批次准入：额度不够覆盖生成和一次验证时缩小批次。cap 为 0 时不启动。"""
+        cap = self.recipe.budget_cap_usd
+        if cap is None:
+            return chunks
+        if float(cap) <= 0:
+            self.llm.budget_stops.append("insufficient_for_required_steps")
+            self.llm.budget_stops.append("budget_cap")
+            return []
+        return chunks
+
     def _timed(self, stage: str, fn, ctx: PipelineContext):
         start = time.perf_counter()
         out = fn()
         ctx.stats.stage_seconds[stage] = round(time.perf_counter() - start, 3)
         logger.info("stage %s -> %s items in %.2ss", stage, len(out) if hasattr(out, "__len__") else "?", ctx.stats.stage_seconds[stage])
         return out
+
+
+def _ledger(spent: float, cap: float | None) -> dict:
+    return {
+        "spent_settled": round(float(spent), 6),
+        "reserved_inflight": 0.0,
+        "unbilled_reserve": 0.0,
+        "required_process_reserve": 0.0,
+        "safety_margin": 0.0,
+        "authorized_cap": cap,
+    }
+
+
+def _publishable(pair: QAPair) -> bool:
+    if pair.grade == "B":
+        return False
+    if pair.metadata.get("verification_status") == "pending":
+        return False
+    return pair.action not in {"reject", "quarantine"} and pair.grade not in {"reject", "quarantine"}
+
+
+def _stamp_source_group(docs: list[Document], chunks: list[Chunk]) -> None:
+    groups = {doc.doc_id: doc.source_group or doc.doc_id for doc in docs}
+    for chunk in chunks:
+        chunk.metadata.setdefault("source_group", groups.get(chunk.doc_id, chunk.doc_id))
 
 
 def _spec(s) -> dict[str, Any]:
@@ -220,7 +273,8 @@ def document_from_file(path: Path) -> Document:
         path=str(path),
         title=title,
         text=normalize(text),
-        metadata={"suffix": path.suffix, "bytes": path.stat().st_size},
+        source_group=path.stem,
+        metadata={"suffix": path.suffix, "bytes": path.stat().st_size, "source_group": path.stem},
     )
 
 

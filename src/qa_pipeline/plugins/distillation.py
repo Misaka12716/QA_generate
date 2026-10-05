@@ -6,7 +6,7 @@ import json
 import re
 
 from ..registry import register
-from ..schemas import QAPair, Question, utc_now
+from ..schemas import QAPair, Question, canon_intent, qtype_for_intent, utc_now
 from ..textutil import is_substring, longest_overlap_span, sentences
 
 
@@ -37,16 +37,29 @@ def _to_pair(q: Question, payload: dict, model: str, cot: bool) -> QAPair:
         evidence = longest_overlap_span(evidence, chunk_text) or q.evidence_span
     if not evidence:
         evidence = longest_overlap_span(answer, chunk_text) or (sentences(chunk_text)[:1] or [""])[0]
+    intent = canon_intent(q.intent_primary or q.q_type)
+    points = [str(item) for item in (q.answer_points or []) if str(item).strip()]
     pair = QAPair(
         q_id=q.q_id,
         question=q.question,
         answer=answer,
-        reasoning=str(payload.get("reasoning") or ""),
+        reasoning=str(payload.get("reasoning") or payload.get("rationale_summary") or ""),
         evidence_span=evidence,
         chunk_id=q.chunk_id,
         chunk_text=chunk_text,
         source_doc=str(q.metadata.get("source_doc") or ""),
-        q_type=q.q_type,
+        q_type=q.q_type or qtype_for_intent(intent),
+        intent_primary=intent,
+        operations=list(q.operations),
+        evidence_topology=q.evidence_topology or "single",
+        evidence_state=q.evidence_state,
+        expected_action=q.expected_action,
+        answer_points=points,
+        generation_route=q.generation_route,
+        construction_evidence_refs=[q.evidence_span] if q.evidence_span else [],
+        teacher_context_refs=[chunk_text] if chunk_text else [],
+        visible_support_refs=[q.evidence_span] if q.evidence_span and q.evidence_state == "sufficient" else [],
+        student_context_refs=[chunk_text] if chunk_text and q.metadata.get("goal") != "closed_book_domain" else [],
         teacher_model=model,
         confidence=float(payload.get("confidence") or 0.0),
         cot_enabled=cot,
@@ -60,6 +73,8 @@ def _to_pair(q: Question, payload: dict, model: str, cot: bool) -> QAPair:
             "q_type": q.q_type,
             "evol_level": q.evol_level,
             "hard": bool(q.metadata.get("hard")),
+            "generation_route": q.generation_route,
+            "verification_status": q.metadata.get("verification_status"),
         },
         metadata=dict(q.metadata),
     )
@@ -189,6 +204,37 @@ class MultiTeacherJudge:
             ]
             pair.log("distillation", self.name, picked=model, judge=score)
             out.append(pair)
+        return [p for p in out if p.answer]
+
+
+@register("distillation", "reuse_candidate")
+class ReuseCandidate:
+    """候选答案已带可定位证据时直接采用，不再请教师重写同一答案。"""
+
+    name = "reuse_candidate"
+
+    def __init__(self, **_: object) -> None:
+        pass
+
+    def run(self, questions: list[Question], ctx) -> list[QAPair]:
+        out = []
+        for q in questions:
+            chunk_text = q.metadata.get("chunk_text") or ""
+            hint = (q.answer_hint or "").strip()
+            evidence = (q.evidence_span or "").strip()
+            if hint and evidence and is_substring(evidence, chunk_text):
+                pair = _to_pair(
+                    q,
+                    {"answer": hint, "evidence_span": evidence, "confidence": 0.8},
+                    "candidate_reuse",
+                    False,
+                )
+                pair.generation_trace["reused_candidate"] = True
+                pair.log("distillation", self.name, reused=True)
+                out.append(pair)
+                continue
+            model = q.metadata.get("teacher_model") or ctx.model_for("default")
+            out.append(_to_pair(q, _ask(q, ctx, cot=False, model=model), model, False))
         return [p for p in out if p.answer]
 
 

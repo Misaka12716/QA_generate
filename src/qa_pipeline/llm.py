@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 _PRICE = {
     "default": (0.14 / 1e6, 0.28 / 1e6),
+    "qwen3.8-27b": (0.0, 0.0),
     "deepseek-chat": (0.14 / 1e6, 0.28 / 1e6),
     "deepseek-reasoner": (0.55 / 1e6, 2.19 / 1e6),
     "gpt-4o-mini": (0.15 / 1e6, 0.60 / 1e6),
@@ -43,10 +44,14 @@ def _read_gpt_api_file() -> tuple[str, str]:
 
 
 def default_credentials() -> tuple[str, str, str]:
-    file_key, file_base = _read_gpt_api_file()
-    key = os.environ.get("OPENAI_API_KEY") or os.environ.get("QA_PIPELINE_API_KEY") or file_key
-    base = os.environ.get("OPENAI_BASE_URL") or os.environ.get("QA_PIPELINE_BASE_URL") or file_base
-    model = os.environ.get("OPENAI_MODEL") or os.environ.get("QA_PIPELINE_MODEL") or "deepseek-chat"
+    file_key, _file_base = _read_gpt_api_file()
+    key = os.environ.get("OPENAI_API_KEY") or os.environ.get("QA_PIPELINE_API_KEY") or file_key or "EMPTY"
+    base = (
+        os.environ.get("OPENAI_BASE_URL")
+        or os.environ.get("QA_PIPELINE_BASE_URL")
+        or "http://192.168.4.110:4000/v1"
+    )
+    model = os.environ.get("OPENAI_MODEL") or os.environ.get("QA_PIPELINE_MODEL") or "qwen3.8-27b"
     return key, base, model
 
 
@@ -67,6 +72,8 @@ class LLMClient:
         self.prompt_tokens = 0
         self.completion_tokens = 0
         self.estimated_cost_usd = 0.0
+        self.budget_cap_usd: float | None = None
+        self.budget_stops: list[str] = []
         self._client = None
         self._lock = threading.Lock()
 
@@ -88,6 +95,16 @@ class LLMClient:
                     )
         return self._client
 
+    def over_budget(self) -> bool:
+        cap = self.budget_cap_usd
+        if cap is None:
+            return False
+        if self.estimated_cost_usd >= float(cap):
+            if "budget_cap" not in self.budget_stops:
+                self.budget_stops.append("budget_cap")
+            return True
+        return False
+
     def _charge(self, model: str, pin: int, pout: int) -> None:
         self.calls += 1
         self.prompt_tokens += pin
@@ -103,12 +120,15 @@ class LLMClient:
         max_tokens: int = 2000,
     ) -> str:
         model = model or self.default_model
+        if self.over_budget():
+            return ""
         client = self._get()
         resp = client.chat.completions.create(
             model=model,
             messages=messages,
             temperature=temperature,
             max_tokens=max_tokens,
+            extra_body={"chat_template_kwargs": {"enable_thinking": False}},
         )
         text = resp.choices[0].message.content or ""
         usage = getattr(resp, "usage", None)
@@ -125,6 +145,8 @@ class LLMClient:
         max_tokens: int = 3000,
     ) -> dict[str, Any] | None:
         model = model or self.default_model
+        if self.over_budget():
+            return None
         client = self._get()
         try:
             resp = client.chat.completions.create(
@@ -133,6 +155,7 @@ class LLMClient:
                 temperature=temperature,
                 max_tokens=max_tokens,
                 response_format={"type": "json_object"},
+                extra_body={"chat_template_kwargs": {"enable_thinking": False}},
             )
             raw = resp.choices[0].message.content or ""
             usage = getattr(resp, "usage", None)
@@ -169,6 +192,8 @@ class FakeLLM(LLMClient):
         self.history: list[list[dict[str, str]]] = []
 
     def chat(self, messages, model=None, temperature=0.3, max_tokens=2000) -> str:
+        if self.over_budget():
+            return ""
         self.history.append(messages)
         blob = " ".join(m.get("content", "") for m in messages)
         user = messages[-1]["content"] if messages else ""
@@ -191,6 +216,8 @@ class FakeLLM(LLMClient):
         return text
 
     def chat_json(self, messages, model=None, temperature=0.2, max_tokens=3000):
+        if self.over_budget():
+            return None
         self.history.append(messages)
         blob = " ".join(m.get("content", "") for m in messages)
         user = messages[-1]["content"] if messages else ""
@@ -231,6 +258,43 @@ def _extract_listed_items(user: str, label: str) -> list[str]:
 
 def _fake_json(blob: str, user: str) -> dict[str, Any]:
     sent = _pick_sentence(user)
+    if "知识单元" in blob:
+        return {
+            "units": [
+                {
+                    "proposition": sent,
+                    "conditions": [],
+                    "exceptions": [],
+                    "evidence": sent,
+                    "intent_primary": "lookup_explain",
+                }
+            ],
+            "samples": [
+                {
+                    "question": "请根据给定资料说明该规定的具体要求是什么？",
+                    "candidate_answer": sent,
+                    "answer_points": [sent],
+                    "evidence": sent,
+                    "intent_primary": "lookup_explain",
+                }
+            ],
+        }
+    if "候选答案" in blob or "direct_grounded" in blob:
+        return {
+            "samples": [
+                {
+                    "question": "请根据给定资料说明该规定的具体要求是什么？",
+                    "candidate_answer": sent,
+                    "answer_points": [sent],
+                    "evidence": sent,
+                    "intent_primary": "lookup_explain",
+                    "operations": ["抽取"],
+                    "evidence_topology": "single",
+                }
+            ]
+        }
+    if "主张" in blob or "升级验证" in blob:
+        return {"claims": [{"text": sent or "答案要点", "status": "supported"}]}
     if "锚点" in blob and "生成问题" not in blob and "questions" not in blob.lower():
         kws = _extract_listed_items(user, "关键词") or re.findall(r"[\u4e00-\u9fff]{2,8}", user)[:4]
         return {

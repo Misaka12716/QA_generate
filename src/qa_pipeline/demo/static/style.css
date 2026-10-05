@@ -35,7 +35,7 @@ body {
 }
 
 .sheet {
-  max-width: 1180px;
+  max-width: 1440px;
   margin: 0 auto;
   background: var(--sheet);
   color: var(--ink);
@@ -246,6 +246,36 @@ ol.samples li {
   color: var(--muted);
   border-left: 3px solid var(--coolant);
   padding-left: 8px;
+}
+
+.compare-table {
+  min-width: 980px;
+}
+
+.compare-table td,
+.compare-table th {
+  vertical-align: top;
+  min-width: 180px;
+}
+
+.source {
+  max-width: 240px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  white-space: pre-wrap;
+}
+
+.cell-qa {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.cell-qa:last-child { border-bottom: 0; }
+
+.trace {
+  margin: 4px 0 0;
+  color: var(--alarm);
+  font-size: 0.82rem;
 }
 
 .empty, .error {

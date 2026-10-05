@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from ..registry import register
-from ..schemas import Q_TYPES, Anchor, Chunk, Question, canon_qtype
+from ..schemas import INTENTS, Q_TYPES, Anchor, Chunk, Question, canon_intent, canon_qtype, qtype_for_intent
 from ..textutil import is_substring, longest_overlap_span, rouge_l, sentences, tokenize
 
 _TYPE_CYCLE = list(Q_TYPES)
@@ -276,4 +276,242 @@ class AnswerAwareQG:
                         metadata={"source_doc": chunk.source_doc, "chunk_text": chunk.text, "strategy": self.name},
                     )
                 )
+        return _dedup(out)
+
+
+def _per_chunk_limit(explicit: int | None, ctx) -> int:
+    """0 表示不强制每块题数，仍保留安全上限，并允许模型返回空列表。"""
+    raw = explicit if explicit is not None else int(getattr(ctx.recipe, "questions_per_chunk", 0) or 0)
+    if raw <= 0:
+        return 6
+    return raw
+
+
+def _chat_json_once(ctx, messages: list[dict], model: str) -> dict:
+    data = ctx.llm.chat_json(messages, model=model)
+    if data is None and int(getattr(ctx.recipe, "content_repair_max", 1) or 0) >= 1:
+        data = ctx.llm.chat_json(messages, model=model)
+    return data or {}
+
+
+def _question_from_sample(item: dict, chunk: Chunk, strategy: str) -> Question | None:
+    qtext = str(item.get("question") or item.get("q") or "").strip()
+    if not _valid_question(qtext):
+        return None
+    evidence = _clip_evidence(str(item.get("evidence") or item.get("evidence_span") or ""), chunk)
+    if not evidence or not is_substring(evidence, chunk.text):
+        return None
+    intent = canon_intent(item.get("intent_primary") or item.get("intent") or item.get("q_type"))
+    points = item.get("answer_points") or []
+    if isinstance(points, str):
+        points = [points]
+    answer = str(item.get("candidate_answer") or item.get("answer") or item.get("a") or "").strip()
+    operations = item.get("operations") or []
+    if isinstance(operations, str):
+        operations = [operations]
+    return Question(
+        question=qtext,
+        chunk_id=chunk.chunk_id,
+        q_type=qtype_for_intent(intent),
+        evidence_span=evidence,
+        answer_hint=answer,
+        intent_primary=intent if intent in INTENTS else "other_review",
+        operations=[str(op) for op in operations],
+        evidence_topology=str(item.get("evidence_topology") or "single"),
+        answer_points=[str(point) for point in points if str(point).strip()],
+        metadata={"source_doc": chunk.source_doc, "chunk_text": chunk.text, "strategy": strategy},
+    )
+
+
+@register("question_gen", "direct_grounded")
+class DirectGroundedQG:
+    """路线 D：一次生成问题、候选答案、要点和原文证据。允许返回空列表。"""
+
+    name = "direct_grounded"
+
+    def __init__(self, per_chunk: int | None = None, **_: object) -> None:
+        self.per_chunk = per_chunk
+
+    def run(self, chunks: list[Chunk], ctx) -> list[Question]:
+        limit = _per_chunk_limit(self.per_chunk, ctx)
+        out: list[Question] = []
+        for chunk in chunks:
+            data = _chat_json_once(
+                ctx,
+                [
+                    {
+                        "role": "system",
+                        "content": (
+                            "你是证据约束出题器（direct_grounded）。基于资料一次给出问题、候选答案、"
+                            "答案要点和原文证据。证据必须是资料中的连续原文。没有适宜问题时返回空列表。"
+                            "intent_primary 取 lookup_explain、procedure、rule_decision、compare_select、"
+                            "diagnose_explain、synthesize 之一。"
+                            '只输出 JSON：{"samples":[{"question":"...","candidate_answer":"...","answer_points":["..."],'
+                            '"evidence":"...","intent_primary":"lookup_explain","operations":["抽取"],'
+                            '"evidence_topology":"single"}]}'
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": f"资料：\n{chunk.text}\n\n最多 {limit} 条，可以返回空 samples。",
+                    },
+                ],
+                ctx.model_for("default"),
+            )
+            samples = data.get("samples") or []
+            if not isinstance(samples, list):
+                continue
+            for item in samples[:limit]:
+                if not isinstance(item, dict):
+                    continue
+                question = _question_from_sample(item, chunk, self.name)
+                if question:
+                    question.generation_route = "anchor_assisted" if chunk.metadata.get("anchors") else "direct_grounded"
+                    out.append(question)
+        return _dedup(out)
+
+
+def _verified_units(data: dict, chunk: Chunk) -> list[dict]:
+    """子串定位只证明证据在原文中，不把同次生成的 QA 当成已验证。"""
+    verified = []
+    for unit in data.get("units") or []:
+        if not isinstance(unit, dict):
+            continue
+        evidence = str(unit.get("evidence") or "").strip()
+        if evidence and is_substring(evidence, chunk.text):
+            verified.append({**unit, "evidence": evidence, "verification_status": "verified"})
+    return verified
+
+
+def _tag_question(question: Question, route: str, units: list[dict], status: str) -> Question:
+    question.generation_route = route  # type: ignore[assignment]
+    question.metadata["knowledge_units"] = units
+    question.metadata["verification_status"] = status
+    question.metadata["knowledge_unit"] = status == "verified"
+    return question
+
+
+@register("question_gen", "k_sequential")
+@register("question_gen", "knowledge_unit")
+class KnowledgeUnitQG:
+    """k_sequential：候选单元独立核验后，才第二次调用出题。同次 samples 一律忽略。"""
+
+    name = "k_sequential"
+
+    def __init__(self, per_chunk: int | None = None, **_: object) -> None:
+        self.per_chunk = per_chunk
+
+    def run(self, chunks: list[Chunk], ctx) -> list[Question]:
+        limit = _per_chunk_limit(self.per_chunk, ctx)
+        out: list[Question] = []
+        for chunk in chunks:
+            extracted = _chat_json_once(
+                ctx,
+                [
+                    {
+                        "role": "system",
+                        "content": (
+                            "只抽取知识单元，不要出题。每个单元包含命题、条件、例外和原文证据。"
+                            "证据必须是资料中的连续原文。没有可定位证据时返回空 units。"
+                            '只输出 JSON：{"units":[{"proposition":"...","conditions":[],"exceptions":[],"evidence":"..."}]}'
+                        ),
+                    },
+                    {"role": "user", "content": f"资料：\n{chunk.text}"},
+                ],
+                ctx.model_for("default"),
+            )
+            verified = _verified_units(extracted, chunk)
+            if not verified:
+                continue
+            data = _chat_json_once(
+                ctx,
+                [
+                    {
+                        "role": "system",
+                        "content": (
+                            "你是证据约束出题器（k_sequential）。只根据已经给出的原文和已核验知识单元出题。"
+                            "仍须阅读原文，不能只复述命题而丢掉条件或例外。证据必须是资料中的连续原文。"
+                            '只输出 JSON：{"samples":[{"question":"...","candidate_answer":"...","answer_points":["..."],'
+                            '"evidence":"...","intent_primary":"lookup_explain"}]}'
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            f"资料：\n{chunk.text}\n\n已核验单元：{verified}\n\n最多 {limit} 条，可以返回空 samples。"
+                        ),
+                    },
+                ],
+                ctx.model_for("default"),
+            )
+            allowed = {str(unit["evidence"]) for unit in verified}
+            for item in (data.get("samples") or [])[:limit]:
+                if not isinstance(item, dict):
+                    continue
+                question = _question_from_sample(item, chunk, self.name)
+                if question is None or question.evidence_span not in allowed:
+                    continue
+                out.append(_tag_question(question, "k_sequential", verified, "verified"))
+        return _dedup(out)
+
+
+@register("question_gen", "k_joint")
+class KnowledgeUnitJointQG:
+    """k_joint：同一次返回单元和 QA，二者都保持 pending，直到独立验证。"""
+
+    name = "k_joint"
+
+    def __init__(self, per_chunk: int | None = None, **_: object) -> None:
+        self.per_chunk = per_chunk
+
+    def run(self, chunks: list[Chunk], ctx) -> list[Question]:
+        limit = _per_chunk_limit(self.per_chunk, ctx)
+        out: list[Question] = []
+        for chunk in chunks:
+            data = _chat_json_once(
+                ctx,
+                [
+                    {
+                        "role": "system",
+                        "content": (
+                            "一次给出候选知识单元和候选问答。单元与问答都还未验证，不要自称已经核验。"
+                            "证据必须是资料中的连续原文，并阅读原文中的条件与例外。"
+                            '只输出 JSON：{"units":[{"proposition":"...","conditions":[],"exceptions":[],"evidence":"..."}],'
+                            '"samples":[{"question":"...","candidate_answer":"...","answer_points":["..."],'
+                            '"evidence":"...","intent_primary":"lookup_explain"}]}'
+                        ),
+                    },
+                    {"role": "user", "content": f"资料：\n{chunk.text}\n\n最多 {limit} 条。"},
+                ],
+                ctx.model_for("default"),
+            )
+            pending = []
+            for unit in data.get("units") or []:
+                if isinstance(unit, dict):
+                    pending.append({**unit, "verification_status": "pending"})
+            for item in (data.get("samples") or [])[:limit]:
+                if not isinstance(item, dict):
+                    continue
+                question = _question_from_sample(item, chunk, self.name)
+                if question is None:
+                    continue
+                out.append(_tag_question(question, "k_joint", pending, "pending"))
+        return _dedup(out)
+
+
+@register("question_gen", "mixed_route")
+class MixedRouteQG:
+    """端到端混合：偶数块走直接生成，奇数块走 k_sequential。每条仍记录自己的路线。"""
+
+    name = "mixed_route"
+
+    def __init__(self, per_chunk: int | None = None, **_: object) -> None:
+        self.direct = DirectGroundedQG(per_chunk=per_chunk)
+        self.sequential = KnowledgeUnitQG(per_chunk=per_chunk)
+
+    def run(self, chunks: list[Chunk], ctx) -> list[Question]:
+        out: list[Question] = []
+        for index, chunk in enumerate(chunks):
+            chosen = self.sequential if index % 2 else self.direct
+            out.extend(chosen.run([chunk], ctx))
         return _dedup(out)

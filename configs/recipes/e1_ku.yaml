@@ -1,0 +1,21 @@
+name: e1_ku
+description: 路线 K。知识单元经原文核验后才出题。
+goal: rag_grounded
+chunking: {name: heading_window, max_tokens: 512, overlap: 0.1}
+anchor: {name: none}
+question_gen: {name: knowledge_unit}
+evolution: {name: none}
+question_filter: {name: none}
+distillation: {name: reuse_candidate}
+teacher_router: {name: single}
+filters:
+  - {name: rule_clean, min_answer_tokens: 4}
+  - {name: evidence_substring, on_fail: quarantine}
+  - {name: exact_hash_dedup}
+  - {name: claim_evidence}
+  - {name: joint_dedup}
+grading: validity_tier
+questions_per_chunk: 0
+max_chunks: 2
+max_samples: 6
+seed: 42

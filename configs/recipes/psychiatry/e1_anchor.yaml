@@ -1,0 +1,21 @@
+name: e1_anchor
+description: 传统锚点路径。后续验证与直接生成相同。
+goal: rag_grounded
+chunking: {name: heading_window, max_tokens: 512, overlap: 0.1}
+anchor: {name: ner_rake_textrank, top_k: 3}
+question_gen: {name: anchor_reverse, per_anchor: 1}
+evolution: {name: none}
+question_filter: {name: none}
+distillation: {name: reuse_candidate}
+teacher_router: {name: single}
+filters:
+  - {name: rule_clean, min_answer_tokens: 4}
+  - {name: evidence_substring, on_fail: quarantine}
+  - {name: exact_hash_dedup}
+  - {name: claim_evidence}
+  - {name: joint_dedup}
+grading: validity_tier
+questions_per_chunk: 0
+max_chunks: 30
+max_samples: 80
+seed: 42

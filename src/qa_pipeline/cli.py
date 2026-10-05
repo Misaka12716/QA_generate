@@ -11,18 +11,28 @@ from pathlib import Path
 from .adapters.zhixun import export_zhixun
 from .config import load_recipe
 from .experiments.runner import run_suite
-from .llm import FakeLLM, LLMClient, LocalLLM
+from .llm import FakeLLM, LLMClient
 from .pipeline import Pipeline
 from .registry import list_strategies
 from .store import load_pairs, save_result
 
 
+def _devices(args) -> list[int] | None:
+    if getattr(args, "fake", False):
+        return None
+    raw = getattr(args, "devices", None)
+    if raw:
+        return [int(part) for part in str(raw).split(",") if part.strip()]
+    if not getattr(args, "local_model", None) and not getattr(args, "sft", False):
+        return None
+    from .experiments.devices import detect_free_gpus
+
+    return detect_free_gpus()
+
+
 def _client(args) -> LLMClient:
     if getattr(args, "fake", False):
         return FakeLLM()
-    local_model = getattr(args, "local_model", None)
-    if local_model:
-        return LocalLLM(local_model)
     return LLMClient(
         api_key=getattr(args, "api_key", None),
         base_url=getattr(args, "base_url", None),
@@ -44,6 +54,10 @@ def cmd_run(args) -> int:
 
 def cmd_experiment(args) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    devices = _devices(args)
+    if (getattr(args, "local_model", None) or args.sft) and not args.fake and not devices:
+        print("没有空闲 GPU（显存占用需低于 2GB）。可用 --devices 指定卡号。", file=sys.stderr)
+        return 1
     payload = run_suite(
         args.suite,
         out_dir=args.out,
@@ -51,6 +65,7 @@ def cmd_experiment(args) -> int:
         skip_sft=not args.sft,
         llm=_client(args),
         base_model=getattr(args, "local_model", None),
+        devices=devices,
     )
     print(json.dumps({"suite": payload.get("suite"), "n": len(payload.get("experiments") or [])}, ensure_ascii=False))
     out = Path(args.out) if args.out else None
@@ -94,7 +109,7 @@ def main(argv: list[str] | None = None) -> int:
 
     def add_llm(p):
         p.add_argument("--fake", action="store_true", help="使用 FakeLLM，不调用真实 API")
-        p.add_argument("--local-model", dest="local_model", default=None, help="本地 HuggingFace 模型目录，同时作为教师和学生基座")
+        p.add_argument("--local-model", dest="local_model", default=None, help="本地 HuggingFace 目录，仅作 LoRA 学生基座。教师走已配置的 API")
         p.add_argument("--model", default=None)
         p.add_argument("--api-key", dest="api_key", default=None)
         p.add_argument("--base-url", dest="base_url", default=None)
@@ -110,6 +125,11 @@ def main(argv: list[str] | None = None) -> int:
     exp_p.add_argument("--suite", required=True)
     exp_p.add_argument("--out", default=None)
     exp_p.add_argument("--sft", action="store_true", help="同时跑 LoRA SFT 对比（需 GPU 与 extras）")
+    exp_p.add_argument(
+        "--devices",
+        default=None,
+        help="逗号分隔的 GPU 编号。默认选用显存占用低于 2GB 的卡",
+    )
     add_llm(exp_p)
     exp_p.set_defaults(func=cmd_experiment)
 

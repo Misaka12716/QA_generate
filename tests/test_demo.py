@@ -115,3 +115,64 @@ def test_suite_and_samples(tmp_path: Path):
     home = client.get("/")
     assert home.status_code == 200
     assert "方案对照台账" in home.text
+    assert "同源文本对照" in home.text
+
+
+def test_compare_aligns_same_chunk(tmp_path: Path):
+    root = _write_run(tmp_path)
+    chunk = "过温保护阈值设置为 65℃，恢复后可继续运行。"
+    for exp_id, question in (("E2_a1", "阈值是多少？"), ("E2_a2", "保护如何恢复？")):
+        exp = root / exp_id
+        exp.mkdir(exist_ok=True)
+        row = {
+            "question": question,
+            "answer": "65℃",
+            "evidence_span": "过温保护阈值设置为 65℃",
+            "chunk_text": chunk,
+            "grade": "A",
+            "q_type": "factual",
+            "filter_trace": {"rule_clean": {"action": "pass"}},
+        }
+        (exp / "qa.kept.jsonl").write_text(json.dumps(row, ensure_ascii=False) + "\n", encoding="utf-8")
+    client = TestClient(create_app(root))
+    page = client.get("/api/compare", params={"group": "e2", "status": "kept"})
+    assert page.status_code == 200
+    body = page.json()
+    assert body["align"] == "chunk"
+    assert body["total"] == 1
+    assert body["rows"][0]["cells"]["E2_a1"][0]["question"] == "阈值是多少？"
+    assert body["rows"][0]["cells"]["E2_a2"][0]["question"] == "保护如何恢复？"
+    assert client.get("/api/compare", params={"group": "e9"}).status_code == 422
+
+
+def test_compare_question_and_overlap(tmp_path: Path):
+    root = _write_run(tmp_path)
+    shared_q = "阈值是多少？"
+    for exp_id, answer in (("E3_b1", "便宜答案"), ("E3_b2", "强教师答案")):
+        exp = root / exp_id
+        exp.mkdir()
+        (exp / "qa.kept.jsonl").write_text(
+            json.dumps({"question": shared_q, "answer": answer, "chunk_text": "材料甲"}, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+    client = TestClient(create_app(root))
+    body = client.get("/api/compare", params={"group": "e3"}).json()
+    assert body["align"] == "question"
+    assert body["total"] == 1
+    assert body["rows"][0]["cells"]["E3_b1"][0]["answer"] == "便宜答案"
+    assert body["rows"][0]["cells"]["E3_b2"][0]["answer"] == "强教师答案"
+
+    evidence = "过温保护阈值设置为 65℃"
+    (root / "E1_ours_full").mkdir()
+    (root / "E1_ours_full" / "qa.kept.jsonl").write_text(
+        json.dumps(
+            {"question": "推荐问法", "answer": "65℃", "evidence_span": evidence, "chunk_text": "标题窗 " + evidence},
+            ensure_ascii=False,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    overlap = client.get("/api/compare", params={"group": "e1"}).json()
+    assert overlap["align"] == "overlap"
+    matched = [row for row in overlap["rows"] if row["cells"]["E1_baseline"] and row["cells"]["E1_ours_full"]]
+    assert matched
