@@ -630,7 +630,7 @@ def write_heldout(rows: list[dict], size: int = 16, dest: Path | None = None) ->
     cases = []
     seen_families: set[str] = set()
     for row in locked:
-        family = row.get("source_family_id") or ""
+        family = row.get("source_family_id") or row.get("stem") or ""
         if family in seen_families:
             continue
         text = row.get("text") or ""
@@ -645,7 +645,7 @@ def write_heldout(rows: list[dict], size: int = 16, dest: Path | None = None) ->
             break
     _write_jsonl(root / "heldout_candidates.jsonl", cases)
     main = [case for case in cases if admits_main_metric(case)]
-    path = root / "heldout.jsonl"
+    path = root / "heldout_protocol.jsonl"
     _write_jsonl(path, main)
     notes = {
         "status": "direction_only_not_gold",
@@ -654,6 +654,38 @@ def write_heldout(rows: list[dict], size: int = 16, dest: Path | None = None) ->
     }
     (root / "heldout_regression_notes.json").write_text(json.dumps(notes, ensure_ascii=False, indent=2), encoding="utf-8")
     return path
+
+
+def _locked_rows_from_inventory(root: Path) -> list[dict] | None:
+    """用已冻结清点里的锁定测试，避免重跑全库近重复聚类。"""
+    inventory_path = root / "inventory.jsonl"
+    if not inventory_path.is_file():
+        return None
+    rows = []
+    for line in inventory_path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        row = json.loads(line)
+        if row.get("split") != "locked_test":
+            continue
+        path = Path(row["path"]) if row.get("path") else None
+        if path and path.is_file():
+            row["text"] = path.read_text(encoding="utf-8", errors="replace")
+        row["parse_ok"] = row.get("parse_ok", row.get("status") == "parsed_text")
+        rows.append(row)
+    return rows
+
+
+def emit_protocol(directory: Path | None = None, dest: Path | None = None) -> dict:
+    """只写候选题和主协议。不重写冻结子集，也不覆盖历史 heldout.jsonl。"""
+    root = dest or frozen_dir()
+    rows = None if directory is not None else _locked_rows_from_inventory(root)
+    if rows is None:
+        rows = inventory(directory)["documents"]
+    path = write_heldout(rows, dest=dest)
+    text = path.read_text(encoding="utf-8") if path.is_file() else ""
+    main_n = sum(1 for line in text.splitlines() if line.strip())
+    return {"heldout_protocol": str(path), "main_n": main_n, "heldout_legacy_untouched": True}
 
 
 def prepare(directory: Path | None = None) -> dict:

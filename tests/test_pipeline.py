@@ -162,6 +162,9 @@ def test_free_gpu_parse_and_waves():
     from qa_pipeline.experiments.runner import load_suite
 
     assert parse_gpu_table("0, 16561\n3, 18\n4, 18 MiB\n7, 47099\n") == [3, 4]
+    from qa_pipeline.experiments.devices import parse_trainable_gpus
+
+    assert parse_trainable_gpus("3, 18, 4000\n4, 18, 22000\n") == [4]
     suite = load_suite(ROOT / "configs/experiments/suite.yaml")
     independent, dependent, light, refusal = split_waves(suite["experiments"])
     assert {item["id"] for item in independent} >= {"E1_baseline", "E1_direct", "E1_ku", "E2_gap"}

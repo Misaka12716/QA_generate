@@ -1,0 +1,84 @@
+name: drug_v21
+run_id: drug_v22
+input: data/campus_hospital_drug_instructions/frozen/subset
+heldout: data/campus_hospital_drug_instructions/frozen/heldout_protocol.jsonl
+heldout_legacy: data/campus_hospital_drug_instructions/frozen/heldout.jsonl
+refusal: fixtures/refusal.jsonl
+recipes_dir: configs/recipes/drug
+notes:
+  - 本轮是修复后的流程验证与训练集学习诊断，run_id=drug_v22。不是五组 LoRA 效果对照。
+  - 主测试没有双人金标时主指标未执行，delta_f1 为空。不排列组别，不写独立泛化提升。
+  - train_seen 只说明已见样本是否学到，不进入泛化总分。task_accuracy 只作辅助，不是已验证的语义正确率。
+  - 学生诊断未执行。第一种回放干预未执行。补题未执行。第二种回放预算未检验。
+  - 冲突臂与全库出题未执行。锚点、K 路线、混合路由、E4–E8 本轮不调用教师。
+  - 多维题型和同义改写未做。后续才区分训练原题、已见知识点的新问法和未见来源的多维题。
+  - 旧 heldout.jsonl 题干歧义，不可用于主效果结论。
+  - 教师为 192.168.4.110:4000 的 qwen3.8-27b。学生是本地 Qwen2.5-7B-Instruct。输入是 60 篇冻结子集，最多 100 个 chunk、150 条样本。
+experiments:
+  - id: E1_direct
+    purpose: 直接证据生成，作为 G0 的合格池
+    recipe: e1_direct.yaml
+    cache_as: e1_direct
+    cache_questions: q_direct
+
+  - id: E3_g0
+    purpose: 代表臂。无诊断、无回放、无补题，只验证训练链路和训练原题前后对照
+    recipe: e3_g0.yaml
+    from_accepted: e1_direct
+    sft: true
+    answer_sheet: true
+
+  - id: E1_anchor
+    purpose: 锚点路线
+    kind: skipped
+    reason: 本轮流程验证不跑，不构成路线对照。
+
+  - id: E1_kseq
+    purpose: 顺序知识单元
+    kind: skipped
+    reason: 本轮流程验证不跑，不构成路线对照。
+
+  - id: E1_kjoint
+    purpose: 联合知识单元
+    kind: skipped
+    reason: 本轮流程验证不跑，不构成路线对照。
+
+  - id: E1_mix
+    purpose: 混合路由
+    kind: skipped
+    reason: 本轮流程验证不跑，不构成路线对照。
+
+  - id: E2_gap
+    purpose: 覆盖缺口补题
+    kind: skipped
+    reason: 补题未执行。目录仍是示例文件，没有在冻结训练文档上走完补题闭环。
+
+  - id: E3_g1
+    purpose: 诊断选样
+    kind: skipped
+    reason: 学生诊断未执行。没有与学生基座一致的探针。
+
+  - id: E3_g2
+    purpose: 回放替换
+    kind: skipped
+    reason: 第一种回放干预未执行。没有冻结保留池。
+
+  - id: E3_g3
+    purpose: 诊断加回放
+    kind: skipped
+    reason: 学生诊断未执行，第一种回放干预未执行。
+
+  - id: E6_conflict
+    purpose: 冲突行为通道
+    kind: skipped
+    reason: 冲突臂未执行。未确认可合法使用的冲突说明书，不编造样本。
+
+  - id: E_replay_budget_2
+    purpose: 第二种回放预算
+    kind: skipped
+    reason: 第二种回放预算未检验。新数据条数固定后再追加回放，本轮未跑。
+
+  - id: E_full_corpus
+    purpose: 全库出题
+    kind: skipped
+    reason: 全库出题未执行。本轮仍只用 60 篇冻结子集。

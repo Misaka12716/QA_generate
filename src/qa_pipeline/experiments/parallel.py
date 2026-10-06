@@ -461,6 +461,11 @@ def run_parallel(
     notes: list[str],
     client_config: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
+    from .runner import abort_missing_heldout, gate_heldout, write_run_meta
+
+    gate = gate_heldout(heldout)
+    if not gate["ok"]:
+        return abort_missing_heldout(suite, heldout)
     entries = list(suite.get("experiments") or [])
     order = [entry["id"] for entry in entries]
     independent, dependent, light, refusal = split_waves(entries)
@@ -468,6 +473,8 @@ def run_parallel(
     cache_dir.mkdir(parents=True, exist_ok=True)
     teacher_model = (client_config or {}).get("default_model") or "qwen3.8-27b"
     notes = list(notes) + [f"管线并行于 GPU {devices}。教师为 {teacher_model}，实验卡只加载 NLI、向量和 LoRA。"]
+    if gate["heldout_status"] == "empty" and not any("主评测不加载模型" in item for item in notes):
+        notes.append("主测试清单存在但没有可评分题目。允许训练和训练原题探针，主评测不加载模型，delta_f1 为空。")
     ctx = {
         "out": str(out),
         "recipes_dir": str(recipes_dir),
@@ -577,4 +584,6 @@ def run_parallel(
                     "refusal": report,
                 }
             )
-    return _write_payload(out, suite, input_path, student, devices, notes, order, rows_by_id, teacher_model)
+    payload = _write_payload(out, suite, input_path, student, devices, notes, order, rows_by_id, teacher_model)
+    write_run_meta(out, suite, heldout, student)
+    return payload

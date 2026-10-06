@@ -17,17 +17,16 @@ from .registry import list_strategies
 from .store import load_pairs, save_result
 
 
-def _devices(args) -> list[int] | None:
+def _devices(args) -> tuple[list[int] | None, str]:
     if getattr(args, "fake", False):
-        return None
+        return None, ""
     raw = getattr(args, "devices", None)
-    if raw:
-        return [int(part) for part in str(raw).split(",") if part.strip()]
+    requested = [int(part) for part in str(raw).split(",") if part.strip()] if raw else None
     if not getattr(args, "local_model", None) and not getattr(args, "sft", False):
-        return None
-    from .experiments.devices import detect_free_gpus
+        return requested, ""
+    from .experiments.devices import select_trainable_gpus
 
-    return detect_free_gpus()
+    return select_trainable_gpus(requested)
 
 
 def _client(args) -> LLMClient:
@@ -54,9 +53,12 @@ def cmd_run(args) -> int:
 
 def cmd_experiment(args) -> int:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    devices = _devices(args)
+    devices, device_error = _devices(args)
+    if device_error:
+        print(device_error, file=sys.stderr)
+        return 1
     if (getattr(args, "local_model", None) or args.sft) and not args.fake and not devices:
-        print("没有空闲 GPU（显存占用需低于 2GB）。可用 --devices 指定卡号。", file=sys.stderr)
+        print("没有空闲显存达到约 18GB 的 GPU。占用低于 2GB 只表示没有其他大进程。", file=sys.stderr)
         return 1
     payload = run_suite(
         args.suite,
@@ -67,6 +69,9 @@ def cmd_experiment(args) -> int:
         base_model=getattr(args, "local_model", None),
         devices=devices,
     )
+    if payload.get("aborted"):
+        print(payload.get("note") or payload.get("reason"), file=sys.stderr)
+        return 1
     print(json.dumps({"suite": payload.get("suite"), "n": len(payload.get("experiments") or [])}, ensure_ascii=False))
     out = Path(args.out) if args.out else None
     if out:

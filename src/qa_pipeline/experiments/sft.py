@@ -96,6 +96,56 @@ def judge_vs_reference(llm, questions: list, preds: list[str], golds: list[str],
     return {"mean": mean, "n": len(scores), "failed": failed, "reason": None if scores else "no_valid_judge"}
 
 
+EXPOSURE_DEFINITION = (
+    "consumed_ids 是预处理通过并进入 Dataset 的样本。"
+    "exposure_count 等于 epoch 数，表示按训练轮次计的计划曝光。"
+    "trainer_global_step 是优化步数。这不是逐批消费日志。"
+)
+TASK_ACCURACY_NOTE = "task_accuracy 只作辅助，不是已验证的语义正确率。"
+
+
+def _template_ids(tokenizer, messages: list[dict], add_generation_prompt: bool) -> list[int]:
+    rendered = tokenizer.apply_chat_template(
+        messages,
+        tokenize=True,
+        add_generation_prompt=add_generation_prompt,
+    )
+    if hasattr(rendered, "input_ids"):
+        rendered = rendered.input_ids
+    elif isinstance(rendered, dict):
+        rendered = rendered["input_ids"]
+    if rendered and isinstance(rendered[0], (list, tuple)):
+        rendered = rendered[0]
+    return [int(token) for token in rendered]
+
+
+def encode_supervised_messages(tokenizer, messages: list[dict], max_length: int) -> dict[str, Any]:
+    """用聊天模板编码完整 assistant 回合，保留模板自己的结束标记。正文为空则拒绝。"""
+    if not messages or messages[-1].get("role") != "assistant":
+        return {"skipped": True, "reason": "no_effective_target"}
+    body = str(messages[-1].get("content") or "").strip()
+    if not body:
+        return {"skipped": True, "reason": "no_effective_target"}
+    try:
+        prompt_ids = _template_ids(tokenizer, messages[:-1], True)
+        full_ids = _template_ids(tokenizer, messages, False)
+    except Exception as exc:
+        return {"skipped": True, "reason": f"template_failed: {exc}"}
+    if full_ids[: len(prompt_ids)] != prompt_ids:
+        return {"skipped": True, "reason": "template_mismatch"}
+    answer_ids = full_ids[len(prompt_ids) :]
+    closer: list[int] = []
+    try:
+        empty_ids = _template_ids(tokenizer, [*messages[:-1], {"role": "assistant", "content": ""}], False)
+        if empty_ids[: len(prompt_ids)] == prompt_ids:
+            closer = empty_ids[len(prompt_ids) :]
+    except Exception:
+        closer = []
+    if not answer_ids or (closer and answer_ids == closer):
+        return {"skipped": True, "reason": "no_effective_target"}
+    return build_supervised_batch(prompt_ids, answer_ids, max_length, getattr(tokenizer, "eos_token_id", None))
+
+
 def train_lora(
     train_jsonl: Path,
     out_dir: Path,
@@ -144,10 +194,7 @@ def train_lora(
     skipped_rows = []
     for row in rows:
         messages = row["messages"]
-        prompt = tokenizer.apply_chat_template(messages[:-1], tokenize=False, add_generation_prompt=True)
-        prompt_ids = tokenizer(prompt, add_special_tokens=False)["input_ids"]
-        answer_ids = tokenizer(messages[-1]["content"], add_special_tokens=False)["input_ids"]
-        packed = build_supervised_batch(prompt_ids, answer_ids, max_length, tokenizer.eos_token_id)
+        packed = encode_supervised_messages(tokenizer, messages, max_length)
         if packed.get("skipped"):
             skipped_rows.append({"id": row.get("id"), "reason": packed["reason"]})
             continue
@@ -211,6 +258,9 @@ def train_lora(
         "base_model": base_model,
         "adapter": str(artifact),
         "consumed_ids": [item.get("id") for item in prepared],
+        "global_step": int(getattr(result, "global_step", 0) or 0),
+        "exposure_count": epochs,
+        "exposure_definition": EXPOSURE_DEFINITION,
     }
     (out_dir / "sft_metrics.json").write_text(json.dumps(metrics, ensure_ascii=False, indent=2), encoding="utf-8")
     del trainer, model
@@ -225,6 +275,8 @@ def generate_answers(
     adapter: str | None = None,
     max_new_tokens: int = 512,
 ) -> list[str] | dict[str, Any]:
+    if not questions:
+        return []
     try:
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -400,37 +452,170 @@ def _changed_sections(text: str, limit: int = 4) -> list[str]:
     return [text for _, text in ranked[:limit]]
 
 
-def export_train_seen(pairs: list[QAPair], consumed_ids: list[str], path: Path) -> dict[str, Any]:
-    wanted = {item for item in consumed_ids if item}
-    rows = []
-    for pair in pairs:
-        if pair.qa_id not in wanted:
-            continue
-        pair.data_stage = "actually_trained"
-        pair.exposure_count = max(1, pair.exposure_count)
-        probe = eval_messages(
+def _gold_text(row: dict) -> str:
+    answer = str(row.get("answer") or "").strip()
+    if answer:
+        return answer
+    points = [str(point).strip() for point in (row.get("answer_points") or []) if str(point).strip()]
+    return "\n".join(points)
+
+
+def partition_heldout(rows: list[dict]) -> tuple[list[dict], list[dict]]:
+    """主指标只收审核通过、金标完整、ID 唯一且来源合格的题。未审核题显式拒绝。"""
+    from .drug_corpus import admits_main_metric
+
+    eligible: list[dict] = []
+    rejected: list[dict] = []
+    seen: set[str] = set()
+    for index, row in enumerate(rows):
+        case_id = str(row.get("id") or "")
+        reasons: list[str] = []
+        if not case_id:
+            reasons.append("missing_id")
+        elif case_id in seen:
+            reasons.append("duplicate_id")
+        else:
+            seen.add(case_id)
+        if not admits_main_metric(row):
+            reasons.append("not_admitted")
+        if not _gold_text(row):
+            reasons.append("missing_gold")
+        if not (row.get("source_family_id") or row.get("source")):
+            reasons.append("missing_source")
+        if row.get("historical"):
+            reasons.append("historical")
+        if row.get("main_metric") is False:
+            reasons.append("not_main")
+        if reasons:
+            rejected.append({"id": case_id or index, "reasons": reasons})
+        else:
+            eligible.append(row)
+    return eligible, rejected
+
+
+def _not_executed_probe(reason: str, epochs: int | None = None, global_step: int | None = None, **extra: Any) -> dict[str, Any]:
+    payload = {
+        "export_status": "not_executed",
+        "eval_status": "not_executed",
+        "reason": reason,
+        "enters_generalization_score": False,
+        "exposure_definition": EXPOSURE_DEFINITION,
+        "epochs": epochs,
+        "trainer_global_step": global_step,
+        "task_accuracy_note": TASK_ACCURACY_NOTE,
+    }
+    payload.update(extra)
+    return payload
+
+
+def build_train_seen_rows(
+    train_path: Path,
+    consumed_ids: list[str],
+    epochs: int | None,
+    global_step: int | None,
+) -> dict[str, Any]:
+    """按消费 ID 回查 train.jsonl。输入是 messages[:-1]，目标是最终 assistant 消息。"""
+    ids = [str(item) for item in consumed_ids if item]
+    if not ids:
+        return _not_executed_probe("missing_actually_trained", epochs, global_step)
+    by_id: dict[str, dict] = {}
+    if train_path.is_file():
+        for line in train_path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            by_id[str(row.get("id"))] = row
+    missing = [item for item in ids if item not in by_id]
+    if missing:
+        return _not_executed_probe("train_row_missing", epochs, global_step, missing_ids=missing)
+    probes = []
+    for case_id in ids:
+        messages = list(by_id[case_id].get("messages") or [])
+        if len(messages) < 2 or messages[-1].get("role") != "assistant":
+            return _not_executed_probe("train_message_missing", epochs, global_step, missing_ids=[case_id])
+        probes.append(
             {
-                "question": pair.question,
-                "context": pair.metadata.get("student_context") if "student_context" in pair.metadata else pair.chunk_text,
-                "task_mode": "closed_book" if pair.goal == "closed_book_domain" else "rag_grounded",
-            }
-        )
-        rows.append(
-            {
-                "case_id": pair.qa_id,
-                "sample_id": pair.qa_id,
-                "family_id": pair.family_id,
-                "messages": probe,
-                "answer": pair.answer,
-                "answer_points": pair.answer_points,
-                "exposure_count": pair.exposure_count,
+                "case_id": case_id,
+                "sample_id": case_id,
+                "messages": messages[:-1],
+                "answer": messages[-1].get("content") or "",
+                "exposure_count": epochs,
                 "layer": "T0",
             }
         )
-    if not rows:
-        return {"status": "not_executed", "reason": "missing_actually_trained"}
+    return {
+        "export_status": "ready",
+        "eval_status": "not_executed",
+        "reason": None,
+        "probes": probes,
+        "n": len(probes),
+        "enters_generalization_score": False,
+        "exposure_definition": EXPOSURE_DEFINITION,
+        "epochs": epochs,
+        "trainer_global_step": global_step,
+        "task_accuracy_note": TASK_ACCURACY_NOTE,
+    }
+
+
+def _write_jsonl_rows(path: Path, rows: list[dict]) -> None:
     path.write_text("\n".join(json.dumps(row, ensure_ascii=False) for row in rows) + "\n", encoding="utf-8")
-    return {"status": "executed", "n": len(rows), "path": str(path), "enters_generalization_score": False}
+
+
+def _score_main(report: dict[str, Any], eligible: list[dict], base_preds: list[str], tuned_preds: list[str], llm, base_model: str, adapter: str | None) -> None:
+    questions = [_prompt_for(row) for row in eligible]
+    golds = [_gold_text(row) for row in eligible]
+    case_ids = [str(row.get("id")) for row in eligible]
+    report["base"] = score_generations(base_preds, golds, case_ids)
+    report["tuned"] = score_generations(tuned_preds, golds, case_ids)
+    if report["base"]["f1"] is None or report["tuned"]["f1"] is None:
+        report["delta_f1"] = None
+        report["delta_em"] = None
+    else:
+        report["delta_f1"] = round(report["tuned"]["f1"] - report["base"]["f1"], 4)
+        report["delta_em"] = round(report["tuned"]["em"] - report["base"]["em"], 4)
+    missing_distractor = [row.get("id") for row in eligible if row.get("require_distractor") and not row.get("distractor")]
+    if missing_distractor:
+        raise AlignmentError("缺失干扰上下文: " + ",".join(str(item) for item in missing_distractor))
+    distractor_base = distractor_tuned = None
+    if any(row.get("distractor") for row in eligible):
+        distractor_prompts = [_prompt_for(row, "distractor") if row.get("distractor") else _prompt_for(row) for row in eligible]
+        distractor_base = generate_answers(distractor_prompts, base_model)
+        distractor_tuned = generate_answers(distractor_prompts, base_model, adapter=adapter)
+        if isinstance(distractor_base, dict) or isinstance(distractor_tuned, dict):
+            distractor_base = distractor_tuned = None
+        elif len(distractor_base) != len(eligible) or len(distractor_tuned) != len(eligible):
+            raise AlignmentError("干扰回答数量与题目不一致")
+    by_source: dict[str, list[float]] = {}
+    transitions = []
+    for row, base, tuned in zip(eligible, base_preds, tuned_preds):
+        case = {
+            "answer": _gold_text(row),
+            "answer_points": row.get("answer_points") or [_gold_text(row)],
+            "expected_action": row.get("expected_action") or "answer",
+        }
+        before = score_task(base, case)
+        after = score_task(tuned, case)
+        transitions.append(transition_label(before, after))
+        source = str(row.get("source_family_id") or row.get("family_id") or row.get("id"))
+        by_source.setdefault(source, []).append(float(after["passed"]) - float(before["passed"]))
+    report["task_transitions"] = transitions
+    report["clustered_delta"] = clustered_interval({key: sum(vals) / len(vals) for key, vals in by_source.items()})
+    report["task_accuracy_note"] = TASK_ACCURACY_NOTE
+    if llm is not None:
+        report["judge_base"] = judge_vs_reference(llm, questions, base_preds, golds)
+        report["judge_tuned"] = judge_vs_reference(llm, questions, tuned_preds, golds)
+        base_mean = report["judge_base"].get("mean")
+        tuned_mean = report["judge_tuned"].get("mean")
+        report["delta_judge"] = None if base_mean is None or tuned_mean is None else round(tuned_mean - base_mean, 4)
+    sheet = write_answer_sheet(
+        [{**row, "answer": _gold_text(row)} for row in eligible],
+        base_preds,
+        tuned_preds,
+        Path(report["answer_sheet_path"]),
+        distractor_base if isinstance(distractor_base, list) else None,
+        distractor_tuned if isinstance(distractor_tuned, list) else None,
+    )
+    report["answer_sheet"] = str(sheet)
 
 
 def evaluate_sft(
@@ -443,83 +628,111 @@ def evaluate_sft(
 ) -> dict[str, Any]:
     out_dir.mkdir(parents=True, exist_ok=True)
     train_path = write_sft_jsonl(pairs, out_dir / "train.jsonl")
-    heldout = load_heldout(heldout_path)
-    questions = [_prompt_for(h) for h in heldout]
-    golds = [h["answer"] for h in heldout]
-    report: dict[str, Any] = {"train_samples": len(pairs), "heldout": len(heldout), "train_jsonl": str(train_path)}
-    report["train_seen"] = {"status": "not_executed", "reason": "missing_actually_trained"}
-    ambiguous = [row for row in heldout if "这一句" in str(row.get("question") or "")]
-    if ambiguous:
+    heldout_file = Path(heldout_path)
+    parse_errors: list[dict] = []
+    heldout: list[dict] = []
+    if heldout_file.is_file():
+        for index, line in enumerate(heldout_file.read_text(encoding="utf-8").splitlines(), start=1):
+            if not line.strip():
+                continue
+            try:
+                heldout.append(json.loads(line))
+            except json.JSONDecodeError:
+                parse_errors.append({"id": index, "reasons": ["invalid_json"]})
+    eligible, rejected = partition_heldout(heldout)
+    rejected = parse_errors + rejected
+    report: dict[str, Any] = {
+        "train_samples": len(pairs),
+        "heldout": len(heldout),
+        "heldout_main": len(eligible),
+        "heldout_rejections": rejected,
+        "train_jsonl": str(train_path),
+        "delta_f1": None,
+        "delta_em": None,
+        "main_metric": "not_executed" if not eligible else "pending",
+        "main_eval": "model_not_loaded" if not eligible else "pending",
+        "task_accuracy_note": TASK_ACCURACY_NOTE,
+        "effect_note": "词面 F1 只作辅助诊断，不能单独作为质量结论",
+        "pass_decision": "delta_min_unset",
+        "retention_claim": "保留测试未配置，只报告效应与区间",
+        "answer_sheet_path": str(out_dir / "answers.md"),
+    }
+    report["train_seen"] = _not_executed_probe("missing_actually_trained")
+    if any("这一句" in str(row.get("question") or "") for row in heldout):
         report["heldout_validity"] = "ambiguous_referent"
         report["heldout_note"] = "题干歧义、不可用于主效果结论"
+
+    def finish() -> dict[str, Any]:
+        public = {key: value for key, value in report.items() if key != "answer_sheet_path"}
+        (out_dir / "eval.json").write_text(json.dumps(public, ensure_ascii=False, indent=2), encoding="utf-8")
+        return public
+
     if skip_sft:
         report["skipped"] = True
         report["reason"] = "skip_sft"
-        return report
+        return finish()
     trained = train_lora(train_path, out_dir / "lora", base_model=base_model)
     report["train"] = trained
     if trained.get("skipped"):
-        return report
-    report["train_seen"] = export_train_seen(pairs, trained.get("consumed_ids") or [], out_dir / "train_seen.jsonl")
+        return finish()
+    epochs = trained.get("epochs")
+    global_step = trained.get("global_step")
+    probe = build_train_seen_rows(train_path, trained.get("consumed_ids") or [], epochs, global_step)
+    seen_path = out_dir / "train_seen.jsonl"
+    if probe.get("export_status") != "ready":
+        report["train_seen"] = probe
+    else:
+        rows = probe.pop("probes")
+        _write_jsonl_rows(seen_path, rows)
+        probe["export_status"] = "exported"
+        probe["path"] = str(seen_path)
+        base_seen = generate_answers([row["messages"] for row in rows], base_model)
+        tuned_seen = generate_answers([row["messages"] for row in rows], base_model, adapter=trained.get("adapter"))
+        if isinstance(base_seen, dict) or isinstance(tuned_seen, dict):
+            probe["eval_status"] = "not_executed"
+            probe["reason"] = (base_seen if isinstance(base_seen, dict) else tuned_seen).get("reason")
+            report["train_seen"] = probe
+        else:
+            scored = []
+            passed = 0
+            for row, base, tuned in zip(rows, base_seen, tuned_seen):
+                case = {"answer": row["answer"], "answer_points": [row["answer"]], "expected_action": "answer"}
+                before = score_task(base, case)
+                after = score_task(tuned, case)
+                if after["passed"]:
+                    passed += 1
+                scored.append(
+                    {
+                        **row,
+                        "base_answer": base,
+                        "tuned_answer": tuned,
+                        "before": before,
+                        "after": after,
+                        "change": transition_label(before, after),
+                    }
+                )
+            _write_jsonl_rows(seen_path, scored)
+            probe["eval_status"] = "executed"
+            probe["n"] = len(scored)
+            probe["auxiliary_pass_rate"] = round(passed / len(scored), 4) if scored else None
+            probe["enters_generalization_score"] = False
+            report["train_seen"] = probe
+    if not eligible:
+        report["main_metric"] = "not_executed"
+        report["main_eval"] = "model_not_loaded"
+        report["delta_f1"] = None
+        return finish()
     adapter = trained.get("adapter")
+    questions = [_prompt_for(row) for row in eligible]
     base_preds = generate_answers(questions, base_model)
     tuned_preds = generate_answers(questions, base_model, adapter=adapter)
     if isinstance(base_preds, dict) or isinstance(tuned_preds, dict):
+        report["main_metric"] = "not_executed"
+        report["main_eval"] = "generation_failed"
         report["eval_skipped"] = base_preds if isinstance(base_preds, dict) else tuned_preds
-        return report
-    case_ids = [str(row.get("id") or index) for index, row in enumerate(heldout)]
-    report["base"] = score_generations(base_preds, golds, case_ids)
-    report["tuned"] = score_generations(tuned_preds, golds, case_ids)
-    if report["base"]["f1"] is None or report["tuned"]["f1"] is None:
         report["delta_f1"] = None
-        report["delta_em"] = None
-    else:
-        report["delta_f1"] = round(report["tuned"]["f1"] - report["base"]["f1"], 4)
-        report["delta_em"] = round(report["tuned"]["em"] - report["base"]["em"], 4)
-    missing_distractor = [row.get("id") for row in heldout if row.get("require_distractor") and not row.get("distractor")]
-    if missing_distractor:
-        raise AlignmentError("缺失干扰上下文: " + ",".join(str(item) for item in missing_distractor))
-    distractor_base = distractor_tuned = None
-    if any(row.get("distractor") for row in heldout):
-        distractor_prompts = [_prompt_for(row, "distractor") if row.get("distractor") else _prompt_for(row) for row in heldout]
-        distractor_base = generate_answers(distractor_prompts, base_model)
-        distractor_tuned = generate_answers(distractor_prompts, base_model, adapter=adapter)
-        if isinstance(distractor_base, dict) or isinstance(distractor_tuned, dict):
-            distractor_base = distractor_tuned = None
-        elif len(distractor_base) != len(heldout) or len(distractor_tuned) != len(heldout):
-            raise AlignmentError("干扰回答数量与题目不一致")
-    sheet = write_answer_sheet(
-        heldout,
-        base_preds,
-        tuned_preds,
-        out_dir / "answers.md",
-        distractor_base if isinstance(distractor_base, list) else None,
-        distractor_tuned if isinstance(distractor_tuned, list) else None,
-    )
-    report["answer_sheet"] = str(sheet)
-    by_source: dict[str, list[float]] = {}
-    transitions = []
-    for row, base, tuned in zip(heldout, base_preds, tuned_preds):
-        case = {
-            "answer": row.get("answer"),
-            "answer_points": row.get("answer_points") or [row.get("answer")],
-            "expected_action": row.get("expected_action") or "answer",
-        }
-        before = score_task(base, case)
-        after = score_task(tuned, case)
-        transitions.append(transition_label(before, after))
-        source = str(row.get("source_family_id") or row.get("family_id") or row.get("id"))
-        by_source.setdefault(source, []).append(float(after["passed"]) - float(before["passed"]))
-    report["task_transitions"] = transitions
-    report["clustered_delta"] = clustered_interval({key: sum(vals) / len(vals) for key, vals in by_source.items()})
-    report["pass_decision"] = "delta_min_unset"
-    report["retention_claim"] = "保留测试未配置，只报告效应与区间"
-    report["effect_note"] = "词面 F1 只作辅助诊断，不能单独作为质量结论"
-    if llm is not None:
-        report["judge_base"] = judge_vs_reference(llm, questions, base_preds, golds)
-        report["judge_tuned"] = judge_vs_reference(llm, questions, tuned_preds, golds)
-        base_mean = report["judge_base"].get("mean")
-        tuned_mean = report["judge_tuned"].get("mean")
-        report["delta_judge"] = None if base_mean is None or tuned_mean is None else round(tuned_mean - base_mean, 4)
-    (out_dir / "eval.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    return report
+        return finish()
+    _score_main(report, eligible, base_preds, tuned_preds, llm, base_model, adapter)
+    report["main_metric"] = "executed"
+    report["main_eval"] = "executed"
+    return finish()

@@ -23,6 +23,84 @@ def _repo_root() -> Path:
     return Path(__file__).resolve().parents[3]
 
 
+def gate_heldout(path: str | Path) -> dict[str, Any]:
+    """生成前检查主测试清单。缺失则不能开跑；空文件允许流程验证。"""
+    heldout = Path(path)
+    if not heldout.is_file():
+        return {
+            "ok": False,
+            "reason": "missing_heldout",
+            "heldout": str(heldout),
+            "heldout_status": "missing",
+        }
+    rows = [line for line in heldout.read_text(encoding="utf-8").splitlines() if line.strip()]
+    status = "empty" if not rows else "ready"
+    return {"ok": True, "reason": None, "heldout": str(heldout), "heldout_status": status, "n": len(rows)}
+
+
+def abort_missing_heldout(suite: dict[str, Any], heldout: str | Path) -> dict[str, Any]:
+    return {
+        "suite": suite.get("name"),
+        "aborted": True,
+        "reason": "missing_heldout",
+        "heldout": str(heldout),
+        "experiments": [],
+        "note": "主测试清单缺失。不开始生成，也不回退到历史题干清单。",
+    }
+
+
+def write_run_meta(out: Path, suite: dict[str, Any], heldout: str | Path, student: str) -> Path:
+    import hashlib
+    import subprocess
+
+    root = _repo_root()
+    try:
+        commit = subprocess.check_output(
+            ["git", "rev-parse", "HEAD"],
+            cwd=root,
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except (OSError, subprocess.CalledProcessError):
+        commit = None
+
+    def digest(path: Path) -> str | None:
+        if not path.is_file():
+            return None
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+
+    trains = {}
+    if out.is_dir():
+        for path in sorted(out.glob("*/sft/train.jsonl")):
+            trains[str(path.relative_to(out))] = digest(path)
+    version: dict[str, Any] = {"path": student}
+    config = Path(student) / "config.json"
+    if config.is_file():
+        try:
+            data = json.loads(config.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            data = {}
+        version.update(
+            {
+                "model_type": data.get("model_type"),
+                "architectures": data.get("architectures"),
+                "name_or_path": data.get("_name_or_path") or data.get("name_or_path"),
+            }
+        )
+    meta = {
+        "run_id": suite.get("run_id") or out.name,
+        "suite": suite.get("name"),
+        "git_commit": commit,
+        "heldout_protocol_sha256": digest(Path(heldout)),
+        "train_jsonl_sha256": trains or None,
+        "base_model": student,
+        "model_version": version,
+    }
+    dest = out / "run_meta.json"
+    dest.write_text(json.dumps(meta, ensure_ascii=False, indent=2), encoding="utf-8")
+    return dest
+
+
 def load_suite(path: str | Path) -> dict[str, Any]:
     return yaml.safe_load(Path(path).read_text(encoding="utf-8")) or {}
 
@@ -202,10 +280,14 @@ def run_suite(
     refusal_path = Path(suite.get("refusal") or root / "fixtures" / "refusal.jsonl")
     if not refusal_path.is_absolute():
         refusal_path = (root / refusal_path).resolve()
+    gate = gate_heldout(heldout)
+    if not gate["ok"]:
+        return abort_missing_heldout(suite, heldout)
     out = Path(out_dir or root / "runs" / suite.get("name", "suite"))
     out.mkdir(parents=True, exist_ok=True)
     client = llm or (FakeLLM() if fake else LLMClient())
     student = base_model or DEFAULT_BASE
+    write_run_meta(out, suite, heldout, student)
     llm_label = "fake" if isinstance(client, FakeLLM) else ("local" if type(client).__name__ == "LocalLLM" else "live")
 
     cache_pairs: dict[str, list[QAPair]] = {}
@@ -219,6 +301,8 @@ def run_suite(
         "教师为 192.168.4.110:4000 的 qwen3.8-27b，API 费用记 0 美元，并报告等价 token。学生基座为本地 Qwen2.5-7B-Instruct。",
         "E5 无人工标签，不计算 Cohen's Kappa。事实遵循使用 NLI 与证据子串，未接入 RAGAS。",
     ])
+    if gate["heldout_status"] == "empty":
+        notes.append("主测试清单存在但没有可评分题目。允许训练和训练原题探针，主评测不加载模型，delta_f1 为空。")
     if not fake and devices and len(devices) >= 2:
         from .parallel import run_parallel
 
@@ -283,12 +367,7 @@ def run_suite(
         if not pairs:
             return {"skipped": True, "reason": "empty_train"}
         if not Path(heldout).is_file():
-            return {
-                "skipped": True,
-                "reason": "missing_heldout",
-                "heldout": str(heldout),
-                "note": "主测试清单缺失。不回退到历史题干清单。",
-            }
+            raise FileNotFoundError(f"missing_heldout: {heldout}")
         if sig in sft_done:
             return {**sft_done[sig], "reused": True}
         report = evaluate_sft(pairs, heldout, exp_dir / "sft", llm=client, base_model=student, skip_sft=False)
@@ -497,4 +576,5 @@ def run_suite(
     from .sft import assemble_answer_book
 
     assemble_answer_book(out, list(suite.get("experiments") or []))
+    write_run_meta(out, suite, heldout, student)
     return payload
