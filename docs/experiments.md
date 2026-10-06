@@ -52,9 +52,25 @@ qa-pipeline experiment --suite configs/experiments/suite.yaml --out runs/local_s
 qa-pipeline eval-adapter --base-model /path/to/base-model --base-id base-v1 --adapter /path/to/adapter --adapter-id adapter-v1 --protocol /path/to/protocol.jsonl --out runs/local_adapter_eval --mode exploratory --device 0
 ```
 
-`--mode` 必填，可取 `formal` 或 `exploratory`。默认评分器为 `aux-rules-v2`，默认最大新 token 数为 512。
+`--mode` 必填，可取 `formal` 或 `exploratory`。默认评分器为 `aux-rules-v2`，默认最大新 token 数为 512。`aux-rules-v1`、`aux-rules-v2`、`aux-rules-v3` 都是辅助规则分。规则通过不能改称为语义正确率，`formal_main_metric` 在没有人工盲评主指标时保持 `not_executed`。人工盲评的任务完成和行为适当单独汇总。
 
-**当前 CLI 的正式模式存在接口缺口：**正式协议校验需要 `frozen_train_families`，但 CLI 没有对应参数，也未传入冻结训练来源列表。因此仅添加 `--mode formal` 不能完成正式评测；非空正式协议会因缺少来源列表停止。需要由 Python 调用 [adapter_eval.py](../src/qa_pipeline/experiments/adapter_eval.py) 的 `eval_adapter(..., frozen_train_families=...)`，传入真实冻结清单及其他必需参数。不要为了通过校验伪造空清单或改成探索模式后宣称正式结果。
+探索模式不要求来源清单，也不能把探索结果改称为正式结果。见过来源上的问法诊断、开发集上的证据条件，都留在探索或诊断报告里。正式测试要求协议来源不在冻结训练清单中，并且来源可追溯。
+
+正式模式必须同时给出两份文件：
+
+```sh
+qa-pipeline eval-adapter --base-model /path/to/base-model --base-id base-v1 --adapter /path/to/adapter --adapter-id adapter-v1 --protocol /path/to/protocol.jsonl --out runs/local_formal_eval --mode formal --frozen-train-families /path/to/frozen_train_families.json --source-inventory /path/to/source_universe.json --device 0
+```
+
+`--frozen-train-families` 是 JSON 对象，至少包含非空的 `source_family_ids`，以及 `records`。每条 record 含 `source_family_id`，并含 `stem` 或 `path`。`--source-inventory` 是来源宇宙，可以是带 `source_family_id` 的 JSON 或 JSONL。只有 stem、没有家族 id 的 inventory 不能证明协议来源可追溯。两份文件的字节 SHA-256 写入 `eval_report.json` 的 `frozen_train_families_sha256` 与 `source_universe_sha256`。
+
+正式模式在下列情况整批停止，不加载模型，也不缩小 `planned_n`：
+
+- 未提供 `--frozen-train-families`：`source_list_missing`。
+- 清单存在但 `source_family_ids` 为空：`invalid_empty_source_list`。空集合不能绕过重叠检查。
+- 文件缺失、JSON 无效、只有裸 id、或清单中的家族在宇宙里找不到：`invalid_source_list`。
+- 协议里的 `source_family_id` 不在来源宇宙中：`source_untraceable`。
+- 协议来源出现在训练清单中：`source_overlap`。
 
 ### 协议与复核
 
@@ -63,17 +79,19 @@ qa-pipeline eval-adapter --base-model /path/to/base-model --base-id base-v1 --ad
 - 参考答案或答案要点、来源和 `expected_action`；
 - 已复核状态、复核人员与意见；双人一致状态还要求双人记录与裁决信息；
 - 与当前内容一致的 `review_content_hash`；
-- 与冻结训练来源集合的隔离。
+- 与冻结训练来源集合的隔离，以及来源宇宙中的可追溯性。
 
-字段和条件以 `validate_protocol`、`review_content_hash` 和测试为准。内容变化后必须重新复核。正式协议有无效项时整批停止，不通过删除题目缩小分母。
+字段和条件以 `validate_protocol`、`review_content_hash` 和测试为准。题干、上下文或 system 变化后，对应预测失效并必须重新复核。只改 gold 或评分器时，可在预测身份匹配的前提下复用预测并写入新评分版本。正式协议有无效项时整批停止，不通过删除题目缩小分母。空白审核或 `pending_review` 保持待审核，不会默认通过。只填写一名审核者时状态为 `agreed`，不能写成 `dual_agreed`。
+
+人工表用 `qa-pipeline import-review --run <运行目录>` 导入。该命令按 `review/batches.json` 校验 ID、内容哈希和审核完整性，并写出 `review/import_result.json`。`runs/drug_v25_eval/review/review_guide.md` 是这一轮审核包的填写说明，包含不含真实药品内容的示例。开发集用来构造新条件；诊断集描述见过来源或固定行为边界；正式测试仍是独立来源上的冻结协议。三者的分母和结论不能合并。
 
 ### 产物、缓存与结果解释
 
-查看 `protocol_check.json`、`eval_report.json` 和适用的预测、评分产物。协议失败或未执行时不一定存在预测文件。
+查看 `protocol_check.json`、`eval_report.json` 和适用的预测、评分产物。协议失败或未执行时不一定存在预测文件。来源清单无效时报告仍保留计划分母，并记录清单哈希。
 
 预测缓存绑定实际消息、基座、adapter、模板与推理配置；评分版本和 gold 改变时可用 `rescore_saved` 复用匹配的已存预测。它是 Python 接口，不是当前 CLI 子命令。保存新版本应保留旧评分和历史身份信息。
 
-`eval-adapter` 成功执行返回 0，捕获的协议错误或缺少 tokenizer 配置返回 1，返回未执行报告时返回 2。进一步判断应查看报告中的 `executed`、失败项和统计分母，不能只检查输出文件是否存在。
+`eval-adapter` 成功执行返回 0，捕获的协议错误、来源清单错误或缺少 tokenizer 配置返回 1，返回未执行报告时返回 2。`import-review` 在校验错误时返回 1。进一步判断应查看报告中的 `executed`、失败项和统计分母，不能只检查输出文件是否存在。
 
 ## 如何阅读实验结论
 

@@ -277,7 +277,7 @@ def test_unreviewed_items_stop_formal_batch_without_shrinking(tmp_path):
             mode="formal",
             template_id="tpl",
             generate_fn=generate,
-            frozen_train_families=set(),
+            frozen_train_families={"unrelated_family"},
         )
     assert seen == []
     report = json.loads((tmp_path / "out" / "eval_report.json").read_text(encoding="utf-8"))
@@ -605,3 +605,133 @@ def test_greedy_infer_config_reaches_gpu_check(monkeypatch):
     )
     assert result["skipped"] is True
     assert result["reason"] == "no_gpu"
+
+
+def test_empty_frozen_train_families_do_not_bypass_formal(tmp_path):
+    protocol = tmp_path / "protocol.jsonl"
+    _write_jsonl(protocol, [_reviewed()])
+    generate, calls = _gen()
+    with pytest.raises(ProtocolError):
+        eval_adapter(
+            base_model="unused",
+            base_id="base",
+            adapter="unused",
+            adapter_id="g0",
+            protocol_path=protocol,
+            out_dir=tmp_path / "out",
+            mode="formal",
+            template_id="tpl",
+            generate_fn=generate,
+            frozen_train_families=set(),
+        )
+    assert calls["n"] == 0
+    report = json.loads((tmp_path / "out" / "eval_report.json").read_text(encoding="utf-8"))
+    assert report["executed"] is False
+    assert report["planned_n"] == 1
+    assert report["scored_n"] == 0
+    assert any("invalid_empty_source_list" in item["reasons"] for item in report["protocol_failures"])
+
+
+def test_unlisted_family_is_untraceable_and_keeps_denominator(tmp_path):
+    protocol = tmp_path / "protocol.jsonl"
+    _write_jsonl(protocol, [_reviewed(source_family_id="src_missing"), _reviewed(case_id="b", source_family_id="src_a")])
+    generate, calls = _gen()
+    with pytest.raises(ProtocolError):
+        eval_adapter(
+            base_model="unused",
+            base_id="base",
+            adapter="unused",
+            adapter_id="g0",
+            protocol_path=protocol,
+            out_dir=tmp_path / "out",
+            mode="formal",
+            template_id="tpl",
+            generate_fn=generate,
+            frozen_train_families={"src_train"},
+            source_universe={"src_a", "src_train"},
+            frozen_train_families_sha256="abc",
+            source_universe_sha256="def",
+        )
+    assert calls["n"] == 0
+    report = json.loads((tmp_path / "out" / "eval_report.json").read_text(encoding="utf-8"))
+    assert report["planned_n"] == 2
+    assert report["scored_n"] == 0
+    assert report["frozen_train_families_sha256"] == "abc"
+    assert report["source_universe_sha256"] == "def"
+    assert any("source_untraceable" in item["reasons"] for item in report["protocol_failures"])
+
+
+def test_cli_formal_rejects_empty_or_untraceable_list(tmp_path, monkeypatch):
+    from qa_pipeline.cli import main
+    from qa_pipeline.experiments.adapter_eval import load_frozen_train_families, trace_source_list, load_source_universe
+
+    base = tmp_path / "base"
+    base.mkdir()
+    (base / "tokenizer_config.json").write_text("{}", encoding="utf-8")
+    protocol = tmp_path / "protocol.jsonl"
+    _write_jsonl(protocol, [_reviewed()])
+    empty = tmp_path / "empty.json"
+    empty.write_text(json.dumps({"source_family_ids": [], "records": []}), encoding="utf-8")
+    inventory = tmp_path / "universe.json"
+    inventory.write_text(
+        json.dumps(
+            {
+                "source_family_ids": ["src_a"],
+                "records": [{"source_family_id": "src_a", "stem": "1", "path": "raw/1.txt"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    def boom(*_args, **_kwargs):
+        raise AssertionError("无效清单不应加载模型")
+
+    monkeypatch.setattr("qa_pipeline.experiments.adapter_eval.generate_with_model", boom)
+    out = tmp_path / "out_empty"
+    code = main(
+        [
+            "eval-adapter",
+            "--base-model",
+            str(base),
+            "--base-id",
+            "base",
+            "--adapter",
+            "adapter",
+            "--adapter-id",
+            "g0",
+            "--protocol",
+            str(protocol),
+            "--out",
+            str(out),
+            "--mode",
+            "formal",
+            "--frozen-train-families",
+            str(empty),
+            "--source-inventory",
+            str(inventory),
+        ]
+    )
+    assert code == 1
+    report = json.loads((out / "eval_report.json").read_text(encoding="utf-8"))
+    assert report["executed"] is False
+    assert report["planned_n"] == 1
+    assert "invalid_empty_source_list" in report["reason"]
+    assert report["frozen_train_families_sha256"]
+    with pytest.raises(Exception, match="invalid_source_list"):
+        load_frozen_train_families(tmp_path / "missing.json")
+    bare = tmp_path / "bare.json"
+    bare.write_text(json.dumps({"source_family_ids": ["src_a"]}), encoding="utf-8")
+    with pytest.raises(Exception, match="untraceable"):
+        load_frozen_train_families(bare)
+    listed = tmp_path / "listed.json"
+    listed.write_text(
+        json.dumps(
+            {
+                "source_family_ids": ["src_other"],
+                "records": [{"source_family_id": "src_other", "stem": "9"}],
+            }
+        ),
+        encoding="utf-8",
+    )
+    traced = trace_source_list(load_frozen_train_families(listed), load_source_universe(inventory))
+    assert traced["ok"] is False

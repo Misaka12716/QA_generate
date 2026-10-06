@@ -418,7 +418,7 @@ def test_formal_protocol_does_not_shrink_denominator(tmp_path):
             mode="formal",
             template_id="tpl",
             generate_fn=generate,
-            frozen_train_families=set(),
+            frozen_train_families={"unrelated_family"},
         )
     assert called["n"] == 0
     report = json.loads((tmp_path / "out" / "eval_report.json").read_text(encoding="utf-8"))
@@ -446,7 +446,7 @@ def test_review_content_change_invalidates_review(tmp_path):
             mode="formal",
             template_id="tpl",
             generate_fn=_gen()[0],
-            frozen_train_families=set(),
+            frozen_train_families={"unrelated_family"},
         )
     report = json.loads((tmp_path / "out" / "eval_report.json").read_text(encoding="utf-8"))
     assert report["executed"] is False
@@ -468,7 +468,7 @@ def test_uncalibrated_rules_do_not_become_main_metric(tmp_path):
         mode="formal",
         template_id="tpl",
         generate_fn=_gen()[0],
-        frozen_train_families=set(),
+        frozen_train_families={"unrelated_family"},
         scorer_version=SCORER_V3,
     )
     assert report["executed"] is True

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any, Callable
@@ -67,6 +68,11 @@ CONTENT_FIELDS = (
 
 class ProtocolError(Exception):
     """协议不合法。应在加载模型之前抛出。"""
+
+    def __init__(self, message: str, *, sha256: str | None = None, universe_sha256: str | None = None):
+        super().__init__(message)
+        self.sha256 = sha256
+        self.universe_sha256 = universe_sha256
 
 
 def case_id_of(case: dict[str, Any]) -> str:
@@ -161,10 +167,227 @@ def screen_candidates(cases: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def load_frozen_train_families(path: str | Path) -> dict[str, Any]:
+    """读取非空、带出处的冻结训练来源清单。
+
+    JSON 对象至少包含 source_family_ids。每条 id 还要有 record，
+    并且 record 带 stem 或 path，便于对照 inventory。空清单、缺文件和
+    无法追溯的裸 id 列表都拒绝，不把它们当成“没有来源重叠”。
+    """
+    file = Path(path)
+    if not file.is_file():
+        raise ProtocolError("invalid_source_list:file_missing")
+    digest = _sha256_file(file)
+
+    def fail(reason: str) -> None:
+        raise ProtocolError(reason, sha256=digest)
+
+    try:
+        payload = json.loads(file.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise ProtocolError("invalid_source_list:json", sha256=digest) from exc
+    if not isinstance(payload, dict):
+        fail("invalid_source_list:schema")
+    raw_ids = payload.get("source_family_ids")
+    if not isinstance(raw_ids, list):
+        fail("invalid_source_list:schema")
+    if len(raw_ids) == 0:
+        fail("invalid_empty_source_list")
+    ids: list[str] = []
+    for item in raw_ids:
+        text = str(item or "").strip()
+        if not text:
+            fail("invalid_source_list:blank_id")
+        if text not in ids:
+            ids.append(text)
+    records = payload.get("records")
+    if not isinstance(records, list) or not records:
+        fail("invalid_source_list:untraceable")
+    by_id: dict[str, dict[str, Any]] = {}
+    for record in records:
+        if not isinstance(record, dict):
+            fail("invalid_source_list:schema")
+        family = str(record.get("source_family_id") or "").strip()
+        stem = str(record.get("stem") or "").strip()
+        record_path = str(record.get("path") or "").strip()
+        if not family or not (stem or record_path):
+            fail("invalid_source_list:untraceable")
+        by_id[family] = {"source_family_id": family, "stem": stem, "path": record_path}
+    missing = [family for family in ids if family not in by_id]
+    if missing:
+        fail("invalid_source_list:untraceable")
+    return {
+        "ids": set(ids),
+        "sha256": digest,
+        "records": [by_id[family] for family in ids],
+        "path": str(file),
+    }
+
+
+def load_source_universe(path: str | Path) -> dict[str, Any]:
+    """读取来源宇宙。JSON 对象或 JSONL 均可。
+
+    家族 id、stem、path 分开保存。只有 stem 的 inventory 不能单独证明
+    协议里的 source_family_id 可追溯。
+    """
+    file = Path(path)
+    if not file.is_file():
+        raise ProtocolError("invalid_source_list:universe_missing")
+    digest = _sha256_file(file)
+    families: set[str] = set()
+    stems: set[str] = set()
+    paths: set[str] = set()
+    text = file.read_text(encoding="utf-8")
+    stripped = text.strip()
+    if not stripped:
+        raise ProtocolError("invalid_source_list:universe_empty")
+    if stripped.startswith("{") or stripped.startswith("["):
+        try:
+            payload = json.loads(stripped)
+        except json.JSONDecodeError as exc:
+            raise ProtocolError("invalid_source_list:json") from exc
+        rows: list[Any]
+        if isinstance(payload, dict):
+            raw_ids = payload.get("source_family_ids") or []
+            if not isinstance(raw_ids, list):
+                raise ProtocolError("invalid_source_list:schema")
+            families.update(str(item).strip() for item in raw_ids if str(item).strip())
+            rows = list(payload.get("records") or [])
+        elif isinstance(payload, list):
+            rows = payload
+        else:
+            raise ProtocolError("invalid_source_list:schema")
+        for record in rows:
+            if not isinstance(record, dict):
+                raise ProtocolError("invalid_source_list:schema")
+            family = str(record.get("source_family_id") or "").strip()
+            stem = str(record.get("stem") or "").strip()
+            record_path = str(record.get("path") or "").strip()
+            if family:
+                families.add(family)
+            if stem:
+                stems.add(stem)
+            if record_path:
+                paths.add(record_path)
+    else:
+        for line in text.splitlines():
+            if not line.strip():
+                continue
+            try:
+                record = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise ProtocolError("invalid_source_list:json") from exc
+            if not isinstance(record, dict):
+                raise ProtocolError("invalid_source_list:schema")
+            family = str(record.get("source_family_id") or "").strip()
+            stem = str(record.get("stem") or "").strip()
+            record_path = str(record.get("path") or "").strip()
+            if family:
+                families.add(family)
+            if stem:
+                stems.add(stem)
+            if record_path:
+                paths.add(record_path)
+    if not families and not stems and not paths:
+        raise ProtocolError("invalid_source_list:universe_empty")
+    return {"families": families, "stems": stems, "paths": paths, "sha256": digest, "path": str(file)}
+
+
+def trace_source_list(manifest: dict[str, Any], universe: dict[str, Any]) -> dict[str, Any]:
+    """训练清单里的每个家族都要能在宇宙中找到。找不到则清单无效。"""
+    families = set(universe.get("families") or [])
+    stems = set(universe.get("stems") or [])
+    paths = set(universe.get("paths") or [])
+    if not families and not stems and not paths:
+        return {"ok": False, "reason": "invalid_source_list:universe_empty", "untraced": []}
+    untraced = []
+    for record in manifest.get("records") or []:
+        family = str(record.get("source_family_id") or "")
+        stem = str(record.get("stem") or "")
+        record_path = str(record.get("path") or "")
+        located = False
+        if families and family in families:
+            located = True
+        if stem and stem in stems:
+            located = True
+        if record_path and record_path in paths:
+            located = True
+        if families and family not in families:
+            located = False
+        if not located:
+            untraced.append(family)
+    if untraced or not families:
+        reason = "invalid_source_list:untraceable" if untraced or not families else None
+        if not families:
+            reason = "invalid_source_list:universe_families_missing"
+        if untraced:
+            reason = "invalid_source_list:untraceable"
+        return {"ok": False, "reason": reason, "untraced": untraced}
+    return {"ok": True, "reason": None, "untraced": []}
+
+
+def refuse_source_list(
+    out_dir: str | Path,
+    reason: str,
+    *,
+    mode: str,
+    protocol_path: str | Path | None = None,
+    frozen_train_families_sha256: str | None = None,
+    source_universe_sha256: str | None = None,
+) -> dict[str, Any]:
+    """来源清单无效时写报告并停止，不加载模型。"""
+    destination = Path(out_dir)
+    destination.mkdir(parents=True, exist_ok=True)
+    planned = 0
+    if protocol_path and Path(protocol_path).is_file():
+        planned = len(read_jsonl(protocol_path))
+    _dump_report.source_meta = source_list_report_fields(
+        frozen_sha256=frozen_train_families_sha256,
+        universe_sha256=source_universe_sha256,
+    )
+    report = _not_executed(
+        reason,
+        mode,
+        {
+            "planned_n": planned,
+            "failed_n": planned,
+            "scored_n": 0,
+            "protocol_failures": [{"id": None, "reasons": [reason.split(":")[0]]}],
+        },
+    )
+    _dump_report(destination, report, "source_list")
+    _dump_report.source_meta = None
+    return report
+
+
+def source_list_report_fields(
+    *,
+    frozen_train_families: set[str] | frozenset[str] | None = None,
+    frozen_sha256: str | None = None,
+    source_universe: set[str] | frozenset[str] | None = None,
+    universe_sha256: str | None = None,
+) -> dict[str, Any]:
+    return {
+        "frozen_train_families_sha256": frozen_sha256,
+        "frozen_train_families_n": None if frozen_train_families is None else len(set(frozen_train_families)),
+        "source_universe_sha256": universe_sha256,
+        "source_universe_n": None if source_universe is None else len(set(source_universe)),
+    }
+
+
 def validate_protocol(
     cases: Any,
     mode: str,
     frozen_train_families: set[str] | frozenset[str] | None = None,
+    source_universe: set[str] | frozenset[str] | None = None,
 ) -> dict[str, Any]:
     if mode not in {"formal", "exploratory"}:
         raise ProtocolError(f"unknown_mode:{mode}")
@@ -205,11 +428,23 @@ def validate_protocol(
         if not case_question(case):
             reasons.append("empty_question")
         if mode == "formal":
-            if frozen_train_families is None:
-                reasons.append("source_list_missing")
-            else:
+            train_ids = None if frozen_train_families is None else set(frozen_train_families)
+            universe_ids = None if source_universe is None else set(source_universe)
+            list_reasons: list[str] = []
+            if train_ids is None:
+                list_reasons.append("source_list_missing")
+            elif len(train_ids) == 0:
+                list_reasons.append("invalid_empty_source_list")
+            elif universe_ids is not None and len(universe_ids) == 0:
+                list_reasons.append("invalid_source_list")
+            elif universe_ids is not None and not train_ids <= universe_ids:
+                list_reasons.append("invalid_source_list")
+            reasons.extend(list_reasons)
+            if not list_reasons and train_ids is not None:
                 family = str(case.get("source_family_id") or "")
-                if family and family in set(frozen_train_families):
+                if universe_ids is not None and family and family not in universe_ids:
+                    reasons.append("source_untraceable")
+                elif family and family in train_ids:
                     reasons.append("source_overlap")
                 elif case.get("source_overlap_train"):
                     reasons.append("source_overlap_unverified")
@@ -566,10 +801,19 @@ def eval_adapter(
     device: int | None = None,
     reuse_predictions: bool = True,
     frozen_train_families: set[str] | frozenset[str] | None = None,
+    source_universe: set[str] | frozenset[str] | None = None,
+    frozen_train_families_sha256: str | None = None,
+    source_universe_sha256: str | None = None,
     resume: bool = False,
 ) -> dict[str, Any]:
     """推理与评分分开。正式协议有无效项时停止，不缩小计划分母。"""
     destination = Path(out_dir)
+    _dump_report.source_meta = source_list_report_fields(
+        frozen_train_families=frozen_train_families,
+        frozen_sha256=frozen_train_families_sha256,
+        source_universe=source_universe,
+        universe_sha256=source_universe_sha256,
+    )
     destination.mkdir(parents=True, exist_ok=True)
     protocol_file = Path(protocol_path)
     if not protocol_file.is_file():
@@ -582,7 +826,12 @@ def eval_adapter(
         _dump_report(destination, report, "unsupported")
         return report
     cases = read_jsonl(protocol_file)
-    checked = validate_protocol(cases, mode, frozen_train_families=frozen_train_families)
+    checked = validate_protocol(
+        cases,
+        mode,
+        frozen_train_families=frozen_train_families,
+        source_universe=source_universe,
+    )
     (destination / "protocol_check.json").write_text(
         json.dumps(
             {
@@ -870,6 +1119,9 @@ def _finalize_scores(
 
 
 def _dump_report(destination: Path, report: dict[str, Any], score_id: str) -> None:
+    meta = getattr(_dump_report, "source_meta", None)
+    if meta:
+        report.update(meta)
     _write_versioned_json(destination / "eval_report.json", score_id, report)
 
 
@@ -899,9 +1151,18 @@ def rescore_saved(
     adapter_id: str = "",
     template_id: str = "",
     infer_config: dict[str, Any] | None = None,
+    source_universe: set[str] | frozenset[str] | None = None,
+    frozen_train_families_sha256: str | None = None,
+    source_universe_sha256: str | None = None,
 ) -> dict[str, Any]:
     """只读取已经落盘的预测。输入 messages 不一致时拒绝复用，不加载模型。"""
     destination = Path(out_dir)
+    _dump_report.source_meta = source_list_report_fields(
+        frozen_train_families=frozen_train_families,
+        frozen_sha256=frozen_train_families_sha256,
+        source_universe=source_universe,
+        universe_sha256=source_universe_sha256,
+    )
     destination.mkdir(parents=True, exist_ok=True)
     protocol_file = Path(protocol_path)
     if not protocol_file.is_file():
@@ -909,7 +1170,12 @@ def rescore_saved(
         _dump_report(destination, report, "missing")
         return report
     cases = read_jsonl(protocol_file)
-    checked = validate_protocol(cases, mode, frozen_train_families=frozen_train_families)
+    checked = validate_protocol(
+        cases,
+        mode,
+        frozen_train_families=frozen_train_families,
+        source_universe=source_universe,
+    )
     if not checked["executable"]:
         report = _not_executed(
             checked["status"],

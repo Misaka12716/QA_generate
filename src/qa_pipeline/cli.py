@@ -106,6 +106,52 @@ def cmd_demo(args) -> int:
     return 0
 
 
+def _formal_source_arguments(args):
+    """正式模式读取冻结训练来源清单和来源宇宙。探索模式不借此改称正式结果。"""
+    from .experiments.adapter_eval import (
+        ProtocolError,
+        load_frozen_train_families,
+        load_source_universe,
+        refuse_source_list,
+        trace_source_list,
+    )
+
+    if args.mode != "formal":
+        return {}, None
+    if not getattr(args, "frozen_train_families", None):
+        return {"frozen_train_families": None}, None
+    frozen_sha = None
+    universe_sha = None
+    try:
+        manifest = load_frozen_train_families(args.frozen_train_families)
+        frozen_sha = manifest["sha256"]
+        if not getattr(args, "source_inventory", None):
+            raise ProtocolError("invalid_source_list:universe_missing")
+        universe = load_source_universe(args.source_inventory)
+        universe_sha = universe["sha256"]
+        traced = trace_source_list(manifest, universe)
+        if not traced["ok"]:
+            raise ProtocolError(str(traced["reason"]))
+    except ProtocolError as exc:
+        reason = str(exc)
+        report = refuse_source_list(
+            args.out,
+            reason,
+            mode=args.mode,
+            protocol_path=args.protocol,
+            frozen_train_families_sha256=frozen_sha or getattr(exc, "sha256", None),
+            source_universe_sha256=universe_sha or getattr(exc, "universe_sha256", None),
+        )
+        print(json.dumps({"status": report.get("status"), "executed": False, "reason": reason, "out": args.out}, ensure_ascii=False))
+        return None, 1
+    return {
+        "frozen_train_families": manifest["ids"],
+        "source_universe": universe["families"],
+        "frozen_train_families_sha256": frozen_sha,
+        "source_universe_sha256": universe_sha,
+    }, None
+
+
 def cmd_eval_adapter(args) -> int:
     import hashlib
 
@@ -124,6 +170,9 @@ def cmd_eval_adapter(args) -> int:
         "top_p": 1.0,
         "dtype": "bfloat16",
     }
+    source_kwargs, source_code = _formal_source_arguments(args)
+    if source_code is not None:
+        return source_code
     try:
         report = eval_adapter(
             base_model=args.base_model,
@@ -137,12 +186,21 @@ def cmd_eval_adapter(args) -> int:
             mode=args.mode,
             template_id=template_id,
             device=args.device,
+            **source_kwargs,
         )
     except ProtocolError as exc:
         print(str(exc), file=sys.stderr)
         return 1
     print(json.dumps({"status": report.get("status"), "executed": report.get("executed"), "out": args.out}, ensure_ascii=False))
     return 0 if report.get("executed") else 2
+
+
+def cmd_import_review(args) -> int:
+    from .experiments.review_io import import_run_reviews
+
+    result = import_run_reviews(args.run, batch=args.batch or None)
+    print(json.dumps({"error_n": result.get("error_n"), "pending_review_n": result.get("pending_review_n"), "adjudicated_n": result.get("adjudicated_n"), "ready_for_inference": result.get("ready_for_inference"), "out": args.run}, ensure_ascii=False))
+    return 0 if not result.get("error_n") else 1
 
 
 def cmd_list(args) -> int:
@@ -204,7 +262,14 @@ def main(argv: list[str] | None = None) -> int:
     ev.add_argument("--scorer", default="aux-rules-v2")
     ev.add_argument("--max-new-tokens", type=int, default=512)
     ev.add_argument("--device", type=int, default=None)
+    ev.add_argument("--frozen-train-families", default=None, help="正式模式使用的冻结训练来源清单 JSON。空清单无效")
+    ev.add_argument("--source-inventory", default=None, help="正式模式用来核对来源家族是否可追溯的宇宙文件")
     ev.set_defaults(func=cmd_eval_adapter)
+
+    review_p = sub.add_parser("import-review", help="导入人工审核 CSV，并校验 ID、内容哈希和审核完整性")
+    review_p.add_argument("--run", required=True, help="含 review/batches.json 的运行目录")
+    review_p.add_argument("--batch", default="", help="只导入指定批次；默认导入清单中的全部批次")
+    review_p.set_defaults(func=cmd_import_review)
 
     ls = sub.add_parser("list-strategies", help="列出已注册策略")
     ls.set_defaults(func=cmd_list)
