@@ -12,6 +12,7 @@ from qa_pipeline.experiments.adapter_eval import (
     EXPLORATORY_DISCLAIMER,
     ProtocolError,
     eval_adapter,
+    generate_with_model,
     rescore_saved,
     review_content_hash,
 )
@@ -53,9 +54,31 @@ def _case(**kwargs) -> dict:
 
 
 def _reviewed(**kwargs) -> dict:
-    row = _case(review_status="dual_agreed", **kwargs)
+    row = _case(
+        review_status="dual_agreed",
+        reviewer_a="reviewer_a",
+        reviewer_b="reviewer_b",
+        opinion_a="同意金标",
+        opinion_b="同意金标",
+        adjudication="同意",
+        **kwargs,
+    )
     row["review_content_hash"] = review_content_hash(row)
     return row
+
+
+def _identified(case: dict, role: str, text: str, model_id: str = "base-1") -> dict:
+    from qa_pipeline.experiments.adapter_eval import canonical_messages
+
+    return {
+        "case_id": case["case_id"],
+        "model_role": role,
+        "text": text,
+        "messages": canonical_messages(case),
+        "signature": f"sig-{case['case_id']}-{role}",
+        "model_id": model_id,
+        "adapter_id": "g0" if role == "adapter" else "",
+    }
 
 
 def _gen(text: str = "成人一次 0.5 g"):
@@ -146,13 +169,14 @@ def test_shuffled_predictions_keep_the_same_score(tmp_path):
     assert [item["predictions"]["adapter"]["text"] for item in flipped["aligned"]] == ["儿童一次 0.25 g", "成人一次 0.5 g"]
     protocol = tmp_path / "protocol.jsonl"
     _write_jsonl(protocol, cases)
+    by_id = {case["case_id"]: case for case in cases}
     _write_jsonl(
         tmp_path / "predictions.jsonl",
         [
-            {"case_id": "b", "model_role": "base", "text": "儿童一次 0.25 g"},
-            {"case_id": "a", "model_role": "adapter", "text": "成人一次 0.5 g"},
-            {"case_id": "a", "model_role": "base", "text": "成人一次 0.5 g"},
-            {"case_id": "b", "model_role": "adapter", "text": "儿童一次 0.25 g"},
+            _identified(by_id["b"], "base", "儿童一次 0.25 g"),
+            _identified(by_id["a"], "adapter", "成人一次 0.5 g"),
+            _identified(by_id["a"], "base", "成人一次 0.5 g"),
+            _identified(by_id["b"], "adapter", "儿童一次 0.25 g"),
         ],
     )
     report = rescore_saved(
@@ -233,7 +257,7 @@ def test_invalid_protocol_stops_before_generation(tmp_path):
     assert called["n"] == 0
 
 
-def test_unreviewed_items_stay_out_of_formal_metric(tmp_path):
+def test_unreviewed_items_stop_formal_batch_without_shrinking(tmp_path):
     protocol = tmp_path / "protocol.jsonl"
     _write_jsonl(protocol, [_reviewed(case_id="ok"), _case(case_id="raw", review_status="unreviewed")])
     seen = []
@@ -242,21 +266,26 @@ def test_unreviewed_items_stay_out_of_formal_metric(tmp_path):
         seen.extend(item["case_id"] for item in pending)
         return [{"text": "成人一次 0.5 g"} for _ in pending]
 
-    report = eval_adapter(
-        base_model="unused",
-        base_id="base",
-        adapter="unused",
-        adapter_id="g0",
-        protocol_path=protocol,
-        out_dir=tmp_path / "out",
-        mode="formal",
-        template_id="tpl",
-        generate_fn=generate,
-    )
-    assert seen == ["ok", "ok"]
-    assert report["enters_formal_metric"] is True
-    scores = [json.loads(line)["case_id"] for line in (tmp_path / "out" / "scores.jsonl").read_text().splitlines()]
-    assert scores == ["ok"]
+    with pytest.raises(ProtocolError):
+        eval_adapter(
+            base_model="unused",
+            base_id="base",
+            adapter="unused",
+            adapter_id="g0",
+            protocol_path=protocol,
+            out_dir=tmp_path / "out",
+            mode="formal",
+            template_id="tpl",
+            generate_fn=generate,
+            frozen_train_families=set(),
+        )
+    assert seen == []
+    report = json.loads((tmp_path / "out" / "eval_report.json").read_text(encoding="utf-8"))
+    assert report["executed"] is False
+    assert report["planned_n"] == 2
+    assert report["scored_n"] == 0
+    assert report["reason"] == "pending_review"
+    assert report["enters_formal_metric"] is False
 
 
 def test_exploratory_is_not_formal_gold(tmp_path):
@@ -279,7 +308,7 @@ def test_exploratory_is_not_formal_gold(tmp_path):
     assert report["formal_main_metric"] == "not_executed"
     assert report["enters_formal_metric"] is False
     assert report["disclaimer"] == EXPLORATORY_DISCLAIMER
-    score = json.loads((tmp_path / "out" / "scores.jsonl").read_text().splitlines()[0])
+    score = json.loads((tmp_path / "out" / "scores.aux-rules-v2.jsonl").read_text().splitlines()[0])
     assert score["disclaimer"] == EXPLORATORY_DISCLAIMER
     assert score["enters_formal_metric"] is False
 
@@ -341,8 +370,9 @@ def test_repeated_phrasings_do_not_increase_family_weight():
     assert summary["task_accuracy"] == 0.5
     assert summary["family_count"] == 2
     layered = aggregate_layered(cases)
-    assert layered["ordinary"]["task_accuracy"] == 0.5
+    assert layered["seen_rephrase"]["task_accuracy"] == 0.5
     assert layered["behavior"]["row_count"] == 1
+    assert "ordinary" not in layered
     assert layered["combined_generalization_score"] is None
     assert layered["row_count"] == 12
 
@@ -431,6 +461,8 @@ def test_historical_files_stay_unmodified(tmp_path):
         found = next((path for path in v21.rglob("*") if path.is_file() and path.stat().st_size < 2_000_000), None)
         if found is not None:
             watched.append(found)
+    if any(not path.is_file() for path in watched):
+        pytest.skip("历史运行文件不在这个 checkout 里")
     before = {str(path): _sha(path) for path in watched}
     protocol = tmp_path / "protocol.jsonl"
     _write_jsonl(protocol, [_case()])
@@ -558,3 +590,18 @@ def test_scoring_rules_cover_required_cases():
     )
     assert "over_refusal" in refused["critical_errors"]
     assert refused["semantic_accuracy_verified"] is False
+
+
+def test_greedy_infer_config_reaches_gpu_check(monkeypatch):
+    monkeypatch.setattr(
+        "qa_pipeline.experiments.adapter_eval.select_trainable_gpus",
+        lambda *args, **kwargs: ([], "no_gpu"),
+    )
+    result = generate_with_model(
+        [],
+        base_model="unused",
+        adapter="unused",
+        infer_config={"max_new_tokens": 8, "do_sample": False, "dtype": "bfloat16"},
+    )
+    assert result["skipped"] is True
+    assert result["reason"] == "no_gpu"

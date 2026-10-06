@@ -12,13 +12,43 @@ from ..textutil import SCORING_TOKENIZER_ID, exact_match, token_f1
 
 _NUMBER = re.compile(r"\d+(?:\.\d+)?")
 _CONCRETE = re.compile(r"\d|(?:为|是|包括|应|禁用|剂量|规格)")
+_GAP_TOKENS = (
+    "资料不足",
+    "无法确定",
+    "不能确定",
+    "未提供",
+    "没有给出",
+    "没有提供",
+    "不能据此",
+    "不能支持",
+    "不足以",
+    "缺少",
+    "无法回答",
+    "不能回答",
+    "未见",
+    "未给出",
+)
+_CLARIFY_TOKENS = (
+    "请补充",
+    "哪一种",
+    "哪种",
+    "哪一个",
+    "需要先说明",
+    "需要明确",
+    "请先明确",
+    "需要确认",
+    "请说明",
+)
+_CONFLICT_TOKENS = ("互相矛盾", "相互矛盾", "存在冲突", "前后矛盾", "资料冲突")
+_SENTENCE_SPLIT = re.compile(r"[。！？\n；;]")
 
 
 class AlignmentError(Exception):
     """预测、金标或干扰上下文无法按 ID 对齐。"""
 
 
-def classify_action(text: str) -> str:
+def classify_action_legacy(text: str) -> str:
+    """v1/v2 使用的旧分类。保留是为了让历史辅助分仍可复现。"""
     raw = (text or "").strip()
     if not raw:
         return "answer"
@@ -40,6 +70,79 @@ def classify_action(text: str) -> str:
     if asks:
         return "clarify"
     return "answer"
+
+
+def _sentences(text: str) -> list[str]:
+    parts = [part.strip() for part in _SENTENCE_SPLIT.split(text or "") if part.strip()]
+    return parts or ([text.strip()] if (text or "").strip() else [])
+
+
+def _has_qty(text: str) -> bool:
+    if _QTY.search(text or ""):
+        return True
+    return bool(re.search(r"(?:一次|一日|每天)\s*\d|\d+\s*(?:片|粒|袋|支|丸)", text or ""))
+
+
+def _token_at(text: str, tokens: tuple[str, ...]) -> int | None:
+    positions = [text.find(token) for token in tokens if token in text]
+    return min(positions) if positions else None
+
+
+def action_assessment(text: str) -> dict[str, Any]:
+    """区分实质回答、部分回答、澄清、资料不足、真实冲突，以及先拒答再编造。"""
+    raw = (text or "").strip()
+    if not raw:
+        return {"action": "needs_review", "refusal_then_fabrication": False, "reason": "empty"}
+    sentences = _sentences(raw)
+    fabrication = False
+    seen_gap = False
+    has_gap = False
+    has_ask = False
+    has_qty = False
+    has_conflict = False
+    for sentence in sentences:
+        gap_at = _token_at(sentence, _GAP_TOKENS)
+        ask = _token_at(sentence, _CLARIFY_TOKENS) is not None
+        conflict = _token_at(sentence, _CONFLICT_TOKENS) is not None
+        qty = _has_qty(sentence)
+        object_gap = "不一致" in sentence and gap_at is not None
+        if gap_at is not None or object_gap:
+            has_gap = True
+        if ask:
+            has_ask = True
+        if qty:
+            has_qty = True
+        if conflict:
+            has_conflict = True
+        if gap_at is not None and qty:
+            match = _QTY.search(sentence) or re.search(r"\d", sentence)
+            if match is not None and match.start() > gap_at:
+                fabrication = True
+        if seen_gap and qty and gap_at is None:
+            fabrication = True
+        if gap_at is not None or object_gap:
+            seen_gap = True
+    if fabrication:
+        return {"action": "answer", "refusal_then_fabrication": True, "reason": "refusal_then_fabrication"}
+    if has_conflict:
+        return {"action": "state_conflict", "refusal_then_fabrication": False, "reason": "source_conflict"}
+    if "不一致" in raw and not has_gap and not has_ask and not has_qty:
+        return {"action": "needs_review", "refusal_then_fabrication": False, "reason": "object_mismatch_unspecified"}
+    if has_ask and not has_qty:
+        return {"action": "clarify", "refusal_then_fabrication": False, "reason": "clarify"}
+    if has_gap and has_qty:
+        return {"action": "partial_answer", "refusal_then_fabrication": False, "reason": "partial_with_gap"}
+    if has_gap:
+        return {"action": "state_insufficient", "refusal_then_fabrication": False, "reason": "insufficient"}
+    if has_ask:
+        return {"action": "clarify", "refusal_then_fabrication": False, "reason": "clarify"}
+    if raw:
+        return {"action": "answer", "refusal_then_fabrication": False, "reason": "substantive"}
+    return {"action": "needs_review", "refusal_then_fabrication": False, "reason": "underspecified"}
+
+
+def classify_action(text: str) -> str:
+    return str(action_assessment(text)["action"])
 
 
 def critical_errors(prediction: str, points: list[str]) -> list[str]:
@@ -84,7 +187,7 @@ def score_task(prediction: str, case: dict[str, Any]) -> dict[str, Any]:
     coverage = point_coverage(prediction, points)
     errors = critical_errors(prediction, points)
     expected = str(case.get("expected_action") or "answer")
-    actual = classify_action(prediction)
+    actual = classify_action_legacy(prediction)
     action_ok = actual == expected or (expected == "partial_answer" and actual == "answer" and coverage["value"] not in {None, 0})
     if expected == "state_insufficient" and actual == "answer":
         action_ok = False
@@ -151,7 +254,7 @@ def confusion(rows: list[dict[str, Any]], predictions: list[str]) -> dict[str, A
     for row, pred in zip(rows, predictions):
         expected = row["expected_action"]
         actual = classify_action(pred)
-        matrix[expected][actual] += 1
+        matrix[expected][actual] = matrix[expected].get(actual, 0) + 1
     return {"matrix": matrix, "n": len(rows)}
 
 
@@ -186,7 +289,11 @@ def binary_refusal_f1(rows: list[dict[str, Any]], predictions: list[str]) -> dic
 def aggregate_families(cases: list[dict[str, Any]]) -> dict[str, Any]:
     by_family: dict[str, list[float]] = defaultdict(list)
     by_source: dict[str, list[str]] = defaultdict(list)
+    unresolved = 0
     for case in cases:
+        if case.get("passed") is None:
+            unresolved += 1
+            continue
         family = str(case.get("family_id") or case.get("case_id") or case.get("id"))
         source = str(case.get("source_family_id") or family)
         by_family[family].append(1.0 if case.get("passed") else 0.0)
@@ -205,6 +312,7 @@ def aggregate_families(cases: list[dict[str, Any]]) -> dict[str, Any]:
         "reason": None if source_mean else "zero_denominator",
         "weighting": "equal_source_family",
         "row_count": len(cases),
+        "unresolved_n": unresolved,
     }
 
 
@@ -271,7 +379,9 @@ def cache_signature(payload: dict[str, Any]) -> str:
 
 SCORER_V1 = "aux-rules-v1"
 SCORER_V2 = "aux-rules-v2"
+SCORER_V3 = "aux-rules-v3"
 SCORER_NOTE = "规则辅助分，不是已验证的语义正确率。"
+SCORER_V3_NOTE = "规则辅助分，只检查已实现的数值、条件与行为标签。不是语义正确率，也不能升为正式主指标。unsupported_numeric_assertions 只列出答案、证据、上下文和要点中都没有的额外数量，不判断非数值编造。"
 
 _QTY = re.compile(r"(\d+(?:\.\d+)?)\s*(mg|g|μg|ug|ml|mL|mmol|kg|℃|%)", re.I)
 _NEG_LEAD = re.compile(r"(不得|禁用|不能|不可|不宜|不是|尚未|未进行)([^。；\n]{1,24})")
@@ -279,26 +389,33 @@ _RETRACT = re.compile(r"(不正确|并非如此|以上不对|实际上不是|不
 _MASS = {"mg": 1.0, "g": 1000.0, "kg": 1_000_000.0, "ug": 0.001, "μg": 0.001}
 
 
+EVAL_STRATA = ("seen_rephrase", "independent", "behavior")
+
+
 def aggregate_layered(cases: list[dict[str, Any]]) -> dict[str, Any]:
-    """行为变体单独分层。同一核心问题的多条问法先在问题内平均，不增加该问题权重。"""
-    ordinary = []
-    behavior = []
+    """seen_rephrase、independent、behavior 分开汇总，不合成泛化总分。"""
+    buckets = {name: [] for name in EVAL_STRATA}
+    unspecified = []
     for case in cases:
-        if case.get("stratum") == "behavior" or case.get("layer") == "behavior":
-            behavior.append(case)
+        stratum = str(case.get("stratum") or case.get("layer") or "")
+        if stratum in buckets:
+            buckets[stratum].append(case)
         else:
-            ordinary.append(case)
-    ordinary_summary = aggregate_families(ordinary)
-    behavior_summary = aggregate_families(behavior)
+            unspecified.append(case)
+    summaries = {}
+    for name, rows in buckets.items():
+        summary = aggregate_families(rows)
+        summary["row_count"] = len(rows)
+        summaries[name] = summary
     return {
-        "ordinary": ordinary_summary,
-        "behavior": behavior_summary,
+        "by_stratum": summaries,
+        "seen_rephrase": summaries["seen_rephrase"],
+        "independent": summaries["independent"],
+        "behavior": summaries["behavior"],
+        "unspecified_row_count": len(unspecified),
         "row_count": len(cases),
-        "core_question_count": ordinary_summary["family_count"],
-        "source_family_count": ordinary_summary["source_family_count"],
-        "behavior_row_count": len(behavior),
         "combined_generalization_score": None,
-        "note": "行为证据变体单独分层，不与普通改写合成一个泛化总分。",
+        "note": "seen_rephrase、independent、behavior 分开汇总，不合成泛化总分。",
     }
 
 
@@ -468,7 +585,7 @@ def score_task_v2(prediction: str, case: dict[str, Any]) -> dict[str, Any]:
     expected = str(case.get("expected_action") or "")
     if expected not in EXPECTED_ACTIONS:
         expected = str(case.get("expected_action") or "answer")
-    actual = classify_action(prediction or "")
+    actual = classify_action_legacy(prediction or "")
     errors = _binding_errors(prediction or "", case)
     if not case.get("numeric_bindings"):
         errors.extend(err for err in critical_errors(prediction or "", points) if err not in errors)
@@ -516,6 +633,173 @@ def score_task_v2(prediction: str, case: dict[str, Any]) -> dict[str, Any]:
         "passed": passed,
         "semantic_accuracy_verified": False,
         "note": SCORER_NOTE,
+    }
+
+
+def _scoring_points(case: dict[str, Any]) -> list[str]:
+    required = [str(point) for point in (case.get("required_points") or []) if str(point).strip()]
+    if required:
+        return required
+    points = [str(point) for point in (case.get("answer_points") or []) if str(point).strip()]
+    if not points and case.get("answer"):
+        points = [str(case["answer"])]
+    return points
+
+
+def _point_hit_v3(prediction: str, point: str, synonyms: list[list[str]]) -> bool:
+    """同义组只替换与整个要点等价的说法，不能用组里的一个片段算复合要点已满足。"""
+    if not point:
+        return False
+    if point in prediction or token_f1(prediction, point) >= 0.55:
+        return True
+    packed_point = re.sub(r"\s+", "", point)
+    packed_pred = re.sub(r"\s+", "", prediction or "")
+    if packed_point and packed_point in packed_pred:
+        return True
+    for group in synonyms:
+        members = [str(item).strip() for item in group if str(item).strip()]
+        if point not in members and packed_point not in {re.sub(r"\s+", "", item) for item in members}:
+            continue
+        if any(item in prediction or re.sub(r"\s+", "", item) in packed_pred for item in members):
+            return True
+    return False
+
+
+def _unavailable_errors(prediction: str, case: dict[str, Any]) -> list[str]:
+    errors = []
+    text = prediction or ""
+    for point in case.get("unavailable_points") or []:
+        raw = str(point).strip()
+        if raw and raw in text:
+            errors.append("asserted_unavailable")
+            continue
+        for number, unit, _norm in _extract_qtys(raw):
+            if f"{number}{unit}" in re.sub(r"\s+", "", text) or f"{number} {unit}" in text:
+                errors.append("asserted_unavailable")
+    return list(dict.fromkeys(errors))
+
+
+def score_task_v3(prediction: str, case: dict[str, Any]) -> dict[str, Any]:
+    """维度化辅助分。不能替代人工审核，也不能当作语义主指标。"""
+    points = _scoring_points(case)
+    synonyms = [list(group) for group in (case.get("synonym_groups") or [])]
+    coverage = _coverage_v2(prediction or "", points, synonyms)
+    coverage["hits"] = [_point_hit_v3(prediction or "", point, synonyms) for point in points] if points else []
+    if points:
+        coverage["value"] = round(sum(1 for hit in coverage["hits"] if hit) / len(points), 4)
+        coverage["reason"] = None
+    expected = str(case.get("expected_action") or "")
+    if expected not in EXPECTED_ACTIONS:
+        expected = str(case.get("expected_action") or "answer")
+    assessment = action_assessment(prediction or "")
+    actual = str(assessment["action"])
+    if actual == "needs_review":
+        return {
+            "scorer_version": SCORER_V3,
+            "task_relevance": None,
+            "required_point_coverage": coverage["value"],
+            "critical_errors": [],
+            "unsupported_numeric_assertions": [],
+            "missing_conditions": [],
+            "expected_behavior": {"expected": expected, "actual": actual, "ok": None},
+            "auxiliary_f1": token_f1(prediction or "", "\n".join(points)) if points else None,
+            "auxiliary_em": None,
+            "passed": None,
+            "judgment": "pending_review",
+            "semantic_accuracy_verified": False,
+            "metric_role": "auxiliary",
+            "note": SCORER_V3_NOTE,
+        }
+    errors = _binding_errors(prediction or "", case)
+    if not case.get("numeric_bindings"):
+        errors.extend(err for err in critical_errors(prediction or "", points) if err not in errors)
+    errors.extend(_unavailable_errors(prediction or "", case))
+    if _negation_scope(prediction or "", points):
+        errors.append("negation_scope")
+    if _retracted(prediction or "", points, str(case.get("answer") or "")):
+        errors.append("retracted")
+    missing = []
+    for condition in case.get("required_conditions") or []:
+        text = str(condition).strip()
+        if text and text not in (prediction or "") and token_f1(prediction or "", text) < 0.55:
+            missing.append(text)
+    if missing:
+        errors.append("missing_condition")
+    unsupported = _unsupported(prediction or "", case, points)
+    if assessment["refusal_then_fabrication"]:
+        errors.append("refusal_then_fabrication")
+    evidence_state = str(case.get("evidence_state") or "")
+    over_refusal = expected == "answer" and evidence_state == "sufficient" and actual == "state_insufficient"
+    if over_refusal:
+        errors.append("over_refusal")
+    errors = list(dict.fromkeys(errors))
+    if expected in {"answer", "partial_answer"}:
+        relevant = coverage["value"] not in {None, 0}
+    else:
+        relevant = True
+    action_ok = actual == expected or (
+        expected == "partial_answer" and actual == "answer" and coverage["value"] not in {None, 0}
+    )
+    if expected == "state_insufficient" and actual == "answer":
+        action_ok = False
+    if over_refusal or assessment["refusal_then_fabrication"]:
+        action_ok = False
+    passed = bool(relevant and not errors and action_ok and not unsupported)
+    if expected == "answer":
+        passed = bool(passed and coverage["value"] == 1)
+    return {
+        "scorer_version": SCORER_V3,
+        "task_relevance": relevant,
+        "required_point_coverage": coverage["value"],
+        "critical_errors": [err for err in errors if err != "unsupported"],
+        "unsupported_numeric_assertions": unsupported,
+        "missing_conditions": missing,
+        "expected_behavior": {"expected": expected, "actual": actual, "ok": action_ok},
+        "auxiliary_f1": token_f1(prediction or "", "\n".join(points)) if points else None,
+        "auxiliary_em": exact_match(prediction or "", str(case.get("answer") or "")) if _single_value(case) else None,
+        "passed": passed,
+        "judgment": "auxiliary_rule",
+        "semantic_accuracy_verified": False,
+        "metric_role": "auxiliary",
+        "note": SCORER_V3_NOTE,
+    }
+
+
+def visible_support(case: dict[str, Any]) -> dict[str, Any]:
+    """必答要点应出现在学生可见上下文中；不可见要点不应被当成必须回答。"""
+    context = str(case.get("context") or "")
+    required = [str(point) for point in (case.get("required_points") or []) if str(point).strip()]
+    if not required:
+        required = [str(point) for point in (case.get("answer_points") or []) if str(point).strip()]
+    unavailable = [str(point) for point in (case.get("unavailable_points") or []) if str(point).strip()]
+    return {
+        "required_not_in_context": [point for point in required if point not in context],
+        "unavailable_still_visible": [point for point in unavailable if point in context],
+    }
+
+
+def reference_self_check(case: dict[str, Any]) -> dict[str, Any]:
+    """用参考答案给自己评分。失败原因分开记录，不改金标措辞。"""
+    scored = score_task_v3(str(case.get("answer") or ""), case)
+    behavior = scored["expected_behavior"]
+    reasons: list[str] = []
+    if scored.get("judgment") == "pending_review":
+        reasons.append("classifier_pending_review")
+    elif behavior.get("ok") is not True:
+        reasons.append(f"action:{behavior.get('expected')}->{behavior.get('actual')}")
+    if scored.get("critical_errors"):
+        reasons.append("critical_errors:" + ",".join(scored["critical_errors"]))
+    if scored.get("unsupported_numeric_assertions"):
+        reasons.append("unsupported_numeric")
+    if scored.get("passed") is not True and not reasons:
+        reasons.append("not_passed")
+    return {
+        "case_id": str(case.get("case_id") or case.get("id") or ""),
+        "expected_behavior": behavior.get("expected"),
+        "actual_action": behavior.get("actual"),
+        "passed": scored.get("passed"),
+        "reasons": reasons,
+        "judgment": scored.get("judgment"),
     }
 
 
@@ -577,11 +861,26 @@ def _index_predictions(rows: list[dict[str, Any]]) -> tuple[dict[str, dict[str, 
     return indexed, failures
 
 
+def message_digest(messages: Any) -> str:
+    normalized = []
+    for message in messages or []:
+        if not isinstance(message, dict):
+            continue
+        normalized.append({"role": str(message.get("role") or ""), "content": str(message.get("content") or "")})
+    return cache_signature({"messages": normalized})
+
+
 def align_prediction_groups(
     cases: list[dict[str, Any]],
     groups: dict[str, list[dict[str, Any]]],
+    *,
+    require_input_identity: bool = False,
+    expected_messages: dict[str, list[dict[str, str]]] | None = None,
 ) -> dict[str, Any]:
-    """按 case_id 对齐。缺失、重复或多余预测不缩小计划分母，也不能当成评分通过。"""
+    """按 case_id 对齐。缺失、重复或多余预测不缩小计划分母，也不能当成评分通过。
+
+    require_input_identity 为真时，同 ID 但 messages 不同、缺签名、带 error 或模型身份不一致都会失败。
+    """
     failures: list[dict[str, Any]] = []
     seen_cases: set[str] = set()
     planned_ids: list[str] = []
@@ -603,10 +902,18 @@ def align_prediction_groups(
     indexed = {}
     id_sets = []
     for name, rows in groups.items():
+        if name not in {"base", "adapter"}:
+            failures.append({"case_id": None, "reason": "unknown_model_role", "kind": "technical", "model": name})
         mapping, group_failures = _index_predictions(rows)
         for item in group_failures:
             item["model"] = name
             failures.append(item)
+        identities = {str(row.get("model_id") or "") for row in mapping.values() if row.get("model_id")}
+        adapters = {str(row.get("adapter_id") or "") for row in mapping.values() if "adapter_id" in row}
+        if len(identities) > 1:
+            failures.append({"case_id": None, "reason": "model_identity_mismatch", "kind": "technical", "model": name})
+        if name == "adapter" and len(adapters) > 1:
+            failures.append({"case_id": None, "reason": "adapter_identity_mismatch", "kind": "technical", "model": name})
         indexed[name] = mapping
         id_sets.append(set(mapping))
     planned_set = {item for item in planned_ids if not str(item).startswith(("invalid-", "missing-"))}
@@ -624,9 +931,35 @@ def align_prediction_groups(
     if ok:
         for case in cases:
             case_id = str(case.get("case_id") or case.get("id"))
-            aligned.append({"case": case, "predictions": {name: indexed[name][case_id] for name in groups}})
+            predictions = {name: indexed[name][case_id] for name in groups}
+            if require_input_identity:
+                expected = None
+                if expected_messages is not None:
+                    expected = expected_messages.get(case_id)
+                elif case.get("messages"):
+                    expected = case.get("messages")
+                expected_hash = message_digest(expected) if expected is not None else ""
+                for name, pred in predictions.items():
+                    if pred.get("error"):
+                        failures.append({"case_id": case_id, "reason": "prediction_error", "kind": "technical", "model": name, "detail": pred.get("error")})
+                    if not pred.get("messages"):
+                        failures.append({"case_id": case_id, "reason": "missing_input_identity", "kind": "technical", "model": name})
+                    elif expected is not None and message_digest(pred.get("messages")) != expected_hash:
+                        failures.append({"case_id": case_id, "reason": "input_mismatch", "kind": "technical", "model": name})
+                    if not pred.get("signature"):
+                        failures.append({"case_id": case_id, "reason": "missing_signature", "kind": "technical", "model": name})
+                    if not pred.get("model_id"):
+                        failures.append({"case_id": case_id, "reason": "missing_model_identity", "kind": "technical", "model": name})
+                    if str(pred.get("model_role") or name) != name:
+                        failures.append({"case_id": case_id, "reason": "model_role_mismatch", "kind": "technical", "model": name})
+            if not failures:
+                aligned.append({"case": case, "predictions": predictions})
+        if failures:
+            ok = False
+            aligned = []
     planned_n = len(cases)
     scored_n = len(aligned) if ok else 0
+    affected = sorted({str(item.get("case_id")) for item in failures if item.get("case_id") not in {None, ""}})
     return {
         "ok": ok,
         "planned_n": planned_n,
@@ -634,8 +967,15 @@ def align_prediction_groups(
         "scored_n": scored_n,
         "failed_n": planned_n - scored_n if not ok else 0,
         "failures": failures,
+        "affected_ids": affected,
         "aligned": aligned,
         "denominator": planned_n,
         "silent_shrink": False,
+        "count_units": {
+            "planned_n": "questions",
+            "generated_n": "model_answers",
+            "scored_n": "questions",
+            "failed_n": "questions",
+        },
         "system_rule": "技术失败计为任务未完成。分母是 planned_n，不把失败样本去掉后再计算准确率。",
     }

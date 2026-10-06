@@ -10,17 +10,23 @@ from .devices import select_trainable_gpus
 from .scoring import (
     SCORER_V1,
     SCORER_V2,
+    SCORER_V3,
     aggregate_layered,
     align_prediction_groups,
+    cache_signature,
+    message_digest,
     prediction_item_signature,
     score_task,
     score_task_v2,
+    score_task_v3,
 )
 from .sft import eval_messages
 
 EXPLORATORY_DISCLAIMER = "未完成人工审核，仅供探索"
 PROTECTED_PROTOCOL_NAMES = frozenset({"heldout_protocol.jsonl", "heldout.jsonl"})
 REVIEWED_STATUS = frozenset({"agreed", "dual_agreed"})
+KNOWN_ROLES = frozenset({"base", "adapter"})
+SUPPORTED_INFER = frozenset({"max_new_tokens", "do_sample", "temperature", "top_p", "dtype"})
 DEFAULT_INFER = {
     "max_new_tokens": 512,
     "do_sample": False,
@@ -41,6 +47,22 @@ CARRY_FIELDS = (
     "source",
     "generic_family_id",
 )
+CONTENT_FIELDS = (
+    "signature",
+    "text",
+    "prompt_tokens",
+    "completion_tokens",
+    "finish_reason",
+    "truncated",
+    "device",
+    "elapsed_sec",
+    "error",
+    "model_id",
+    "adapter_id",
+    "model_role",
+    "template_id",
+    "infer_config",
+)
 
 
 class ProtocolError(Exception):
@@ -60,36 +82,118 @@ def case_question(case: dict[str, Any]) -> str:
     return ""
 
 
-def review_content_hash(case: dict[str, Any]) -> str:
-    from .scoring import cache_signature
+def canonical_messages(case: dict[str, Any]) -> list[dict[str, str]]:
+    raw = case.get("messages") or eval_messages(case)
+    return [{"role": str(item.get("role") or ""), "content": str(item.get("content") or "")} for item in raw]
 
+
+def review_content_hash(case: dict[str, Any]) -> str:
     payload = {
         "case_id": case_id_of(case),
         "question": case.get("question"),
         "context": case.get("context"),
-        "messages": case.get("messages"),
+        "messages": canonical_messages(case),
         "answer": case.get("answer"),
         "answer_points": case.get("answer_points"),
+        "required_points": case.get("required_points") or [],
+        "optional_points": case.get("optional_points") or [],
+        "unavailable_points": case.get("unavailable_points") or [],
+        "evidence": case.get("evidence"),
+        "numeric_bindings": case.get("numeric_bindings") or [],
+        "required_conditions": case.get("required_conditions") or [],
         "expected_action": case.get("expected_action"),
         "evidence_state": case.get("evidence_state"),
         "source_family_id": case.get("source_family_id"),
         "family_id": case.get("family_id"),
+        "dataset_version": case.get("dataset_version"),
+        "source_hash": case.get("source_hash"),
     }
     return cache_signature(payload)
 
 
-def validate_protocol(cases: Any, mode: str) -> dict[str, Any]:
+def _review_reasons(case: dict[str, Any]) -> list[str]:
+    reasons: list[str] = []
+    status = case.get("review_status")
+    if status not in REVIEWED_STATUS:
+        reasons.append("unreviewed")
+        return reasons
+    digest = str(case.get("review_content_hash") or "")
+    if not digest:
+        reasons.append("missing_review_hash")
+    elif digest != review_content_hash(case):
+        reasons.append("review_hash_mismatch")
+    if status == "dual_agreed":
+        required = ("reviewer_a", "reviewer_b", "opinion_a", "opinion_b", "adjudication")
+        if not all(str(case.get(key) or "").strip() for key in required):
+            reasons.append("incomplete_dual_review")
+    elif not str(case.get("reviewer_a") or "").strip() or not str(case.get("opinion_a") or "").strip():
+        reasons.append("incomplete_review")
+    return reasons
+
+
+def screen_candidates(cases: list[dict[str, Any]]) -> dict[str, Any]:
+    """候选筛选只用于发布前。已发布协议不得再靠它缩小分母。"""
+    kept: list[dict[str, Any]] = []
+    excluded: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for index, case in enumerate(cases):
+        if not isinstance(case, dict):
+            excluded.append({"id": index, "reasons": ["invalid_object"]})
+            continue
+        reasons: list[str] = []
+        case_id = case_id_of(case)
+        if not case_id:
+            reasons.append("missing_id")
+        elif case_id in seen:
+            reasons.append("duplicate_id")
+        else:
+            seen.add(case_id)
+        if not case_question(case):
+            reasons.append("empty_question")
+        if reasons:
+            excluded.append({"id": case_id or index, "reasons": reasons})
+        else:
+            kept.append(case)
+    return {
+        "kept": kept,
+        "excluded": excluded,
+        "note": "筛选只发生在发布前。已发布协议不再按这份清单缩小分母。",
+    }
+
+
+def validate_protocol(
+    cases: Any,
+    mode: str,
+    frozen_train_families: set[str] | frozenset[str] | None = None,
+) -> dict[str, Any]:
     if mode not in {"formal", "exploratory"}:
         raise ProtocolError(f"unknown_mode:{mode}")
     if not isinstance(cases, list):
-        raise ProtocolError("invalid_object")
+        return {
+            "mode": mode,
+            "status": "invalid_structure",
+            "eligible": [],
+            "failures": [{"id": None, "reasons": ["invalid_object"]}],
+            "planned_n": 0,
+            "executable": False,
+        }
+    if len(cases) == 0:
+        return {
+            "mode": mode,
+            "status": "empty_protocol",
+            "eligible": [],
+            "failures": [],
+            "planned_n": 0,
+            "executable": False,
+        }
     failures = []
-    eligible = []
     seen: set[str] = set()
+    review_only = True
     for index, case in enumerate(cases):
         reasons: list[str] = []
         if not isinstance(case, dict):
             failures.append({"id": index, "reasons": ["invalid_object"]})
+            review_only = False
             continue
         case_id = case_id_of(case)
         if not case_id:
@@ -101,26 +205,52 @@ def validate_protocol(cases: Any, mode: str) -> dict[str, Any]:
         if not case_question(case):
             reasons.append("empty_question")
         if mode == "formal":
-            if not str(case.get("answer") or "").strip() and not (case.get("answer_points") or []):
+            if frozen_train_families is None:
+                reasons.append("source_list_missing")
+            else:
+                family = str(case.get("source_family_id") or "")
+                if family and family in set(frozen_train_families):
+                    reasons.append("source_overlap")
+                elif case.get("source_overlap_train"):
+                    reasons.append("source_overlap_unverified")
+            if not str(case.get("answer") or "").strip() and not (case.get("answer_points") or case.get("required_points")):
                 reasons.append("missing_gold")
-            if case.get("review_status") not in REVIEWED_STATUS:
-                reasons.append("unreviewed")
-            digest = str(case.get("review_content_hash") or "")
-            if not digest:
-                reasons.append("missing_review_hash")
-            elif digest != review_content_hash(case):
-                reasons.append("review_hash_mismatch")
+            reasons.extend(_review_reasons(case))
             if not (case.get("source_family_id") or case.get("source")):
                 reasons.append("missing_source")
             if not case.get("expected_action"):
                 reasons.append("missing_expected_action")
-            if case.get("source_overlap_train"):
-                reasons.append("source_overlap")
         if reasons:
+            if any(reason not in {"unreviewed", "incomplete_dual_review", "incomplete_review", "missing_review_hash"} for reason in reasons):
+                review_only = False
             failures.append({"id": case_id or index, "reasons": reasons})
-        else:
-            eligible.append(case)
-    return {"mode": mode, "eligible": eligible, "failures": failures, "planned_n": len(cases)}
+    if mode == "formal" and failures:
+        status = "pending_review" if review_only else "batch_stopped"
+        return {
+            "mode": mode,
+            "status": status,
+            "eligible": [],
+            "failures": failures,
+            "planned_n": len(cases),
+            "executable": False,
+        }
+    if mode == "exploratory" and failures:
+        return {
+            "mode": mode,
+            "status": "invalid_protocol",
+            "eligible": [],
+            "failures": failures,
+            "planned_n": len(cases),
+            "executable": False,
+        }
+    return {
+        "mode": mode,
+        "status": "executable",
+        "eligible": list(cases),
+        "failures": [],
+        "planned_n": len(cases),
+        "executable": True,
+    }
 
 
 def assert_candidate_destination(path: str | Path, protected: list[str | Path] | None = None) -> None:
@@ -151,17 +281,170 @@ def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
     path.write_text(body, encoding="utf-8")
 
 
-def _cache_map(path: Path) -> dict[str, dict[str, Any]]:
-    found = {}
-    for row in read_jsonl(path):
-        signature = str(row.get("signature") or "")
-        if signature:
-            found[signature] = row
-    return found
+def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
 def _carry(case: dict[str, Any]) -> dict[str, Any]:
     return {key: case.get(key) for key in CARRY_FIELDS if case.get(key) not in {None, ""}}
+
+
+def resolve_infer(infer_config: dict[str, Any] | None) -> tuple[dict[str, Any] | None, list[str]]:
+    supplied = dict(infer_config or {})
+    unknown = sorted(set(supplied) - SUPPORTED_INFER)
+    if unknown:
+        return None, unknown
+    declared = dict(DEFAULT_INFER)
+    declared.update(supplied)
+    if declared.get("dtype") != "bfloat16":
+        return None, ["dtype"]
+    effective = {
+        "max_new_tokens": int(declared["max_new_tokens"]),
+        "do_sample": bool(declared["do_sample"]),
+        "dtype": "bfloat16",
+    }
+    inactive: list[str] = []
+    if effective["do_sample"]:
+        effective["temperature"] = declared["temperature"]
+        effective["top_p"] = declared["top_p"]
+    else:
+        inactive = ["temperature", "top_p"]
+    return {"declared": declared, "effective": effective, "inactive_when_greedy": inactive}, []
+
+
+def prediction_run_id(
+    cases: list[dict[str, Any]],
+    base_id: str,
+    adapter_id: str,
+    template_id: str,
+    infer_effective: dict[str, Any],
+) -> str:
+    payload = {
+        "base_id": base_id,
+        "adapter_id": adapter_id,
+        "template_id": template_id,
+        "infer_config": infer_effective,
+        "inputs": [{"case_id": case_id_of(case), "messages": canonical_messages(case)} for case in cases],
+    }
+    return cache_signature(payload)[:16]
+
+
+def score_run_id(pred_id: str, scorer_version: str, cases: list[dict[str, Any]]) -> str:
+    gold = []
+    for case in cases:
+        gold.append(
+            {
+                "case_id": case_id_of(case),
+                "answer": case.get("answer"),
+                "answer_points": case.get("answer_points"),
+                "required_points": case.get("required_points"),
+                "unavailable_points": case.get("unavailable_points"),
+                "expected_action": case.get("expected_action"),
+                "numeric_bindings": case.get("numeric_bindings"),
+                "required_conditions": case.get("required_conditions"),
+                "evidence_state": case.get("evidence_state"),
+            }
+        )
+    return cache_signature({"prediction_run_id": pred_id, "scorer": scorer_version, "gold": gold})[:16]
+
+
+def _archive_if_different(path: Path, run_id: str) -> None:
+    """同一路径上的另一运行先改名保留，不覆盖旧结果。"""
+    meta_path = Path(str(path) + ".run.json")
+    if not path.exists():
+        return
+    old_id = None
+    if meta_path.is_file():
+        try:
+            old_id = str(json.loads(meta_path.read_text(encoding="utf-8")).get("run_id") or "")
+        except json.JSONDecodeError:
+            old_id = ""
+    if old_id == run_id:
+        return
+    stamp = old_id or "legacy"
+    archived = path.with_name(f"{path.stem}.{stamp}{path.suffix}")
+    if archived.exists():
+        raise ProtocolError(f"refuse_overwrite:{archived.name}")
+    path.replace(archived)
+    if meta_path.is_file():
+        meta_path.replace(Path(str(archived) + ".run.json"))
+
+
+def _write_versioned_json(path: Path, run_id: str, payload: dict[str, Any]) -> None:
+    _archive_if_different(path, run_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    Path(str(path) + ".run.json").write_text(json.dumps({"run_id": run_id}, ensure_ascii=False), encoding="utf-8")
+
+
+def _write_versioned_jsonl(path: Path, run_id: str, rows: list[dict[str, Any]]) -> None:
+    _archive_if_different(path, run_id)
+    write_jsonl(path, rows)
+    Path(str(path) + ".run.json").write_text(json.dumps({"run_id": run_id}, ensure_ascii=False), encoding="utf-8")
+
+
+def _load_content_cache(path: Path) -> tuple[dict[str, dict[str, Any]], list[dict[str, Any]]]:
+    found: dict[str, dict[str, Any]] = {}
+    problems: list[dict[str, Any]] = []
+    blocked: set[str] = set()
+    if not path.is_file():
+        return found, problems
+    for index, row in enumerate(read_jsonl(path)):
+        if not isinstance(row, dict):
+            problems.append({"index": index, "reason": "corrupt"})
+            continue
+        signature = str(row.get("signature") or "")
+        if not signature:
+            problems.append({"index": index, "reason": "missing_signature"})
+            continue
+        if row.get("case_id"):
+            problems.append({"index": index, "reason": "content_cache_has_case_id", "signature": signature})
+        if row.get("error"):
+            problems.append({"index": index, "reason": "failure_in_success_cache", "signature": signature})
+            continue
+        if signature in blocked:
+            continue
+        if signature in found and found[signature].get("text") != row.get("text"):
+            problems.append({"signature": signature, "reason": "conflict"})
+            found.pop(signature, None)
+            blocked.add(signature)
+            continue
+        if signature in found:
+            problems.append({"signature": signature, "reason": "duplicate"})
+            continue
+        found[signature] = {key: row.get(key) for key in CONTENT_FIELDS}
+    return found, problems
+
+
+def _content_record(row: dict[str, Any]) -> dict[str, Any]:
+    return {key: row.get(key) for key in CONTENT_FIELDS}
+
+
+def _bind_content(content: dict[str, Any], spec: dict[str, Any]) -> dict[str, Any]:
+    bound = {
+        "case_id": spec["case_id"],
+        "model_role": spec["model_role"],
+        "messages": spec["messages"],
+        "signature": content.get("signature") or spec["signature"],
+        "model_id": content.get("model_id") or spec.get("model_id"),
+        "adapter_id": content.get("adapter_id") if spec["model_role"] == "adapter" else "",
+        "template_id": content.get("template_id") or spec.get("template_id"),
+        "infer_config": content.get("infer_config") or spec.get("infer_config"),
+        "text": str(content.get("text") or ""),
+        "prompt_tokens": content.get("prompt_tokens"),
+        "completion_tokens": content.get("completion_tokens"),
+        "finish_reason": content.get("finish_reason"),
+        "truncated": bool(content.get("truncated")),
+        "device": content.get("device"),
+        "elapsed_sec": content.get("elapsed_sec"),
+        "error": content.get("error"),
+    }
+    for key, value in spec.items():
+        if key in CARRY_FIELDS and value not in {None, ""}:
+            bound[key] = value
+    return bound
 
 
 def _score_one(prediction: str, case: dict[str, Any], scorer_version: str) -> dict[str, Any]:
@@ -169,9 +452,14 @@ def _score_one(prediction: str, case: dict[str, Any], scorer_version: str) -> di
         scored = score_task(prediction, case)
         scored["scorer_version"] = SCORER_V1
         scored["semantic_accuracy_verified"] = False
+        scored["metric_role"] = "auxiliary"
         return scored
     if scorer_version == SCORER_V2:
-        return score_task_v2(prediction, case)
+        scored = score_task_v2(prediction, case)
+        scored["metric_role"] = "auxiliary"
+        return scored
+    if scorer_version == SCORER_V3:
+        return score_task_v3(prediction, case)
     raise ProtocolError(f"unknown_scorer:{scorer_version}")
 
 
@@ -185,7 +473,19 @@ def _not_executed(reason: str, mode: str, extra: dict[str, Any] | None = None) -
         "enters_formal_metric": False,
         "formal_main_metric": "not_executed",
         "formal_gold": False,
+        "semantic_accuracy_verified": False,
+        "metric_role": "auxiliary",
+        "reason_main_metric": "uncalibrated_rules" if reason != "protocol_missing" else reason,
         "delta_f1": None,
+        "planned_n": 0,
+        "scored_n": 0,
+        "failed_n": 0,
+        "count_units": {
+            "planned_n": "questions",
+            "generated_n": "model_answers",
+            "scored_n": "questions",
+            "failed_n": "questions",
+        },
     }
     if mode == "exploratory":
         report["disclaimer"] = EXPLORATORY_DISCLAIMER
@@ -211,8 +511,10 @@ def _apply_scores(
             **_carry(case),
             "before": before,
             "after": after,
-            "content_error": (not before.get("passed")) or (not after.get("passed")),
+            "content_error": before.get("passed") is False or after.get("passed") is False,
+            "unresolved": before.get("passed") is None or after.get("passed") is None,
             "technical_failure": False,
+            "metric_role": "auxiliary",
         }
         if mode == "exploratory":
             row["disclaimer"] = EXPLORATORY_DISCLAIMER
@@ -220,9 +522,32 @@ def _apply_scores(
             row["enters_formal_metric"] = False
         else:
             row["review_status"] = case.get("review_status")
-            row["enters_formal_metric"] = True
+            row["enters_formal_metric"] = False
         rows.append(row)
     return rows
+
+
+def _spec_for(
+    case: dict[str, Any],
+    role: str,
+    messages: list[dict[str, str]],
+    signature: str,
+    base_id: str,
+    adapter_id: str,
+    template_id: str,
+    infer_effective: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "case_id": case_id_of(case),
+        "model_role": role,
+        "messages": messages,
+        "signature": signature,
+        "model_id": base_id,
+        "adapter_id": adapter_id if role == "adapter" else "",
+        "template_id": template_id,
+        "infer_config": infer_effective,
+        **_carry(case),
+    }
 
 
 def eval_adapter(
@@ -240,89 +565,122 @@ def eval_adapter(
     generate_fn: Callable[[list[dict[str, Any]]], Any] | None = None,
     device: int | None = None,
     reuse_predictions: bool = True,
+    frozen_train_families: set[str] | frozenset[str] | None = None,
+    resume: bool = False,
 ) -> dict[str, Any]:
-    """推理与评分分开。正式协议没有有效金标时，在调用生成器之前停止。"""
+    """推理与评分分开。正式协议有无效项时停止，不缩小计划分母。"""
     destination = Path(out_dir)
     destination.mkdir(parents=True, exist_ok=True)
-    config = dict(DEFAULT_INFER)
-    config.update(infer_config or {})
-    cases = read_jsonl(protocol_path)
-    checked = validate_protocol(cases, mode)
+    protocol_file = Path(protocol_path)
+    if not protocol_file.is_file():
+        report = _not_executed("protocol_missing", mode)
+        _dump_report(destination, report, "missing")
+        return report
+    resolved, unknown = resolve_infer(infer_config)
+    if resolved is None:
+        report = _not_executed(f"unsupported_infer:{','.join(unknown)}", mode)
+        _dump_report(destination, report, "unsupported")
+        return report
+    cases = read_jsonl(protocol_file)
+    checked = validate_protocol(cases, mode, frozen_train_families=frozen_train_families)
     (destination / "protocol_check.json").write_text(
         json.dumps(
-            {"failures": checked["failures"], "eligible_n": len(checked["eligible"]), "planned_n": checked["planned_n"]},
+            {
+                "status": checked["status"],
+                "failures": checked["failures"],
+                "eligible_n": len(checked["eligible"]),
+                "planned_n": checked["planned_n"],
+                "executable": checked["executable"],
+            },
             ensure_ascii=False,
             indent=2,
         ),
         encoding="utf-8",
     )
-    if checked["failures"] and mode == "exploratory":
-        report = _not_executed("invalid_protocol", mode, {"protocol_failures": checked["failures"]})
-        _dump_report(destination, report)
-        raise ProtocolError("invalid_protocol")
-    if mode == "formal" and not checked["eligible"]:
+    if not checked["executable"]:
         report = _not_executed(
-            "no_valid_gold",
+            checked["status"],
             mode,
-            {"protocol_failures": checked["failures"], "main_metric": "not_executed"},
+            {
+                "protocol_failures": checked["failures"],
+                "planned_n": checked["planned_n"],
+                "scored_n": 0,
+                "failed_n": checked["planned_n"],
+                "main_metric": "not_executed",
+            },
         )
-        _dump_report(destination, report)
-        raise ProtocolError("no_valid_gold")
+        _dump_report(destination, report, checked["status"])
+        if mode == "formal" or checked["status"] in {"invalid_protocol", "invalid_structure"}:
+            raise ProtocolError(checked["status"])
+        return report
     target = checked["eligible"]
+    pred_id = prediction_run_id(target, base_id, adapter_id, template_id, resolved["effective"])
+    gold_id = score_run_id(pred_id, scorer_version, target)
+    if resume:
+        existing = destination / "predictions.jsonl.run.json"
+        if existing.is_file():
+            previous = str(json.loads(existing.read_text(encoding="utf-8")).get("run_id") or "")
+            if previous != pred_id:
+                report = _not_executed("resume_mismatch", mode, {"prediction_run_id": pred_id, "found_run_id": previous})
+                _dump_report(destination, report, gold_id)
+                return report
     cache_path = destination / "prediction_cache.jsonl"
-    cache = _cache_map(cache_path) if reuse_predictions else {}
-    pending: list[dict[str, Any]] = []
-    selected: list[dict[str, Any]] = []
+    cache, cache_problems = _load_content_cache(cache_path) if reuse_predictions else ({}, [])
+    planned_specs: list[dict[str, Any]] = []
+    pending_by_sig: dict[str, dict[str, Any]] = {}
     for case in target:
-        messages = list(case.get("messages") or eval_messages(case))
+        messages = canonical_messages(case)
         for role in ("base", "adapter"):
             signature = prediction_item_signature(
-                case, base_id, adapter_id, template_id, config, role, model_input=messages
+                case, base_id, adapter_id, template_id, resolved["effective"], role, model_input=messages
             )
+            spec = _spec_for(case, role, messages, signature, base_id, adapter_id, template_id, resolved["effective"])
+            planned_specs.append(spec)
             hit = cache.get(signature)
-            if hit is not None:
-                selected.append(hit)
+            if (
+                hit is not None
+                and not hit.get("error")
+                and hit.get("model_id") == base_id
+                and hit.get("model_role") == role
+                and (role != "adapter" or hit.get("adapter_id") == adapter_id)
+            ):
                 continue
-            pending.append(
-                {
-                    "case_id": case_id_of(case),
-                    "model_role": role,
-                    "messages": messages,
-                    "signature": signature,
-                    "model_id": base_id,
-                    "adapter_id": adapter_id if role == "adapter" else "",
-                    **_carry(case),
-                }
-            )
-    cache_hits = len(selected)
+            pending_by_sig.setdefault(signature, spec)
+    pending = list(pending_by_sig.values())
+    cache_hits = len(planned_specs) - len(pending)
+    fresh: dict[str, dict[str, Any]] = {}
     if pending:
         if generate_fn is None:
             produced = generate_with_model(
                 pending,
                 base_model=base_model,
                 adapter=adapter,
-                infer_config=config,
+                infer_config=resolved["effective"],
                 device=device,
+                persist_dir=destination,
             )
         else:
             produced = generate_fn(pending)
         if isinstance(produced, dict):
-            report = _not_executed(str(produced.get("reason") or "generation_failed"), mode, {"cache_hits": cache_hits})
-            _dump_report(destination, report)
+            report = _not_executed(
+                str(produced.get("reason") or "generation_failed"),
+                mode,
+                {"cache_hits": cache_hits, "cache_problems": cache_problems, "prediction_run_id": pred_id},
+            )
+            _dump_report(destination, report, gold_id)
             return report
         if len(produced) != len(pending):
             report = _not_executed(
                 "prediction_count_mismatch",
                 mode,
-                {"expected": len(pending), "got": len(produced), "cache_hits": cache_hits},
+                {"expected": len(pending), "got": len(produced), "cache_hits": cache_hits, "prediction_run_id": pred_id},
             )
-            _dump_report(destination, report)
+            _dump_report(destination, report, gold_id)
             return report
-        stored = []
         for item, spec in zip(produced, pending):
             if not isinstance(item, dict) or "text" not in item:
-                report = _not_executed("invalid_generation_row", mode)
-                _dump_report(destination, report)
+                report = _not_executed("invalid_generation_row", mode, {"prediction_run_id": pred_id})
+                _dump_report(destination, report, gold_id)
                 return report
             row = {
                 **spec,
@@ -335,36 +693,60 @@ def eval_adapter(
                 "elapsed_sec": item.get("elapsed_sec"),
                 "error": item.get("error"),
             }
-            stored.append(row)
-            cache[row["signature"]] = row
-            selected.append(row)
-        previous = [row for row in read_jsonl(cache_path) if row.get("signature") not in {item["signature"] for item in stored}]
-        write_jsonl(cache_path, previous + stored)
-    by_role: dict[str, list[dict[str, Any]]] = {"base": [], "adapter": []}
-    for row in selected:
-        role = str(row.get("model_role") or "")
-        if role in by_role:
-            by_role[role].append(row)
-    write_jsonl(destination / "predictions.jsonl", selected)
+            content = _content_record(row)
+            fresh[spec["signature"]] = content
+            if row.get("error"):
+                _append_jsonl(destination / "prediction_failures.jsonl", content)
+            else:
+                previous = cache.get(spec["signature"])
+                if previous is not None and previous.get("text") != content.get("text"):
+                    cache_problems.append({"signature": spec["signature"], "reason": "conflict"})
+                else:
+                    cache[spec["signature"]] = content
+                    _append_jsonl(cache_path, content)
+    selected = []
+    for spec in planned_specs:
+        content = fresh.get(spec["signature"]) or cache.get(spec["signature"])
+        if content is None:
+            report = _not_executed("missing_generated_content", mode, {"prediction_run_id": pred_id, "case_id": spec["case_id"]})
+            _dump_report(destination, report, gold_id)
+            return report
+        selected.append(_bind_content(content, spec))
+    _write_versioned_jsonl(destination / "predictions.jsonl", pred_id, selected)
     errored = [row for row in selected if row.get("error")]
     if errored:
+        failed_questions = len({row.get("case_id") for row in errored})
         report = _not_executed(
             "generation_item_failed",
             mode,
             {
                 "planned_n": len(target),
+                "generated_n": {"base": sum(1 for row in selected if row.get("model_role") == "base"), "adapter": sum(1 for row in selected if row.get("model_role") == "adapter")},
                 "cache_hits": cache_hits,
-                "failed_n": len({row.get("case_id") for row in errored}),
+                "scored_n": 0,
+                "failed_n": failed_questions,
+                "technical_failure_n": failed_questions,
+                "content_error_n": 0,
+                "prediction_run_id": pred_id,
+                "score_run_id": None,
+                "cache_problems": cache_problems,
                 "failures": [
                     {"case_id": row.get("case_id"), "model_role": row.get("model_role"), "reason": row.get("error"), "kind": "technical"}
                     for row in errored
                 ],
             },
         )
-        _dump_report(destination, report)
+        _dump_report(destination, report, gold_id)
         return report
-    alignment = align_prediction_groups(target, by_role)
-    (destination / "alignment.json").write_text(json.dumps({k: v for k, v in alignment.items() if k != "aligned"}, ensure_ascii=False, indent=2), encoding="utf-8")
+    by_role: dict[str, list[dict[str, Any]]] = {"base": [], "adapter": []}
+    for row in selected:
+        role = str(row.get("model_role") or "")
+        if role in by_role:
+            by_role[role].append(row)
+    expected = {case_id_of(case): canonical_messages(case) for case in target}
+    alignment = align_prediction_groups(target, by_role, require_input_identity=True, expected_messages=expected)
+    alignment_public = {key: value for key, value in alignment.items() if key != "aligned"}
+    (destination / "alignment.json").write_text(json.dumps(alignment_public, ensure_ascii=False, indent=2), encoding="utf-8")
     if not alignment["ok"]:
         report = _not_executed(
             "alignment_failed",
@@ -375,52 +757,134 @@ def eval_adapter(
                 "scored_n": alignment["scored_n"],
                 "failed_n": alignment["failed_n"],
                 "failures": alignment["failures"],
+                "affected_ids": alignment["affected_ids"],
                 "cache_hits": cache_hits,
+                "cache_problems": cache_problems,
                 "task_accuracy": None,
+                "technical_failure_n": alignment["failed_n"],
+                "content_error_n": 0,
+                "prediction_run_id": pred_id,
             },
         )
-        _dump_report(destination, report)
+        _dump_report(destination, report, gold_id)
         return report
+    return _finalize_scores(
+        destination,
+        alignment,
+        target,
+        scorer_version,
+        mode,
+        pred_id,
+        gold_id,
+        base_id,
+        adapter_id,
+        template_id,
+        resolved,
+        cache_hits,
+        cache_problems,
+        checked,
+        model_loaded=generate_fn is None and bool(pending),
+    )
+
+
+def _finalize_scores(
+    destination: Path,
+    alignment: dict[str, Any],
+    target: list[dict[str, Any]],
+    scorer_version: str,
+    mode: str,
+    pred_id: str,
+    gold_id: str,
+    base_id: str,
+    adapter_id: str,
+    template_id: str,
+    resolved: dict[str, Any],
+    cache_hits: int,
+    cache_problems: list[dict[str, Any]],
+    checked: dict[str, Any],
+    model_loaded: bool,
+) -> dict[str, Any]:
     scored = _apply_scores(alignment, scorer_version, mode)
-    write_jsonl(destination / "scores.jsonl", scored)
+    score_path = destination / f"scores.{scorer_version}.jsonl"
+    _write_versioned_jsonl(score_path, gold_id, scored)
     passed_rows = [{**row, "passed": row["after"].get("passed")} for row in scored]
     layered = aggregate_layered(passed_rows)
     exploratory = mode == "exploratory"
     report = {
-        "status": "executed" if not exploratory else "exploratory_executed",
+        "status": "exploratory_executed" if exploratory else "auxiliary_executed",
         "executed": True,
         "reason": None,
         "mode": mode,
-        "result_class": "exploratory_auxiliary" if exploratory else "formal",
-        "disclaimer": EXPLORATORY_DISCLAIMER if exploratory else None,
-        "enters_formal_metric": not exploratory,
-        "formal_main_metric": "not_executed" if exploratory else "executed",
-        "formal_gold": False if exploratory else True,
+        "result_class": "exploratory_auxiliary" if exploratory else "formal_auxiliary",
+        "disclaimer": EXPLORATORY_DISCLAIMER if exploratory else "规则分未校准，不能作为正式语义主指标。",
+        "enters_formal_metric": False,
+        "formal_main_metric": "not_executed",
+        "formal_gold": False,
+        "formal_protocol_executable": not exploratory,
         "semantic_accuracy_verified": False,
+        "metric_role": "auxiliary",
+        "reason_main_metric": "uncalibrated_rules",
         "scorer_version": scorer_version,
+        "prediction_run_id": pred_id,
+        "score_run_id": gold_id,
         "base_id": base_id,
         "adapter_id": adapter_id,
         "template_id": template_id,
-        "infer_config": config,
+        "infer_config": resolved["declared"],
+        "infer_config_effective": resolved["effective"],
+        "infer_inactive_when_greedy": resolved["inactive_when_greedy"],
         "planned_n": alignment["planned_n"],
         "generated_n": alignment["generated_n"],
         "scored_n": alignment["scored_n"],
         "failed_n": alignment["failed_n"],
+        "count_units": alignment["count_units"],
         "cache_hits": cache_hits,
+        "cache_problems": cache_problems,
         "protocol_failures": checked["failures"],
         "content_error_n": sum(1 for row in scored if row["content_error"]),
+        "unresolved_n": sum(1 for row in scored if row["unresolved"]),
         "technical_failure_n": 0,
         "layered": layered,
         "combined_generalization_score": None,
         "delta_f1": None,
+        "model_loaded": model_loaded,
         "judge": {"mean": None, "reason": "not_called", "note": "本轮不为填空值调用模型评委，评委结果也不是人工金标。"},
     }
-    _dump_report(destination, report)
+    _dump_report(destination, report, gold_id)
+    (destination / "run_ids.json").write_text(
+        json.dumps(
+            {
+                "prediction_run_id": pred_id,
+                "score_run_id": gold_id,
+                "base_id": base_id,
+                "adapter_id": adapter_id,
+                "template_id": template_id,
+                "scorer_version": scorer_version,
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
     return report
 
 
-def _dump_report(destination: Path, report: dict[str, Any]) -> None:
-    (destination / "eval_report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+def _dump_report(destination: Path, report: dict[str, Any], score_id: str) -> None:
+    _write_versioned_json(destination / "eval_report.json", score_id, report)
+
+
+def _group_predictions(rows: list[dict[str, Any]]) -> dict[str, list[dict[str, Any]]]:
+    groups: dict[str, list[dict[str, Any]]] = {"base": [], "adapter": []}
+    unknown: list[dict[str, Any]] = []
+    for row in rows:
+        role = str(row.get("model_role") or "")
+        if role in groups:
+            groups[role].append(row)
+        else:
+            unknown.append(row)
+    if unknown:
+        groups["unknown"] = unknown
+    return groups
 
 
 def rescore_saved(
@@ -430,44 +894,87 @@ def rescore_saved(
     out_dir: str | Path,
     scorer_version: str,
     mode: str,
+    frozen_train_families: set[str] | frozenset[str] | None = None,
+    base_id: str = "",
+    adapter_id: str = "",
+    template_id: str = "",
+    infer_config: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """只读取已经落盘的预测。不加载模型。"""
-    cases = read_jsonl(protocol_path)
-    checked = validate_protocol(cases, mode)
-    if mode == "formal" and not checked["eligible"]:
-        raise ProtocolError("no_valid_gold")
-    if mode == "exploratory" and checked["failures"]:
-        raise ProtocolError("invalid_protocol")
-    groups: dict[str, list[dict[str, Any]]] = {"base": [], "adapter": []}
-    for row in read_jsonl(predictions_path):
-        role = str(row.get("model_role") or "")
-        if role in groups:
-            groups[role].append(row)
-    alignment = align_prediction_groups(checked["eligible"], groups)
+    """只读取已经落盘的预测。输入 messages 不一致时拒绝复用，不加载模型。"""
     destination = Path(out_dir)
     destination.mkdir(parents=True, exist_ok=True)
-    if not alignment["ok"]:
-        report = _not_executed("alignment_failed", mode, {"failures": alignment["failures"], "planned_n": alignment["planned_n"], "failed_n": alignment["failed_n"], "scored_n": 0, "task_accuracy": None})
-        _dump_report(destination, report)
+    protocol_file = Path(protocol_path)
+    if not protocol_file.is_file():
+        report = _not_executed("protocol_missing", mode)
+        _dump_report(destination, report, "missing")
         return report
-    scored = _apply_scores(alignment, scorer_version, mode)
-    write_jsonl(destination / "scores.jsonl", scored)
-    report = {
-        "status": "rescored",
-        "executed": True,
-        "mode": mode,
-        "result_class": "exploratory_auxiliary" if mode == "exploratory" else "formal",
-        "disclaimer": EXPLORATORY_DISCLAIMER if mode == "exploratory" else None,
-        "enters_formal_metric": mode == "formal",
-        "formal_gold": mode == "formal",
-        "formal_main_metric": "not_executed" if mode == "exploratory" else "executed",
-        "scorer_version": scorer_version,
-        "planned_n": alignment["planned_n"],
-        "scored_n": alignment["scored_n"],
-        "failed_n": 0,
-        "model_loaded": False,
-    }
-    _dump_report(destination, report)
+    cases = read_jsonl(protocol_file)
+    checked = validate_protocol(cases, mode, frozen_train_families=frozen_train_families)
+    if not checked["executable"]:
+        report = _not_executed(
+            checked["status"],
+            mode,
+            {"protocol_failures": checked["failures"], "planned_n": checked["planned_n"], "scored_n": 0, "failed_n": checked["planned_n"]},
+        )
+        _dump_report(destination, report, checked["status"])
+        if mode == "formal" or checked["status"] in {"invalid_protocol", "invalid_structure"}:
+            raise ProtocolError(checked["status"])
+        return report
+    resolved, unknown = resolve_infer(infer_config)
+    if resolved is None:
+        report = _not_executed(f"unsupported_infer:{','.join(unknown)}", mode)
+        _dump_report(destination, report, "unsupported")
+        return report
+    groups = _group_predictions(read_jsonl(predictions_path))
+    expected = {case_id_of(case): canonical_messages(case) for case in checked["eligible"]}
+    alignment = align_prediction_groups(
+        checked["eligible"],
+        groups,
+        require_input_identity=True,
+        expected_messages=expected,
+    )
+    pred_id = prediction_run_id(checked["eligible"], base_id, adapter_id, template_id, resolved["effective"]) if base_id else "saved"
+    gold_id = score_run_id(pred_id, scorer_version, checked["eligible"])
+    if not alignment["ok"]:
+        report = _not_executed(
+            "alignment_failed",
+            mode,
+            {
+                "failures": alignment["failures"],
+                "affected_ids": alignment["affected_ids"],
+                "planned_n": alignment["planned_n"],
+                "generated_n": alignment["generated_n"],
+                "failed_n": alignment["failed_n"],
+                "scored_n": 0,
+                "technical_failure_n": alignment["failed_n"],
+                "content_error_n": 0,
+                "task_accuracy": None,
+                "model_loaded": False,
+                "prediction_run_id": pred_id,
+            },
+        )
+        _dump_report(destination, report, gold_id)
+        return report
+    report = _finalize_scores(
+        destination,
+        alignment,
+        checked["eligible"],
+        scorer_version,
+        mode,
+        pred_id,
+        gold_id,
+        base_id,
+        adapter_id,
+        template_id,
+        resolved,
+        0,
+        [],
+        checked,
+        model_loaded=False,
+    )
+    report["status"] = "rescored" if mode == "exploratory" else "auxiliary_rescored"
+    report["model_loaded"] = False
+    _dump_report(destination, report, gold_id)
     return report
 
 
@@ -478,8 +985,14 @@ def generate_with_model(
     adapter: str,
     infer_config: dict[str, Any],
     device: int | None = None,
+    persist_dir: str | Path | None = None,
 ) -> list[dict[str, Any]] | dict[str, Any]:
     """在一张空闲 GPU 上串行跑基座和 adapter。没有足够显存时不回退到 CPU。"""
+    unknown = set(infer_config) - SUPPORTED_INFER - {"inactive_when_greedy"}
+    if infer_config.get("dtype") not in {None, "bfloat16"}:
+        return {"skipped": True, "reason": "unsupported_infer:dtype"}
+    if unknown:
+        return {"skipped": True, "reason": "unsupported_infer:" + ",".join(sorted(unknown))}
     requested = None if device is None else [int(device)]
     chosen, error = select_trainable_gpus(requested)
     if not chosen:
@@ -505,6 +1018,7 @@ def generate_with_model(
     max_new = int(infer_config.get("max_new_tokens") or 512)
     do_sample = bool(infer_config.get("do_sample"))
     outputs: dict[tuple[str, str], dict[str, Any]] = {}
+    partial = None if persist_dir is None else Path(persist_dir) / "generation_partial.jsonl"
 
     def _run(spec: dict[str, Any], current) -> dict[str, Any]:
         started = time.perf_counter()
@@ -513,12 +1027,12 @@ def generate_with_model(
         inputs = tokenizer(prompt, return_tensors="pt")
         inputs = {key: value.to(current.device) for key, value in inputs.items()}
         prompt_tokens = int(inputs["input_ids"].shape[1])
+        generate_kwargs: dict[str, Any] = {"max_new_tokens": max_new, "do_sample": do_sample}
+        if do_sample:
+            generate_kwargs["temperature"] = float(infer_config["temperature"])
+            generate_kwargs["top_p"] = float(infer_config["top_p"])
         with torch.no_grad():
-            generated = current.generate(
-                **inputs,
-                max_new_tokens=max_new,
-                do_sample=do_sample,
-            )
+            generated = current.generate(**inputs, **generate_kwargs)
         new_tokens = generated[0][prompt_tokens:]
         text = tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
         completion_tokens = int(new_tokens.shape[0])
@@ -536,17 +1050,21 @@ def generate_with_model(
     try:
         base_pending = [item for item in pending if item.get("model_role") == "base"]
         adapter_pending = [item for item in pending if item.get("model_role") == "adapter"]
+
         def _safe(spec, current):
             try:
-                return _run(spec, current)
+                result = _run(spec, current)
             except Exception as exc:
-                return {
+                result = {
                     "text": "",
                     "error": str(exc),
                     "finish_reason": "error",
                     "truncated": False,
                     "device": index,
                 }
+            if partial is not None:
+                _append_jsonl(partial, {"case_id": spec.get("case_id"), "model_role": spec.get("model_role"), **result})
+            return result
 
         for spec in base_pending:
             outputs[(spec["case_id"], "base")] = _safe(spec, model)
