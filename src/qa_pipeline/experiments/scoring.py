@@ -204,6 +204,7 @@ def aggregate_families(cases: list[dict[str, Any]]) -> dict[str, Any]:
         "task_accuracy": None if overall is None else round(overall, 4),
         "reason": None if source_mean else "zero_denominator",
         "weighting": "equal_source_family",
+        "row_count": len(cases),
     }
 
 
@@ -266,3 +267,375 @@ def cache_signature(payload: dict[str, Any]) -> str:
 
     blob = json.dumps(payload, ensure_ascii=False, sort_keys=True, default=str)
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
+
+
+SCORER_V1 = "aux-rules-v1"
+SCORER_V2 = "aux-rules-v2"
+SCORER_NOTE = "规则辅助分，不是已验证的语义正确率。"
+
+_QTY = re.compile(r"(\d+(?:\.\d+)?)\s*(mg|g|μg|ug|ml|mL|mmol|kg|℃|%)", re.I)
+_NEG_LEAD = re.compile(r"(不得|禁用|不能|不可|不宜|不是|尚未|未进行)([^。；\n]{1,24})")
+_RETRACT = re.compile(r"(不正确|并非如此|以上不对|实际上不是|不能采信|是错误的)")
+_MASS = {"mg": 1.0, "g": 1000.0, "kg": 1_000_000.0, "ug": 0.001, "μg": 0.001}
+
+
+def aggregate_layered(cases: list[dict[str, Any]]) -> dict[str, Any]:
+    """行为变体单独分层。同一核心问题的多条问法先在问题内平均，不增加该问题权重。"""
+    ordinary = []
+    behavior = []
+    for case in cases:
+        if case.get("stratum") == "behavior" or case.get("layer") == "behavior":
+            behavior.append(case)
+        else:
+            ordinary.append(case)
+    ordinary_summary = aggregate_families(ordinary)
+    behavior_summary = aggregate_families(behavior)
+    return {
+        "ordinary": ordinary_summary,
+        "behavior": behavior_summary,
+        "row_count": len(cases),
+        "core_question_count": ordinary_summary["family_count"],
+        "source_family_count": ordinary_summary["source_family_count"],
+        "behavior_row_count": len(behavior),
+        "combined_generalization_score": None,
+        "note": "行为证据变体单独分层，不与普通改写合成一个泛化总分。",
+    }
+
+
+def _unit_key(unit: str) -> str:
+    return unit.replace("μ", "u").lower()
+
+
+def _normalize_qty(number: str, unit: str) -> tuple[float, str] | None:
+    try:
+        value = float(number)
+    except (TypeError, ValueError):
+        return None
+    key = _unit_key(unit)
+    if key in _MASS:
+        return value * _MASS[key], "mass"
+    if key == "ml":
+        return value, "volume"
+    if key == "mmol":
+        return value, "mmol"
+    if key == "%":
+        return value, "percent"
+    if unit == "℃":
+        return value, "temp"
+    return value, key
+
+
+def _qty_equivalent(left: tuple[float, str], right: tuple[float, str]) -> bool:
+    if left[1] != right[1]:
+        return False
+    scale = max(abs(left[0]), abs(right[0]), 1.0)
+    return abs(left[0] - right[0]) <= 0.001 * scale
+
+
+def _extract_qtys(text: str) -> list[tuple[str, str, tuple[float, str]]]:
+    found = []
+    for match in _QTY.finditer(text or ""):
+        norm = _normalize_qty(match.group(1), match.group(2))
+        if norm is not None:
+            found.append((match.group(1), match.group(2), norm))
+    return found
+
+
+def _object_qty(text: str, obj: str) -> tuple[str, str, tuple[float, str]] | None:
+    idx = (text or "").find(obj)
+    if idx < 0 or not obj:
+        return None
+    window = text[idx : idx + 48]
+    match = _QTY.search(window)
+    if match is None:
+        return None
+    norm = _normalize_qty(match.group(1), match.group(2))
+    if norm is None:
+        return None
+    return match.group(1), match.group(2), norm
+
+
+def _binding_errors(prediction: str, case: dict[str, Any]) -> list[str]:
+    bindings = list(case.get("numeric_bindings") or [])
+    if not bindings:
+        return []
+    errors = []
+    normalized = []
+    for binding in bindings:
+        norm = _normalize_qty(str(binding.get("number")), str(binding.get("unit") or ""))
+        normalized.append(norm)
+    for index, binding in enumerate(bindings):
+        found = _object_qty(prediction, str(binding.get("object") or ""))
+        own = normalized[index]
+        if found is None or own is None:
+            continue
+        raw, _unit, pred_norm = found
+        if _qty_equivalent(pred_norm, own):
+            continue
+        swapped = False
+        for other_index, other in enumerate(normalized):
+            if other_index == index or other is None:
+                continue
+            if _qty_equivalent(pred_norm, other):
+                swapped = True
+                break
+        if swapped:
+            errors.append("numeric_object_swap")
+        elif raw == str(binding.get("number")):
+            errors.append("wrong_unit")
+        else:
+            errors.append("numeric")
+    return list(dict.fromkeys(errors))
+
+
+def _point_hit(prediction: str, point: str, synonyms: list[list[str]]) -> bool:
+    if not point:
+        return False
+    if point in prediction or token_f1(prediction, point) >= 0.55:
+        return True
+    packed_point = re.sub(r"\s+", "", point)
+    packed_pred = re.sub(r"\s+", "", prediction or "")
+    for group in synonyms:
+        packed = [re.sub(r"\s+", "", item) for item in group if item]
+        if any(item and item in packed_point for item in packed) and any(item and item in packed_pred for item in packed):
+            return True
+    return False
+
+
+def _coverage_v2(prediction: str, points: list[str], synonyms: list[list[str]]) -> dict[str, Any]:
+    usable = [point for point in points if point]
+    if not usable:
+        return {"value": None, "reason": "no_points", "hits": []}
+    hits = [_point_hit(prediction, point, synonyms) for point in usable]
+    value = round(sum(1 for hit in hits if hit) / len(hits), 4)
+    return {"value": value, "reason": None, "hits": hits}
+
+
+def _negation_scope(prediction: str, points: list[str]) -> bool:
+    for point in points:
+        match = _NEG_LEAD.search(point or "")
+        if not match:
+            continue
+        key = match.group(2).strip()[:12]
+        if len(key) < 1:
+            continue
+        pos = (prediction or "").find(key)
+        if pos < 0:
+            continue
+        prefix = prediction[max(0, pos - 8) : pos]
+        if not re.search(r"[不未无非]|禁用", prefix):
+            return True
+    return False
+
+
+def _retracted(prediction: str, points: list[str], answer: str) -> bool:
+    anchors = [point for point in points if point] or ([answer] if answer else [])
+    for anchor in anchors:
+        token = anchor.strip()[:16]
+        if len(token) < 2:
+            continue
+        idx = (prediction or "").find(token)
+        if idx >= 0 and _RETRACT.search(prediction[idx:]):
+            return True
+    return False
+
+
+def _unsupported(prediction: str, case: dict[str, Any], points: list[str]) -> list[str]:
+    allowed_text = "\n".join(
+        [
+            str(case.get("answer") or ""),
+            str(case.get("evidence") or ""),
+            str(case.get("context") or ""),
+            "\n".join(points),
+        ]
+    )
+    allowed = [_qty[2] for _qty in _extract_qtys(allowed_text)]
+    extras = []
+    for raw, unit, norm in _extract_qtys(prediction or ""):
+        if any(_qty_equivalent(norm, item) for item in allowed):
+            continue
+        extras.append(f"{raw}{unit}")
+    return extras
+
+
+def score_task_v2(prediction: str, case: dict[str, Any]) -> dict[str, Any]:
+    """维度化辅助分。不能替代人工审核，也不能当作语义正确率。"""
+    points = [str(point) for point in (case.get("answer_points") or []) if str(point).strip()]
+    if not points and case.get("answer"):
+        points = [str(case["answer"])]
+    synonyms = [list(group) for group in (case.get("synonym_groups") or [])]
+    coverage = _coverage_v2(prediction or "", points, synonyms)
+    expected = str(case.get("expected_action") or "")
+    if expected not in EXPECTED_ACTIONS:
+        expected = str(case.get("expected_action") or "answer")
+    actual = classify_action(prediction or "")
+    errors = _binding_errors(prediction or "", case)
+    if not case.get("numeric_bindings"):
+        errors.extend(err for err in critical_errors(prediction or "", points) if err not in errors)
+    if _negation_scope(prediction or "", points):
+        errors.append("negation_scope")
+    if _retracted(prediction or "", points, str(case.get("answer") or "")):
+        errors.append("retracted")
+    missing = []
+    for condition in case.get("required_conditions") or []:
+        text = str(condition).strip()
+        if text and text not in (prediction or "") and token_f1(prediction or "", text) < 0.55:
+            missing.append(text)
+    if missing:
+        errors.append("missing_condition")
+    unsupported = _unsupported(prediction or "", case, points)
+    evidence_state = str(case.get("evidence_state") or "")
+    over_refusal = expected == "answer" and evidence_state == "sufficient" and actual == "state_insufficient"
+    if over_refusal:
+        errors.append("over_refusal")
+    errors = list(dict.fromkeys(errors))
+    if expected in {"answer", "partial_answer"}:
+        relevant = coverage["value"] not in {None, 0}
+    else:
+        relevant = True
+    action_ok = actual == expected or (
+        expected == "partial_answer" and actual == "answer" and coverage["value"] not in {None, 0}
+    )
+    if expected == "state_insufficient" and actual == "answer":
+        action_ok = False
+    if over_refusal:
+        action_ok = False
+    passed = bool(relevant and not errors and action_ok and not unsupported)
+    if expected == "answer":
+        passed = bool(passed and coverage["value"] == 1)
+    return {
+        "scorer_version": SCORER_V2,
+        "task_relevance": relevant,
+        "required_point_coverage": coverage["value"],
+        "critical_errors": [err for err in errors if err != "unsupported"],
+        "unsupported_assertions": unsupported,
+        "missing_conditions": missing,
+        "expected_behavior": {"expected": expected, "actual": actual, "ok": action_ok},
+        "auxiliary_f1": token_f1(prediction or "", "\n".join(points)) if points else None,
+        "auxiliary_em": exact_match(prediction or "", str(case.get("answer") or "")) if _single_value(case) else None,
+        "passed": passed,
+        "semantic_accuracy_verified": False,
+        "note": SCORER_NOTE,
+    }
+
+
+def prediction_item_signature(
+    case: dict[str, Any],
+    model_id: str,
+    adapter_id: str,
+    template_id: str,
+    infer_config: dict[str, Any],
+    model_role: str,
+    model_input: Any | None = None,
+) -> str:
+    if model_input is None:
+        messages = case.get("messages")
+        if messages:
+            model_input = {"messages": messages}
+        else:
+            model_input = {
+                "question": case.get("question") or "",
+                "context": case.get("context") or "",
+                "task_mode": case.get("task_mode") or "",
+            }
+    return cache_signature(
+        {
+            "input": model_input,
+            "model_id": model_id,
+            "adapter_id": adapter_id if model_role == "adapter" else "",
+            "model_role": model_role,
+            "template_id": template_id,
+            "infer_config": infer_config,
+        }
+    )
+
+
+def score_item_signature(prediction_signature: str, case: dict[str, Any], scorer_version: str) -> str:
+    gold = {
+        "answer": case.get("answer") or "",
+        "answer_points": case.get("answer_points") or [],
+        "expected_action": case.get("expected_action"),
+        "evidence_state": case.get("evidence_state"),
+        "required_conditions": case.get("required_conditions") or [],
+        "numeric_bindings": case.get("numeric_bindings") or [],
+    }
+    return cache_signature({"prediction": prediction_signature, "gold": gold, "scorer": scorer_version})
+
+
+def _index_predictions(rows: list[dict[str, Any]]) -> tuple[dict[str, dict[str, Any]], list[dict[str, Any]]]:
+    indexed: dict[str, dict[str, Any]] = {}
+    failures: list[dict[str, Any]] = []
+    for row in rows:
+        if not isinstance(row, dict) or not str(row.get("case_id") or "") or "text" not in row:
+            failures.append({"case_id": None, "reason": "invalid_prediction", "kind": "technical"})
+            continue
+        case_id = str(row["case_id"])
+        if case_id in indexed:
+            failures.append({"case_id": case_id, "reason": "duplicate_prediction", "kind": "technical"})
+            continue
+        indexed[case_id] = row
+    return indexed, failures
+
+
+def align_prediction_groups(
+    cases: list[dict[str, Any]],
+    groups: dict[str, list[dict[str, Any]]],
+) -> dict[str, Any]:
+    """按 case_id 对齐。缺失、重复或多余预测不缩小计划分母，也不能当成评分通过。"""
+    failures: list[dict[str, Any]] = []
+    seen_cases: set[str] = set()
+    planned_ids: list[str] = []
+    for index, case in enumerate(cases):
+        if not isinstance(case, dict):
+            failures.append({"case_id": index, "reason": "invalid_case", "kind": "technical"})
+            planned_ids.append(f"invalid-{index}")
+            continue
+        case_id = str(case.get("case_id") or case.get("id") or "")
+        if not case_id:
+            failures.append({"case_id": index, "reason": "missing_id", "kind": "technical"})
+            planned_ids.append(f"missing-{index}")
+            continue
+        if case_id in seen_cases:
+            failures.append({"case_id": case_id, "reason": "duplicate_case_id", "kind": "technical"})
+        else:
+            seen_cases.add(case_id)
+        planned_ids.append(case_id)
+    indexed = {}
+    id_sets = []
+    for name, rows in groups.items():
+        mapping, group_failures = _index_predictions(rows)
+        for item in group_failures:
+            item["model"] = name
+            failures.append(item)
+        indexed[name] = mapping
+        id_sets.append(set(mapping))
+    planned_set = {item for item in planned_ids if not str(item).startswith(("invalid-", "missing-"))}
+    if id_sets:
+        common = set.intersection(*id_sets) if len(id_sets) > 1 else id_sets[0]
+        if len(id_sets) > 1 and any(item != id_sets[0] for item in id_sets[1:]):
+            failures.append({"case_id": None, "reason": "model_prediction_set_mismatch", "kind": "technical"})
+        for case_id in sorted(planned_set - common):
+            failures.append({"case_id": case_id, "reason": "missing_prediction", "kind": "technical"})
+        extras = set.union(*id_sets) - planned_set if id_sets else set()
+        for case_id in sorted(extras):
+            failures.append({"case_id": case_id, "reason": "extra_prediction", "kind": "technical"})
+    ok = not failures
+    aligned = []
+    if ok:
+        for case in cases:
+            case_id = str(case.get("case_id") or case.get("id"))
+            aligned.append({"case": case, "predictions": {name: indexed[name][case_id] for name in groups}})
+    planned_n = len(cases)
+    scored_n = len(aligned) if ok else 0
+    return {
+        "ok": ok,
+        "planned_n": planned_n,
+        "generated_n": {name: len(rows) for name, rows in groups.items()},
+        "scored_n": scored_n,
+        "failed_n": planned_n - scored_n if not ok else 0,
+        "failures": failures,
+        "aligned": aligned,
+        "denominator": planned_n,
+        "silent_shrink": False,
+        "system_rule": "技术失败计为任务未完成。分母是 planned_n，不把失败样本去掉后再计算准确率。",
+    }

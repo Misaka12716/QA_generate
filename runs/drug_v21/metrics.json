@@ -1,0 +1,2239 @@
+{
+  "suite": "drug_v21",
+  "input": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/frozen/subset",
+  "llm": "live",
+  "teacher_model": "qwen3.8-27b",
+  "base_model": "/data1/pjw/models/Qwen2.5-7B-Instruct",
+  "devices": [
+    3,
+    4,
+    6
+  ],
+  "limitations": [
+    "输入是校医院说明书 train 分区的 60 篇冻结子集，最多 100 个 chunk、150 条样本。不是全库 2552 篇都经过每条实验臂。",
+    "锁定测试不进入生成。覆盖目录是原文句子加子串核对，不是人工金标，覆盖率只对这份目录有效。",
+    "教师为 192.168.4.110:4000 的 qwen3.8-27b。接口费用按 0 美元记录，同时报告 token。学生是本地 Qwen2.5-7B-Instruct。",
+    "没有业务给定的 retention_max_drop。分数变化不写成上线通过。",
+    "第二种预算设定（新数据条数固定后再追加回放）本次未跑，记为未检验交互。",
+    "跨文档多跳、复杂表格、多轮和 DPO 不发布。E8 只报告规模、格式和增量文档数。",
+    "全库只做清洗和分区清点。覆盖率的分母是冻结目录里的句子单元，不是全库知识单元。",
+    "管线并行于 GPU [3, 4, 6]。教师为 qwen3.8-27b，实验卡只加载 NLI、向量和 LoRA。"
+  ],
+  "progress": {
+    "done": 17,
+    "total": 17
+  },
+  "experiments": [
+    {
+      "id": "E1_direct",
+      "purpose": "direct_grounded",
+      "recipe": "drug_e1_direct",
+      "recipe_snapshot": {
+        "name": "drug_e1_direct",
+        "description": "路线 D。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 512,
+          "overlap": 0.1
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "direct_grounded"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "reuse_candidate"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring",
+            "on_fail": "quarantine"
+          },
+          {
+            "name": "exact_hash_dedup"
+          },
+          {
+            "name": "claim_evidence"
+          },
+          {
+            "name": "risk_escalate"
+          },
+          {
+            "name": "joint_dedup"
+          }
+        ],
+        "grading": "validity_tier"
+      },
+      "metrics": {
+        "recipe": "drug_e1_direct",
+        "chunks": 100,
+        "questions": 150,
+        "distilled": 150,
+        "kept": 142,
+        "rejected": 3,
+        "answerability": 0.9467,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 1.4654,
+        "type_distribution": {
+          "factual": 0.613,
+          "conditional": 0.197,
+          "procedural": 0.162,
+          "comparative": 0.028
+        },
+        "retention": 0.9467,
+        "s_ratio": 1.0,
+        "grade_distribution": {
+          "S": 142
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 245,
+        "prompt_tokens": 72731,
+        "completion_tokens": 77004,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {
+          "chunking": 0.12,
+          "anchor": 0.0,
+          "question_gen": 1586.317,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 0.009,
+          "filter:rule_clean": 4.316,
+          "filter:evidence_substring": 0.003,
+          "filter:exact_hash_dedup": 0.001,
+          "filter:claim_evidence": 270.449,
+          "filter:risk_escalate": 0.002,
+          "filter:joint_dedup": 0.002,
+          "grading": 0.014,
+          "total": 1861.277
+        },
+        "rejected_by_filter": {
+          "rule_clean": 5
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 150,
+            "out": 145,
+            "dropped": 5
+          },
+          "evidence_substring": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          },
+          "exact_hash_dedup": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          },
+          "claim_evidence": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          },
+          "risk_escalate": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          },
+          "joint_dedup": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 10544718
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    },
+    {
+      "id": "E1_anchor",
+      "purpose": "anchor_assisted",
+      "recipe": "drug_e1_anchor",
+      "recipe_snapshot": {
+        "name": "drug_e1_anchor",
+        "description": "传统锚点辅助，仍读取原文。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 512,
+          "overlap": 0.1
+        },
+        "anchor": {
+          "name": "tfidf_keyword",
+          "top_k": 4
+        },
+        "question_gen": {
+          "name": "direct_grounded"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "reuse_candidate"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring",
+            "on_fail": "quarantine"
+          },
+          {
+            "name": "exact_hash_dedup"
+          },
+          {
+            "name": "claim_evidence"
+          },
+          {
+            "name": "risk_escalate"
+          },
+          {
+            "name": "joint_dedup"
+          }
+        ],
+        "grading": "validity_tier"
+      },
+      "metrics": {
+        "recipe": "drug_e1_anchor",
+        "chunks": 100,
+        "questions": 150,
+        "distilled": 150,
+        "kept": 138,
+        "rejected": 8,
+        "answerability": 0.92,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 1.422,
+        "type_distribution": {
+          "conditional": 0.21,
+          "factual": 0.623,
+          "procedural": 0.145,
+          "comparative": 0.022
+        },
+        "retention": 0.92,
+        "s_ratio": 1.0,
+        "grade_distribution": {
+          "S": 138
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 246,
+        "prompt_tokens": 72604,
+        "completion_tokens": 76859,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {
+          "chunking": 0.117,
+          "anchor": 4.318,
+          "question_gen": 1659.403,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 0.009,
+          "filter:rule_clean": 4.579,
+          "filter:evidence_substring": 0.003,
+          "filter:exact_hash_dedup": 0.001,
+          "filter:claim_evidence": 263.589,
+          "filter:risk_escalate": 0.002,
+          "filter:joint_dedup": 0.002,
+          "grading": 0.013,
+          "total": 1932.051
+        },
+        "rejected_by_filter": {
+          "rule_clean": 4
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 150,
+            "out": 146,
+            "dropped": 4
+          },
+          "evidence_substring": {
+            "in": 146,
+            "out": 146,
+            "dropped": 0
+          },
+          "exact_hash_dedup": {
+            "in": 146,
+            "out": 146,
+            "dropped": 0
+          },
+          "claim_evidence": {
+            "in": 146,
+            "out": 146,
+            "dropped": 0
+          },
+          "risk_escalate": {
+            "in": 146,
+            "out": 146,
+            "dropped": 0
+          },
+          "joint_dedup": {
+            "in": 146,
+            "out": 146,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 10830652
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    },
+    {
+      "id": "E1_kseq",
+      "purpose": "k_sequential",
+      "recipe": "drug_e1_kseq",
+      "recipe_snapshot": {
+        "name": "drug_e1_kseq",
+        "description": "k_sequential。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 512,
+          "overlap": 0.1
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "k_sequential"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "reuse_candidate"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring",
+            "on_fail": "quarantine"
+          },
+          {
+            "name": "exact_hash_dedup"
+          },
+          {
+            "name": "claim_evidence"
+          },
+          {
+            "name": "risk_escalate"
+          },
+          {
+            "name": "joint_dedup"
+          }
+        ],
+        "grading": "validity_tier"
+      },
+      "metrics": {
+        "recipe": "drug_e1_kseq",
+        "chunks": 100,
+        "questions": 150,
+        "distilled": 150,
+        "kept": 146,
+        "rejected": 1,
+        "answerability": 0.9733,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {
+          "factual": 1.0
+        },
+        "retention": 0.9733,
+        "s_ratio": 1.0,
+        "grade_distribution": {
+          "S": 146
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 346,
+        "prompt_tokens": 200383,
+        "completion_tokens": 190372,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {
+          "chunking": 0.118,
+          "anchor": 0.0,
+          "question_gen": 4122.728,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 0.009,
+          "filter:rule_clean": 4.417,
+          "filter:evidence_substring": 0.003,
+          "filter:exact_hash_dedup": 0.0,
+          "filter:claim_evidence": 225.344,
+          "filter:risk_escalate": 0.002,
+          "filter:joint_dedup": 0.002,
+          "grading": 0.014,
+          "total": 4352.672
+        },
+        "rejected_by_filter": {
+          "rule_clean": 3
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 150,
+            "out": 147,
+            "dropped": 3
+          },
+          "evidence_substring": {
+            "in": 147,
+            "out": 147,
+            "dropped": 0
+          },
+          "exact_hash_dedup": {
+            "in": 147,
+            "out": 147,
+            "dropped": 0
+          },
+          "claim_evidence": {
+            "in": 147,
+            "out": 147,
+            "dropped": 0
+          },
+          "risk_escalate": {
+            "in": 147,
+            "out": 147,
+            "dropped": 0
+          },
+          "joint_dedup": {
+            "in": 147,
+            "out": 147,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 26764041
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    },
+    {
+      "id": "E1_kjoint",
+      "purpose": "k_joint",
+      "recipe": "drug_e1_kjoint",
+      "recipe_snapshot": {
+        "name": "drug_e1_kjoint",
+        "description": "k_joint。同次候选待独立验证。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 512,
+          "overlap": 0.1
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "k_joint"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "reuse_candidate"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring",
+            "on_fail": "quarantine"
+          },
+          {
+            "name": "exact_hash_dedup"
+          },
+          {
+            "name": "claim_evidence"
+          },
+          {
+            "name": "risk_escalate"
+          },
+          {
+            "name": "joint_dedup"
+          }
+        ],
+        "grading": "validity_tier"
+      },
+      "metrics": {
+        "recipe": "drug_e1_kjoint",
+        "chunks": 100,
+        "questions": 150,
+        "distilled": 150,
+        "kept": 138,
+        "rejected": 10,
+        "answerability": 0.92,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {
+          "factual": 1.0
+        },
+        "retention": 0.92,
+        "s_ratio": 1.0,
+        "grade_distribution": {
+          "S": 138
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 249,
+        "prompt_tokens": 69159,
+        "completion_tokens": 125236,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {
+          "chunking": 0.106,
+          "anchor": 0.0,
+          "question_gen": 2671.917,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 1.737,
+          "filter:rule_clean": 4.851,
+          "filter:evidence_substring": 0.003,
+          "filter:exact_hash_dedup": 0.001,
+          "filter:claim_evidence": 230.108,
+          "filter:risk_escalate": 0.002,
+          "filter:joint_dedup": 0.002,
+          "grading": 0.013,
+          "total": 2908.805
+        },
+        "rejected_by_filter": {
+          "rule_clean": 2
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 150,
+            "out": 148,
+            "dropped": 2
+          },
+          "evidence_substring": {
+            "in": 148,
+            "out": 148,
+            "dropped": 0
+          },
+          "exact_hash_dedup": {
+            "in": 148,
+            "out": 148,
+            "dropped": 0
+          },
+          "claim_evidence": {
+            "in": 148,
+            "out": 148,
+            "dropped": 0
+          },
+          "risk_escalate": {
+            "in": 148,
+            "out": 148,
+            "dropped": 0
+          },
+          "joint_dedup": {
+            "in": 148,
+            "out": 148,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 14086594
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    },
+    {
+      "id": "E1_mix",
+      "purpose": "混合路由，样本仍记录实际路线",
+      "recipe": "drug_e1_mix",
+      "recipe_snapshot": {
+        "name": "drug_e1_mix",
+        "description": "混合路由。样本仍记录实际路线。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 512,
+          "overlap": 0.1
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "mixed_route"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "reuse_candidate"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring",
+            "on_fail": "quarantine"
+          },
+          {
+            "name": "exact_hash_dedup"
+          },
+          {
+            "name": "claim_evidence"
+          },
+          {
+            "name": "risk_escalate"
+          },
+          {
+            "name": "joint_dedup"
+          }
+        ],
+        "grading": "validity_tier"
+      },
+      "metrics": {
+        "recipe": "drug_e1_mix",
+        "chunks": 100,
+        "questions": 150,
+        "distilled": 150,
+        "kept": 144,
+        "rejected": 4,
+        "answerability": 0.96,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.8267,
+        "type_distribution": {
+          "conditional": 0.069,
+          "factual": 0.84,
+          "procedural": 0.083,
+          "comparative": 0.007
+        },
+        "retention": 0.96,
+        "s_ratio": 1.0,
+        "grade_distribution": {
+          "S": 144
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 296,
+        "prompt_tokens": 135692,
+        "completion_tokens": 133311,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {
+          "chunking": 0.106,
+          "anchor": 0.0,
+          "question_gen": 2918.243,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 0.009,
+          "filter:rule_clean": 4.586,
+          "filter:evidence_substring": 0.003,
+          "filter:exact_hash_dedup": 0.001,
+          "filter:claim_evidence": 246.103,
+          "filter:risk_escalate": 0.002,
+          "filter:joint_dedup": 0.002,
+          "grading": 0.013,
+          "total": 3169.096
+        },
+        "rejected_by_filter": {
+          "rule_clean": 2
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 150,
+            "out": 148,
+            "dropped": 2
+          },
+          "evidence_substring": {
+            "in": 148,
+            "out": 148,
+            "dropped": 0
+          },
+          "exact_hash_dedup": {
+            "in": 148,
+            "out": 148,
+            "dropped": 0
+          },
+          "claim_evidence": {
+            "in": 148,
+            "out": 148,
+            "dropped": 0
+          },
+          "risk_escalate": {
+            "in": 148,
+            "out": 148,
+            "dropped": 0
+          },
+          "joint_dedup": {
+            "in": 148,
+            "out": 148,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 18680764
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    },
+    {
+      "id": "E2_fixed",
+      "purpose": "固定比例对照",
+      "recipe": "drug_e2_fixed",
+      "recipe_snapshot": {
+        "name": "drug_e2_fixed",
+        "description": "固定比例对照，不是生产默认。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 512,
+          "overlap": 0.1
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "direct_grounded"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "reuse_candidate"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring",
+            "on_fail": "quarantine"
+          },
+          {
+            "name": "claim_evidence"
+          },
+          {
+            "name": "diversity_sample",
+            "quota": {
+              "factual": 0.4,
+              "procedural": 0.2,
+              "conditional": 0.15,
+              "comparative": 0.15,
+              "multihop": 0.1
+            }
+          }
+        ],
+        "grading": "validity_tier"
+      },
+      "metrics": {
+        "recipe": "drug_e2_fixed",
+        "chunks": 100,
+        "questions": 150,
+        "distilled": 150,
+        "kept": 142,
+        "rejected": 5,
+        "answerability": 0.9467,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 1.4078,
+        "type_distribution": {
+          "factual": 0.62,
+          "procedural": 0.162,
+          "conditional": 0.204,
+          "comparative": 0.014
+        },
+        "retention": 0.9467,
+        "s_ratio": 1.0,
+        "grade_distribution": {
+          "S": 142
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 247,
+        "prompt_tokens": 72715,
+        "completion_tokens": 76368,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {
+          "chunking": 0.106,
+          "anchor": 0.0,
+          "question_gen": 1663.034,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 0.009,
+          "filter:rule_clean": 4.47,
+          "filter:evidence_substring": 0.003,
+          "filter:claim_evidence": 276.128,
+          "filter:diversity_sample": 0.073,
+          "grading": 0.006,
+          "total": 1943.844
+        },
+        "rejected_by_filter": {
+          "rule_clean": 3
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 150,
+            "out": 147,
+            "dropped": 3
+          },
+          "evidence_substring": {
+            "in": 147,
+            "out": 147,
+            "dropped": 0
+          },
+          "claim_evidence": {
+            "in": 147,
+            "out": 147,
+            "dropped": 0
+          },
+          "diversity_sample": {
+            "in": 147,
+            "out": 147,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 10498803
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    },
+    {
+      "id": "E2_gap",
+      "purpose": "默认可生成性路径，含行为样本",
+      "recipe": "drug_e2_gap",
+      "recipe_snapshot": {
+        "name": "drug_e2_gap",
+        "description": "默认管线，含行为样本和抽样诊断。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 512,
+          "overlap": 0.1
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "direct_grounded"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "reuse_candidate"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring",
+            "on_fail": "quarantine"
+          },
+          {
+            "name": "exact_hash_dedup"
+          },
+          {
+            "name": "claim_evidence"
+          },
+          {
+            "name": "risk_escalate"
+          },
+          {
+            "name": "behavior_insufficient",
+            "max_new": 8
+          },
+          {
+            "name": "student_diagnostic",
+            "sample_size": 8
+          },
+          {
+            "name": "joint_dedup"
+          }
+        ],
+        "grading": "validity_tier"
+      },
+      "metrics": {
+        "recipe": "drug_e2_gap",
+        "chunks": 100,
+        "questions": 150,
+        "distilled": 150,
+        "kept": 147,
+        "rejected": 8,
+        "answerability": 0.98,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 1.3751,
+        "type_distribution": {
+          "factual": 0.646,
+          "conditional": 0.197,
+          "procedural": 0.136,
+          "comparative": 0.02
+        },
+        "retention": 0.98,
+        "s_ratio": 0.9456,
+        "grade_distribution": {
+          "S": 139,
+          "A": 8
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 264,
+        "prompt_tokens": 76296,
+        "completion_tokens": 82091,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {
+          "chunking": 0.107,
+          "anchor": 0.0,
+          "question_gen": 1819.598,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 0.009,
+          "filter:rule_clean": 4.378,
+          "filter:evidence_substring": 0.003,
+          "filter:exact_hash_dedup": 0.0,
+          "filter:claim_evidence": 250.252,
+          "filter:risk_escalate": 0.002,
+          "filter:behavior_insufficient": 0.006,
+          "filter:student_diagnostic": 27.099,
+          "filter:joint_dedup": 0.001,
+          "grading": 0.005,
+          "total": 2101.475
+        },
+        "rejected_by_filter": {
+          "rule_clean": 3,
+          "behavior_insufficient": -8
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 150,
+            "out": 147,
+            "dropped": 3
+          },
+          "evidence_substring": {
+            "in": 147,
+            "out": 147,
+            "dropped": 0
+          },
+          "exact_hash_dedup": {
+            "in": 147,
+            "out": 147,
+            "dropped": 0
+          },
+          "claim_evidence": {
+            "in": 147,
+            "out": 147,
+            "dropped": 0
+          },
+          "risk_escalate": {
+            "in": 147,
+            "out": 147,
+            "dropped": 0
+          },
+          "behavior_insufficient": {
+            "in": 147,
+            "out": 155,
+            "dropped": -8
+          },
+          "student_diagnostic": {
+            "in": 155,
+            "out": 155,
+            "dropped": 0
+          },
+          "joint_dedup": {
+            "in": 155,
+            "out": 155,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 10774626
+      },
+      "sft": {
+        "train_samples": 147,
+        "heldout": 16,
+        "train_jsonl": "runs/drug_v21/E2_gap/sft/train.jsonl",
+        "train": {
+          "skipped": false,
+          "train_loss": 0.10220827364576729,
+          "train_samples": 147,
+          "epochs": 3,
+          "base_model": "/data1/pjw/models/Qwen2.5-7B-Instruct",
+          "adapter": "runs/drug_v21/E2_gap/sft/lora/adapter"
+        },
+        "base": {
+          "em": 0.0,
+          "f1": 0.1688,
+          "n": 16
+        },
+        "tuned": {
+          "em": 0.0,
+          "f1": 0.2079,
+          "n": 16
+        },
+        "delta_f1": 0.0391,
+        "delta_em": 0.0,
+        "answer_sheet": "runs/drug_v21/E2_gap/sft/answers.md",
+        "effect_note": "微调后 token F1 更高"
+      },
+      "note": ""
+    },
+    {
+      "id": "E3_g0",
+      "purpose": "无诊断、无专门回放",
+      "recipe": "drug_e3_g0",
+      "recipe_snapshot": {
+        "name": "drug_e3_g0",
+        "description": "不使用诊断，不额外回放。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 512,
+          "overlap": 0.1
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "direct_grounded"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "reuse_candidate"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring",
+            "on_fail": "quarantine"
+          },
+          {
+            "name": "exact_hash_dedup"
+          },
+          {
+            "name": "claim_evidence"
+          },
+          {
+            "name": "risk_escalate"
+          },
+          {
+            "name": "joint_dedup"
+          }
+        ],
+        "grading": "validity_tier"
+      },
+      "metrics": {
+        "recipe": "drug_e3_g0",
+        "chunks": 0,
+        "questions": 150,
+        "distilled": 150,
+        "kept": 140,
+        "rejected": 5,
+        "answerability": 0.9333,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 1.4761,
+        "type_distribution": {
+          "factual": 0.607,
+          "conditional": 0.2,
+          "procedural": 0.164,
+          "comparative": 0.029
+        },
+        "retention": 0.9333,
+        "s_ratio": 1.0,
+        "grade_distribution": {
+          "S": 140
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 145,
+        "prompt_tokens": 22843,
+        "completion_tokens": 9561,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {
+          "teacher_router": 0.0,
+          "distillation": 0.018,
+          "filter:rule_clean": 5.38,
+          "filter:evidence_substring": 0.004,
+          "filter:exact_hash_dedup": 0.001,
+          "filter:claim_evidence": 285.503,
+          "filter:risk_escalate": 0.003,
+          "filter:joint_dedup": 0.002,
+          "grading": 0.014,
+          "total": 290.951
+        },
+        "rejected_by_filter": {
+          "rule_clean": 5
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 150,
+            "out": 145,
+            "dropped": 5
+          },
+          "evidence_substring": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          },
+          "exact_hash_dedup": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          },
+          "claim_evidence": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          },
+          "risk_escalate": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          },
+          "joint_dedup": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 2314571
+      },
+      "sft": {
+        "train_samples": 140,
+        "heldout": 16,
+        "train_jsonl": "runs/drug_v21/E3_g0/sft/train.jsonl",
+        "train": {
+          "skipped": false,
+          "train_loss": 0.08641318594815121,
+          "train_samples": 140,
+          "epochs": 3,
+          "base_model": "/data1/pjw/models/Qwen2.5-7B-Instruct",
+          "adapter": "runs/drug_v21/E3_g0/sft/lora/adapter"
+        },
+        "base": {
+          "em": 0.0,
+          "f1": 0.1688,
+          "n": 16
+        },
+        "tuned": {
+          "em": 0.0,
+          "f1": 0.2416,
+          "n": 16
+        },
+        "delta_f1": 0.0728,
+        "delta_em": 0.0,
+        "answer_sheet": "runs/drug_v21/E3_g0/sft/answers.md",
+        "effect_note": "微调后 token F1 更高"
+      },
+      "note": ""
+    },
+    {
+      "id": "E3_g1",
+      "purpose": "诊断选样，无专门回放",
+      "recipe": "drug_e3_g1",
+      "recipe_snapshot": {
+        "name": "drug_e3_g1",
+        "description": "诊断调整选样，不额外回放。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 512,
+          "overlap": 0.1
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "direct_grounded"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "reuse_candidate"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring",
+            "on_fail": "quarantine"
+          },
+          {
+            "name": "claim_evidence"
+          },
+          {
+            "name": "student_diagnostic",
+            "sample_size": 20
+          },
+          {
+            "name": "stable_known_downsample",
+            "min_score": 0.8
+          },
+          {
+            "name": "joint_dedup"
+          }
+        ],
+        "grading": "validity_tier"
+      },
+      "metrics": {
+        "recipe": "drug_e3_g1",
+        "chunks": 0,
+        "questions": 150,
+        "distilled": 150,
+        "kept": 141,
+        "rejected": 4,
+        "answerability": 0.94,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 1.424,
+        "type_distribution": {
+          "factual": 0.624,
+          "conditional": 0.199,
+          "procedural": 0.156,
+          "comparative": 0.021
+        },
+        "retention": 0.94,
+        "s_ratio": 1.0,
+        "grade_distribution": {
+          "S": 141
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 185,
+        "prompt_tokens": 30857,
+        "completion_tokens": 11876,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {
+          "teacher_router": 0.0,
+          "distillation": 0.015,
+          "filter:rule_clean": 5.353,
+          "filter:evidence_substring": 0.004,
+          "filter:claim_evidence": 287.896,
+          "filter:student_diagnostic": 86.079,
+          "filter:stable_known_downsample": 0.0,
+          "filter:joint_dedup": 0.001,
+          "grading": 0.005,
+          "total": 379.379
+        },
+        "rejected_by_filter": {
+          "rule_clean": 5
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 150,
+            "out": 145,
+            "dropped": 5
+          },
+          "evidence_substring": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          },
+          "claim_evidence": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          },
+          "student_diagnostic": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          },
+          "stable_known_downsample": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          },
+          "joint_dedup": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 3030709
+      },
+      "sft": {
+        "train_samples": 141,
+        "heldout": 16,
+        "train_jsonl": "runs/drug_v21/E3_g1/sft/train.jsonl",
+        "train": {
+          "skipped": false,
+          "train_loss": 0.08924073592923512,
+          "train_samples": 141,
+          "epochs": 3,
+          "base_model": "/data1/pjw/models/Qwen2.5-7B-Instruct",
+          "adapter": "runs/drug_v21/E3_g1/sft/lora/adapter"
+        },
+        "base": {
+          "em": 0.0,
+          "f1": 0.1688,
+          "n": 16
+        },
+        "tuned": {
+          "em": 0.0,
+          "f1": 0.2112,
+          "n": 16
+        },
+        "delta_f1": 0.0424,
+        "delta_em": 0.0,
+        "answer_sheet": "runs/drug_v21/E3_g1/sft/answers.md",
+        "effect_note": "微调后 token F1 更高"
+      },
+      "note": ""
+    },
+    {
+      "id": "E3_g2",
+      "purpose": "G0 选样加回放替换",
+      "recipe": "drug_e3_g2",
+      "recipe_snapshot": {
+        "name": "drug_e3_g2",
+        "description": "G0 选样加保留回放替换。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 512,
+          "overlap": 0.1
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "direct_grounded"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "reuse_candidate"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring",
+            "on_fail": "quarantine"
+          },
+          {
+            "name": "claim_evidence"
+          },
+          {
+            "name": "replay_replace",
+            "fraction": 0.2
+          },
+          {
+            "name": "joint_dedup"
+          }
+        ],
+        "grading": "validity_tier"
+      },
+      "metrics": {
+        "recipe": "drug_e3_g2",
+        "chunks": 0,
+        "questions": 150,
+        "distilled": 150,
+        "kept": 139,
+        "rejected": 6,
+        "answerability": 0.9267,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 1.4678,
+        "type_distribution": {
+          "factual": 0.612,
+          "conditional": 0.201,
+          "procedural": 0.158,
+          "comparative": 0.029
+        },
+        "retention": 0.9267,
+        "s_ratio": 1.0,
+        "grade_distribution": {
+          "S": 139
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 145,
+        "prompt_tokens": 22843,
+        "completion_tokens": 9321,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {
+          "teacher_router": 0.0,
+          "distillation": 0.014,
+          "filter:rule_clean": 5.26,
+          "filter:evidence_substring": 0.004,
+          "filter:claim_evidence": 282.729,
+          "filter:replay_replace": 0.0,
+          "filter:joint_dedup": 0.002,
+          "grading": 0.013,
+          "total": 288.052
+        },
+        "rejected_by_filter": {
+          "rule_clean": 5
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 150,
+            "out": 145,
+            "dropped": 5
+          },
+          "evidence_substring": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          },
+          "claim_evidence": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          },
+          "replay_replace": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          },
+          "joint_dedup": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 2313957
+      },
+      "sft": {
+        "train_samples": 139,
+        "heldout": 16,
+        "train_jsonl": "runs/drug_v21/E3_g2/sft/train.jsonl",
+        "train": {
+          "skipped": false,
+          "train_loss": 0.10555413466257353,
+          "train_samples": 112,
+          "epochs": 3,
+          "base_model": "/data1/pjw/models/Qwen2.5-7B-Instruct",
+          "adapter": "runs/drug_v21/E3_g2/sft/lora/adapter"
+        },
+        "base": {
+          "em": 0.0,
+          "f1": 0.1688,
+          "n": 16
+        },
+        "tuned": {
+          "em": 0.0,
+          "f1": 0.1868,
+          "n": 16
+        },
+        "delta_f1": 0.018,
+        "delta_em": 0.0,
+        "answer_sheet": "runs/drug_v21/E3_g2/sft/answers.md",
+        "effect_note": "看不出稳定提升"
+      },
+      "note": ""
+    },
+    {
+      "id": "E3_g3",
+      "purpose": "G1 诊断加 G2 回放",
+      "recipe": "drug_e3_g3",
+      "recipe_snapshot": {
+        "name": "drug_e3_g3",
+        "description": "与 G1 相同的诊断，与 G2 相同的回放。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 512,
+          "overlap": 0.1
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "direct_grounded"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "reuse_candidate"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring",
+            "on_fail": "quarantine"
+          },
+          {
+            "name": "claim_evidence"
+          },
+          {
+            "name": "student_diagnostic",
+            "sample_size": 20
+          },
+          {
+            "name": "stable_known_downsample",
+            "min_score": 0.8
+          },
+          {
+            "name": "replay_replace",
+            "fraction": 0.2
+          },
+          {
+            "name": "joint_dedup"
+          }
+        ],
+        "grading": "validity_tier"
+      },
+      "metrics": {
+        "recipe": "drug_e3_g3",
+        "chunks": 0,
+        "questions": 150,
+        "distilled": 150,
+        "kept": 138,
+        "rejected": 7,
+        "answerability": 0.92,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 1.4135,
+        "type_distribution": {
+          "factual": 0.63,
+          "conditional": 0.196,
+          "procedural": 0.152,
+          "comparative": 0.022
+        },
+        "retention": 0.92,
+        "s_ratio": 1.0,
+        "grade_distribution": {
+          "S": 138
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 185,
+        "prompt_tokens": 30857,
+        "completion_tokens": 11391,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {
+          "teacher_router": 0.0,
+          "distillation": 0.013,
+          "filter:rule_clean": 5.486,
+          "filter:evidence_substring": 0.004,
+          "filter:claim_evidence": 296.921,
+          "filter:student_diagnostic": 78.218,
+          "filter:stable_known_downsample": 0.0,
+          "filter:replay_replace": 0.0,
+          "filter:joint_dedup": 0.001,
+          "grading": 0.004,
+          "total": 380.671
+        },
+        "rejected_by_filter": {
+          "rule_clean": 5
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 150,
+            "out": 145,
+            "dropped": 5
+          },
+          "evidence_substring": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          },
+          "claim_evidence": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          },
+          "student_diagnostic": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          },
+          "stable_known_downsample": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          },
+          "replay_replace": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          },
+          "joint_dedup": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 3061449
+      },
+      "sft": {
+        "train_samples": 138,
+        "heldout": 16,
+        "train_jsonl": "runs/drug_v21/E3_g3/sft/train.jsonl",
+        "train": {
+          "skipped": false,
+          "train_loss": 0.10092111985154804,
+          "train_samples": 111,
+          "epochs": 3,
+          "base_model": "/data1/pjw/models/Qwen2.5-7B-Instruct",
+          "adapter": "runs/drug_v21/E3_g3/sft/lora/adapter"
+        },
+        "base": {
+          "em": 0.0,
+          "f1": 0.1688,
+          "n": 16
+        },
+        "tuned": {
+          "em": 0.0,
+          "f1": 0.2744,
+          "n": 16
+        },
+        "delta_f1": 0.1056,
+        "delta_em": 0.0,
+        "answer_sheet": "runs/drug_v21/E3_g3/sft/answers.md",
+        "effect_note": "微调后 token F1 更高"
+      },
+      "note": ""
+    },
+    {
+      "id": "E4_multi",
+      "purpose": "固定多次验证",
+      "recipe": "drug_e4_multi",
+      "recipe_snapshot": {
+        "name": "drug_e4_multi",
+        "description": "固定多次验证对照。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 512,
+          "overlap": 0.1
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "direct_grounded"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "reuse_candidate"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring"
+          },
+          {
+            "name": "roundtrip",
+            "k": 2,
+            "pass_sim": 0.75,
+            "mean_sim": 0.6
+          }
+        ],
+        "grading": "validity_tier"
+      },
+      "metrics": {
+        "recipe": "drug_e4_multi",
+        "chunks": 0,
+        "questions": 0,
+        "distilled": 143,
+        "kept": 143,
+        "rejected": 0,
+        "answerability": 0.0,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 1.46,
+        "type_distribution": {
+          "factual": 0.615,
+          "conditional": 0.196,
+          "procedural": 0.161,
+          "comparative": 0.028
+        },
+        "retention": 1.0,
+        "s_ratio": 0.0,
+        "grade_distribution": {
+          "A": 143
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {
+          "filter:rule_clean": 5.905,
+          "filter:evidence_substring": 0.003,
+          "filter:roundtrip": 388.22
+        },
+        "rejected_by_filter": {
+          "rule_clean": 5,
+          "roundtrip": 2
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 150,
+            "out": 145,
+            "dropped": 5
+          },
+          "evidence_substring": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          },
+          "roundtrip": {
+            "in": 145,
+            "out": 143,
+            "dropped": 2
+          }
+        },
+        "tokens_per_10k_kept": 0
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    },
+    {
+      "id": "E5_cost",
+      "purpose": "默认管线相对直接路线的费用，不把几种预算口径写成等价",
+      "recipe": "",
+      "recipe_snapshot": {},
+      "metrics": {
+        "recipe": "drug_e2_gap",
+        "chunks": 100,
+        "questions": 150,
+        "distilled": 150,
+        "kept": 147,
+        "rejected": 8,
+        "answerability": 0.98,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 1.3751,
+        "type_distribution": {
+          "factual": 0.646,
+          "conditional": 0.197,
+          "procedural": 0.136,
+          "comparative": 0.02
+        },
+        "retention": 0.98,
+        "s_ratio": 0.9456,
+        "grade_distribution": {
+          "S": 139,
+          "A": 8
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 264,
+        "prompt_tokens": 76296,
+        "completion_tokens": 82091,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {
+          "chunking": 0.107,
+          "anchor": 0.0,
+          "question_gen": 1819.598,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 0.009,
+          "filter:rule_clean": 4.378,
+          "filter:evidence_substring": 0.003,
+          "filter:exact_hash_dedup": 0.0,
+          "filter:claim_evidence": 250.252,
+          "filter:risk_escalate": 0.002,
+          "filter:behavior_insufficient": 0.006,
+          "filter:student_diagnostic": 27.099,
+          "filter:joint_dedup": 0.001,
+          "grading": 0.005,
+          "total": 2101.475
+        },
+        "rejected_by_filter": {
+          "rule_clean": 3,
+          "behavior_insufficient": -8
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 150,
+            "out": 147,
+            "dropped": 3
+          },
+          "evidence_substring": {
+            "in": 147,
+            "out": 147,
+            "dropped": 0
+          },
+          "exact_hash_dedup": {
+            "in": 147,
+            "out": 147,
+            "dropped": 0
+          },
+          "claim_evidence": {
+            "in": 147,
+            "out": 147,
+            "dropped": 0
+          },
+          "risk_escalate": {
+            "in": 147,
+            "out": 147,
+            "dropped": 0
+          },
+          "behavior_insufficient": {
+            "in": 147,
+            "out": 155,
+            "dropped": -8
+          },
+          "student_diagnostic": {
+            "in": 155,
+            "out": 155,
+            "dropped": 0
+          },
+          "joint_dedup": {
+            "in": 155,
+            "out": 155,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 10774626,
+        "api_cost_usd": 0.0,
+        "cost_note": "教师 qwen3.8-27b 为内网接口，API 费用按 0 计，tokens_per_10k_kept 为等价 token。"
+      },
+      "sft": {},
+      "note": "教师 qwen3.8-27b 为内网接口，API 费用按 0 计，tokens_per_10k_kept 为等价 token。"
+    },
+    {
+      "id": "E6_behavior",
+      "purpose": "缺证据行为",
+      "recipe": "drug_e6_behavior",
+      "recipe_snapshot": {
+        "name": "drug_e6_behavior",
+        "description": "缺证据行为样本。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 512,
+          "overlap": 0.1
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "direct_grounded"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "reuse_candidate"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring",
+            "on_fail": "quarantine"
+          },
+          {
+            "name": "claim_evidence"
+          },
+          {
+            "name": "behavior_insufficient",
+            "max_new": 12
+          },
+          {
+            "name": "joint_dedup"
+          }
+        ],
+        "grading": "validity_tier"
+      },
+      "metrics": {
+        "recipe": "drug_e6_behavior",
+        "chunks": 0,
+        "questions": 150,
+        "distilled": 150,
+        "kept": 150,
+        "rejected": 7,
+        "answerability": 1.0,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 1.4251,
+        "type_distribution": {
+          "factual": 0.633,
+          "conditional": 0.18,
+          "procedural": 0.16,
+          "comparative": 0.027
+        },
+        "retention": 1.0,
+        "s_ratio": 0.92,
+        "grade_distribution": {
+          "S": 138,
+          "A": 12
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 145,
+        "prompt_tokens": 22843,
+        "completion_tokens": 9673,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {
+          "teacher_router": 0.0,
+          "distillation": 0.014,
+          "filter:rule_clean": 5.537,
+          "filter:evidence_substring": 0.004,
+          "filter:claim_evidence": 304.837,
+          "filter:behavior_insufficient": 0.006,
+          "filter:joint_dedup": 0.002,
+          "grading": 0.014,
+          "total": 310.438
+        },
+        "rejected_by_filter": {
+          "rule_clean": 5,
+          "behavior_insufficient": -12
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 150,
+            "out": 145,
+            "dropped": 5
+          },
+          "evidence_substring": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          },
+          "claim_evidence": {
+            "in": 145,
+            "out": 145,
+            "dropped": 0
+          },
+          "behavior_insufficient": {
+            "in": 145,
+            "out": 157,
+            "dropped": -12
+          },
+          "joint_dedup": {
+            "in": 157,
+            "out": 157,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 2167733
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    },
+    {
+      "id": "E6_conflict",
+      "purpose": "冲突行为通道",
+      "recipe": "",
+      "recipe_snapshot": {},
+      "metrics": {},
+      "sft": {},
+      "note": "未在冻结子集中确认可合法使用且内容冲突的成对说明书。不编造冲突，本臂未执行。"
+    },
+    {
+      "id": "E7_rationale",
+      "purpose": "只打开解释文本",
+      "recipe": "drug_e7_rationale",
+      "recipe_snapshot": {
+        "name": "drug_e7_rationale",
+        "description": "只增加解释文本。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 512,
+          "overlap": 0.1
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "direct_grounded"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "cot_mixed"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring",
+            "on_fail": "quarantine"
+          },
+          {
+            "name": "claim_evidence"
+          }
+        ],
+        "grading": "validity_tier"
+      },
+      "metrics": {
+        "recipe": "drug_e7_rationale",
+        "chunks": 0,
+        "questions": 150,
+        "distilled": 150,
+        "kept": 132,
+        "rejected": 7,
+        "answerability": 0.88,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 1.3388,
+        "type_distribution": {
+          "factual": 0.644,
+          "conditional": 0.189,
+          "procedural": 0.159,
+          "comparative": 0.008
+        },
+        "retention": 0.88,
+        "s_ratio": 1.0,
+        "grade_distribution": {
+          "S": 132
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 289,
+        "prompt_tokens": 93082,
+        "completion_tokens": 18640,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {
+          "teacher_router": 0.0,
+          "distillation": 305.445,
+          "filter:rule_clean": 6.11,
+          "filter:evidence_substring": 0.004,
+          "filter:claim_evidence": 242.967,
+          "grading": 0.01,
+          "total": 554.579
+        },
+        "rejected_by_filter": {
+          "rule_clean": 11
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 150,
+            "out": 139,
+            "dropped": 11
+          },
+          "evidence_substring": {
+            "in": 139,
+            "out": 139,
+            "dropped": 0
+          },
+          "claim_evidence": {
+            "in": 139,
+            "out": 139,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 8463788
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    },
+    {
+      "id": "E8_scale",
+      "purpose": "发布子集。跨文档多跳和复杂表格不在一期发布。",
+      "recipe": "",
+      "recipe_snapshot": {},
+      "metrics": {
+        "recipe": "E8_scale",
+        "chunks": 0,
+        "questions": 147,
+        "distilled": 147,
+        "kept": 147,
+        "rejected": 0,
+        "answerability": 1.0,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 1.3751,
+        "type_distribution": {
+          "factual": 0.646,
+          "conditional": 0.197,
+          "procedural": 0.136,
+          "comparative": 0.02
+        },
+        "retention": 1.0,
+        "s_ratio": 0.9456,
+        "grade_distribution": {
+          "S": 139,
+          "A": 8
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {},
+        "rejected_by_filter": {},
+        "funnel": {},
+        "tokens_per_10k_kept": 0
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    }
+  ]
+}

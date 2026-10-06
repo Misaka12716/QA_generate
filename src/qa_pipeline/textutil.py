@@ -15,6 +15,14 @@ _MD_HEADING = re.compile(r"^(#{1,6})\s+(.+)$", re.M)
 _MANUAL_HEADING = re.compile(r"^【([^】\n]{1,40})】\s*$", re.M)
 _TOKEN = re.compile(r"[\u4e00-\u9fff]|[A-Za-z0-9_]+|[^\s]")
 SCORING_TOKENIZER_ID = "locked-char-v1"
+# 这些文件是清单或快照，不能当成说明书正文。
+CORPUS_METADATA_FILENAMES = frozenset(
+    {
+        "snapshot_manifest.json",
+        "subset_manifest.json",
+        "chunk_freeze.json",
+    }
+)
 _REPLACEMENT = "\ufffd"
 
 

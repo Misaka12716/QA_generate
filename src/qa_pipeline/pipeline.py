@@ -13,7 +13,7 @@ from .config import Recipe, load_recipe
 from .llm import FakeLLM, LLMClient
 from .registry import build_strategy, ensure_plugins
 from .schemas import Chunk, Document, QAPair, Question, UsageStats
-from .textutil import approx_tokens, balanced_take, heading_sections, normalize
+from .textutil import CORPUS_METADATA_FILENAMES, approx_tokens, balanced_take, heading_sections, normalize
 
 logger = logging.getLogger(__name__)
 
@@ -334,7 +334,11 @@ def load_documents(source: Iterable[Document] | Iterable[str] | str | Path) -> l
         path = Path(source)
         if path.is_dir():
             files = sorted(
-                p for p in path.rglob("*") if p.suffix.lower() in {".md", ".txt", ".json"} and p.is_file()
+                p
+                for p in path.rglob("*")
+                if p.suffix.lower() in {".md", ".txt", ".json"}
+                and p.is_file()
+                and p.name not in CORPUS_METADATA_FILENAMES
             )
             return [document_from_file(p) for p in files]
         if path.is_file():

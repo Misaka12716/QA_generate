@@ -1,0 +1,31 @@
+{
+  "run_id": "drug_v22",
+  "suite": "drug_v21",
+  "git_commit": "7288f7651d7a8606c121270a2a36887038a41479",
+  "heldout_protocol_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "train_jsonl_sha256": {
+    "E3_g0/sft/train.jsonl": "a95a8aa026bff7b06af8c3034a5030c8837e2c4aa51b04071f089aae2ea331dc"
+  },
+  "base_model": "/data1/pjw/models/Qwen2.5-7B-Instruct",
+  "model_version": {
+    "path": "/data1/pjw/models/Qwen2.5-7B-Instruct",
+    "model_type": "qwen2",
+    "architectures": [
+      "Qwen2ForCausalLM"
+    ],
+    "name_or_path": null
+  },
+  "git_dirty": true,
+  "git_diff_sha256": "4a97f5e03967841172f0a84fdae510809e1051f88c830917f1528c6dacf29c20",
+  "git_status": [
+    " M src/qa_pipeline/cli.py",
+    " M src/qa_pipeline/experiments/devices.py",
+    " M src/qa_pipeline/experiments/drug_corpus.py",
+    " M src/qa_pipeline/experiments/parallel.py",
+    " M src/qa_pipeline/experiments/runner.py",
+    " M src/qa_pipeline/experiments/sft.py",
+    " M tests/test_contracts.py",
+    " M tests/test_pipeline.py",
+    "?? configs/experiments/suite_drug_v22_validate.yaml"
+  ]
+}

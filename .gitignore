@@ -1,4 +1,11 @@
-runs/
+# 实验产物默认不进仓库；人类可读的报告除外（见下方 ! 规则）
+runs/**
+!runs/**/
+!runs/**/report.md
+!runs/**/answers.md
+!runs/*/metrics.json
+!runs/*/run_meta.json
+
 data/
 .cursor/
 .vscode/

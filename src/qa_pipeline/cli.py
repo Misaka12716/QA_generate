@@ -106,6 +106,45 @@ def cmd_demo(args) -> int:
     return 0
 
 
+def cmd_eval_adapter(args) -> int:
+    import hashlib
+
+    from .experiments.adapter_eval import ProtocolError, eval_adapter
+
+    template_path = Path(args.base_model) / "tokenizer_config.json"
+    if template_path.is_file():
+        template_id = hashlib.sha256(template_path.read_bytes()).hexdigest()[:16]
+    else:
+        print(f"找不到 tokenizer 配置: {template_path}", file=sys.stderr)
+        return 1
+    infer = {
+        "max_new_tokens": args.max_new_tokens,
+        "do_sample": False,
+        "temperature": 0.0,
+        "top_p": 1.0,
+        "dtype": "bfloat16",
+    }
+    try:
+        report = eval_adapter(
+            base_model=args.base_model,
+            base_id=args.base_id,
+            adapter=args.adapter,
+            adapter_id=args.adapter_id,
+            protocol_path=args.protocol,
+            out_dir=args.out,
+            infer_config=infer,
+            scorer_version=args.scorer,
+            mode=args.mode,
+            template_id=template_id,
+            device=args.device,
+        )
+    except ProtocolError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    print(json.dumps({"status": report.get("status"), "executed": report.get("executed"), "out": args.out}, ensure_ascii=False))
+    return 0 if report.get("executed") else 2
+
+
 def cmd_list(args) -> int:
     data = list_strategies()
     print(json.dumps(data, ensure_ascii=False, indent=2))
@@ -153,6 +192,19 @@ def main(argv: list[str] | None = None) -> int:
     demo_p.add_argument("--host", default="127.0.0.1")
     demo_p.add_argument("--port", type=int, default=8765)
     demo_p.set_defaults(func=cmd_demo)
+
+    ev = sub.add_parser("eval-adapter", help="评测已有 adapter，不训练、不重写 train.jsonl")
+    ev.add_argument("--base-model", required=True)
+    ev.add_argument("--base-id", required=True)
+    ev.add_argument("--adapter", required=True)
+    ev.add_argument("--adapter-id", required=True)
+    ev.add_argument("--protocol", required=True)
+    ev.add_argument("--out", required=True)
+    ev.add_argument("--mode", choices=("formal", "exploratory"), required=True)
+    ev.add_argument("--scorer", default="aux-rules-v2")
+    ev.add_argument("--max-new-tokens", type=int, default=512)
+    ev.add_argument("--device", type=int, default=None)
+    ev.set_defaults(func=cmd_eval_adapter)
 
     ls = sub.add_parser("list-strategies", help="列出已注册策略")
     ls.set_defaults(func=cmd_list)

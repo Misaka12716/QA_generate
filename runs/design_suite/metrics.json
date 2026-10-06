@@ -1,0 +1,2382 @@
+{
+  "suite": "design_e1_e8",
+  "input": "/data1/pjw/QA_generate-main/fixtures/sample_manual.md",
+  "llm": "live",
+  "teacher_model": "qwen3.8-27b",
+  "base_model": "/data1/pjw/models/Qwen2.5-7B-Instruct",
+  "devices": [
+    3,
+    4,
+    6
+  ],
+  "limitations": [
+    "语料仅为 fixtures/sample_manual.md，规模小于设计稿的 500 chunk / 1 万条。",
+    "教师为 192.168.4.110:4000 的 qwen3.8-27b，API 费用记 0 美元，并报告等价 token。学生基座为本地 Qwen2.5-7B-Instruct。",
+    "E5 无人工标签，不计算 Cohen's Kappa。事实遵循使用 NLI 与证据子串，未接入 RAGAS。",
+    "管线并行于 GPU [3, 4, 6]。教师为 qwen3.8-27b，实验卡只加载 NLI、向量和 LoRA。"
+  ],
+  "progress": {
+    "done": 24,
+    "total": 24
+  },
+  "experiments": [
+    {
+      "id": "E1_baseline",
+      "purpose": "智训现状方案，一次生成 Q+A+证据并做规则过滤",
+      "recipe": "baseline_platform",
+      "recipe_snapshot": {
+        "name": "baseline_platform",
+        "description": "复现智训平台现状——字符窗切分 + 一次生成 Q/A + 证据子串 + LLM supported。",
+        "chunking": {
+          "name": "fixed_overlap",
+          "split": 600,
+          "overlap": 80
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "direct_qa"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "concise_response"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean"
+          },
+          {
+            "name": "exact_hash_dedup"
+          },
+          {
+            "name": "evidence_substring"
+          },
+          {
+            "name": "llm_supported"
+          }
+        ],
+        "grading": "binary"
+      },
+      "metrics": {
+        "recipe": "baseline_platform",
+        "chunks": 3,
+        "questions": 9,
+        "distilled": 9,
+        "kept": 6,
+        "rejected": 0,
+        "answerability": 0.6667,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {
+          "factual": 1.0
+        },
+        "retention": 0.6667,
+        "s_ratio": 0.0,
+        "grade_distribution": {
+          "A": 6
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 9,
+        "prompt_tokens": 2310,
+        "completion_tokens": 4331,
+        "estimated_cost_usd": 0.001536,
+        "fallbacks": [],
+        "stage_seconds": {
+          "chunking": 0.004,
+          "anchor": 0.0,
+          "question_gen": 81.744,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 0.001,
+          "filter:rule_clean": 0.601,
+          "filter:exact_hash_dedup": 0.0,
+          "filter:evidence_substring": 0.0,
+          "filter:llm_supported": 24.617,
+          "grading": 0.0,
+          "total": 106.97
+        },
+        "rejected_by_filter": {
+          "rule_clean": 3
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 9,
+            "out": 6,
+            "dropped": 3
+          },
+          "exact_hash_dedup": {
+            "in": 6,
+            "out": 6,
+            "dropped": 0
+          },
+          "evidence_substring": {
+            "in": 6,
+            "out": 6,
+            "dropped": 0
+          },
+          "llm_supported": {
+            "in": 6,
+            "out": 6,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 11068333
+      },
+      "sft": {
+        "train_samples": 6,
+        "heldout": 10,
+        "train_jsonl": "runs/design_suite/E1_baseline/sft/train.jsonl",
+        "train": {
+          "skipped": false,
+          "train_loss": 2.6873913208643594,
+          "train_samples": 6,
+          "epochs": 3,
+          "base_model": "/data1/pjw/models/Qwen2.5-7B-Instruct",
+          "adapter": "runs/design_suite/E1_baseline/sft/lora/adapter"
+        },
+        "base": {
+          "em": 0.0,
+          "f1": 0.0975,
+          "n": 10
+        },
+        "tuned": {
+          "em": 0.0,
+          "f1": 0.2294,
+          "n": 10
+        },
+        "delta_f1": 0.1319,
+        "delta_em": 0.0,
+        "judge_base": 0.0,
+        "judge_tuned": 0.0,
+        "delta_judge": 0.0
+      },
+      "note": ""
+    },
+    {
+      "id": "E1_ours_full",
+      "purpose": "推荐路线全量，训练时使用 S+A",
+      "recipe": "recommended",
+      "recipe_snapshot": {
+        "name": "recommended",
+        "description": "设计稿推荐栈——锚点反向提问 + Tag-Evol + 分级蒸馏 + 六级过滤 + SAB。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 768,
+          "overlap": 0.12
+        },
+        "anchor": {
+          "name": "ner_rake_textrank",
+          "top_k": 5
+        },
+        "question_gen": {
+          "name": "anchor_reverse",
+          "per_anchor": 1
+        },
+        "evolution": {
+          "name": "tag_evol",
+          "sample_ratio": 0.3
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "cot_mixed"
+        },
+        "teacher_router": {
+          "name": "grade_by_qtype"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "nli_fact",
+            "pass": 0.7,
+            "downgrade": 0.5
+          },
+          {
+            "name": "roundtrip",
+            "k": 3,
+            "pass_sim": 0.75,
+            "mean_sim": 0.6
+          },
+          {
+            "name": "knowledge_ablation",
+            "f1_drop": 0.8
+          },
+          {
+            "name": "selfcheck",
+            "n": 5,
+            "min_consistency": 0.6
+          },
+          {
+            "name": "llm_judge",
+            "min_overall": 2.5
+          },
+          {
+            "name": "exact_hash_dedup"
+          },
+          {
+            "name": "semdedup",
+            "threshold": 0.9
+          },
+          {
+            "name": "diversity_sample",
+            "quota": {
+              "factual": 0.4,
+              "procedural": 0.2,
+              "conditional": 0.15,
+              "comparative": 0.15,
+              "multihop": 0.1
+            }
+          }
+        ],
+        "grading": "sab"
+      },
+      "metrics": {
+        "recipe": "recommended",
+        "chunks": 4,
+        "questions": 10,
+        "distilled": 10,
+        "kept": 0,
+        "rejected": 0,
+        "answerability": 0.0,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {},
+        "retention": 0.0,
+        "s_ratio": 0.0,
+        "grade_distribution": {},
+        "evidence_grounded": 0.0,
+        "llm_calls": 21,
+        "prompt_tokens": 6165,
+        "completion_tokens": 8657,
+        "estimated_cost_usd": 0.003287,
+        "fallbacks": [
+          "anchor.ner_rake_textrank:backend=heuristic"
+        ],
+        "stage_seconds": {
+          "chunking": 0.005,
+          "anchor": 1.607,
+          "question_gen": 223.802,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 74.346,
+          "filter:rule_clean": 0.616,
+          "filter:nli_fact": 34.061,
+          "filter:roundtrip": 0.0,
+          "filter:knowledge_ablation": 0.0,
+          "filter:selfcheck": 0.0,
+          "filter:llm_judge": 0.0,
+          "filter:exact_hash_dedup": 0.0,
+          "filter:semdedup": 0.0,
+          "filter:diversity_sample": 0.0,
+          "grading": 0.0,
+          "total": 334.441
+        },
+        "rejected_by_filter": {
+          "rule_clean": 2,
+          "nli_fact": 8
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 10,
+            "out": 8,
+            "dropped": 2
+          },
+          "nli_fact": {
+            "in": 8,
+            "out": 0,
+            "dropped": 8
+          },
+          "roundtrip": {
+            "in": 0,
+            "out": 0,
+            "dropped": 0
+          },
+          "knowledge_ablation": {
+            "in": 0,
+            "out": 0,
+            "dropped": 0
+          },
+          "selfcheck": {
+            "in": 0,
+            "out": 0,
+            "dropped": 0
+          },
+          "llm_judge": {
+            "in": 0,
+            "out": 0,
+            "dropped": 0
+          },
+          "exact_hash_dedup": {
+            "in": 0,
+            "out": 0,
+            "dropped": 0
+          },
+          "semdedup": {
+            "in": 0,
+            "out": 0,
+            "dropped": 0
+          },
+          "diversity_sample": {
+            "in": 0,
+            "out": 0,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": null
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "empty_train"
+      },
+      "note": ""
+    },
+    {
+      "id": "E1_ours_s_only",
+      "purpose": "推荐路线仅 S 级",
+      "recipe": "",
+      "recipe_snapshot": {},
+      "metrics": {
+        "recipe": "E1_ours_s_only",
+        "chunks": 0,
+        "questions": 0,
+        "distilled": 0,
+        "kept": 0,
+        "rejected": 0,
+        "answerability": 0.0,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {},
+        "retention": 0.0,
+        "s_ratio": 0.0,
+        "grade_distribution": {},
+        "evidence_grounded": 0.0,
+        "llm_calls": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {},
+        "rejected_by_filter": {},
+        "funnel": {},
+        "tokens_per_10k_kept": null
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "empty_train"
+      },
+      "note": ""
+    },
+    {
+      "id": "E2_a1",
+      "purpose": "纯 Self-Instruct，无锚点无进化",
+      "recipe": "e2_a1_self_instruct",
+      "recipe_snapshot": {
+        "name": "e2_a1_self_instruct",
+        "description": "E2-A1 纯 Self-Instruct，无锚点、无进化。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 768,
+          "overlap": 0.12
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "self_instruct",
+          "per_chunk": 3
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "concise_response"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring"
+          },
+          {
+            "name": "roundtrip",
+            "k": 3,
+            "pass_sim": 0.75,
+            "mean_sim": 0.6
+          },
+          {
+            "name": "exact_hash_dedup"
+          }
+        ],
+        "grading": "none"
+      },
+      "metrics": {
+        "recipe": "e2_a1_self_instruct",
+        "chunks": 4,
+        "questions": 12,
+        "distilled": 12,
+        "kept": 10,
+        "rejected": 0,
+        "answerability": 0.8333,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 1.6855,
+        "type_distribution": {
+          "factual": 0.5,
+          "multihop": 0.1,
+          "procedural": 0.3,
+          "conditional": 0.1
+        },
+        "retention": 0.8333,
+        "s_ratio": 0.0,
+        "grade_distribution": {
+          "none": 10
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 46,
+        "prompt_tokens": 10703,
+        "completion_tokens": 10716,
+        "estimated_cost_usd": 0.004499,
+        "fallbacks": [],
+        "stage_seconds": {
+          "chunking": 0.002,
+          "anchor": 0.0,
+          "question_gen": 108.069,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 59.591,
+          "filter:rule_clean": 0.745,
+          "filter:evidence_substring": 0.0,
+          "filter:roundtrip": 96.901,
+          "filter:exact_hash_dedup": 0.0,
+          "grading": 0.0,
+          "total": 265.312
+        },
+        "rejected_by_filter": {
+          "rule_clean": 2
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 12,
+            "out": 10,
+            "dropped": 2
+          },
+          "evidence_substring": {
+            "in": 10,
+            "out": 10,
+            "dropped": 0
+          },
+          "roundtrip": {
+            "in": 10,
+            "out": 10,
+            "dropped": 0
+          },
+          "exact_hash_dedup": {
+            "in": 10,
+            "out": 10,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 21419000
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    },
+    {
+      "id": "E2_a2",
+      "purpose": "锚点反向提问，不进化",
+      "recipe": "e2_a2_anchor",
+      "recipe_snapshot": {
+        "name": "e2_a2_anchor",
+        "description": "E2-A2 锚点反向提问，不进化。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 768,
+          "overlap": 0.12
+        },
+        "anchor": {
+          "name": "ner_rake_textrank",
+          "top_k": 5
+        },
+        "question_gen": {
+          "name": "anchor_reverse",
+          "per_anchor": 1
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "concise_response"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring"
+          },
+          {
+            "name": "roundtrip",
+            "k": 3,
+            "pass_sim": 0.75,
+            "mean_sim": 0.6
+          },
+          {
+            "name": "exact_hash_dedup"
+          }
+        ],
+        "grading": "none"
+      },
+      "metrics": {
+        "recipe": "e2_a2_anchor",
+        "chunks": 4,
+        "questions": 5,
+        "distilled": 5,
+        "kept": 4,
+        "rejected": 0,
+        "answerability": 0.8,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 1.5,
+        "type_distribution": {
+          "factual": 0.25,
+          "conditional": 0.25,
+          "procedural": 0.5
+        },
+        "retention": 0.8,
+        "s_ratio": 0.0,
+        "grade_distribution": {
+          "none": 4
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 19,
+        "prompt_tokens": 3915,
+        "completion_tokens": 6144,
+        "estimated_cost_usd": 0.002268,
+        "fallbacks": [
+          "anchor.ner_rake_textrank:backend=heuristic"
+        ],
+        "stage_seconds": {
+          "chunking": 0.001,
+          "anchor": 1.735,
+          "question_gen": 223.525,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 17.028,
+          "filter:rule_clean": 0.351,
+          "filter:evidence_substring": 0.0,
+          "filter:roundtrip": 29.607,
+          "filter:exact_hash_dedup": 0.0,
+          "grading": 0.0,
+          "total": 272.251
+        },
+        "rejected_by_filter": {
+          "rule_clean": 1
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 5,
+            "out": 4,
+            "dropped": 1
+          },
+          "evidence_substring": {
+            "in": 4,
+            "out": 4,
+            "dropped": 0
+          },
+          "roundtrip": {
+            "in": 4,
+            "out": 4,
+            "dropped": 0
+          },
+          "exact_hash_dedup": {
+            "in": 4,
+            "out": 4,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 25147500
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    },
+    {
+      "id": "E2_a3",
+      "purpose": "锚点 + Tag-Evol 受控进化",
+      "recipe": "e2_a3_tag_evol",
+      "recipe_snapshot": {
+        "name": "e2_a3_tag_evol",
+        "description": "E2-A3 锚点 + Tag-Evol 受控进化。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 768,
+          "overlap": 0.12
+        },
+        "anchor": {
+          "name": "ner_rake_textrank",
+          "top_k": 5
+        },
+        "question_gen": {
+          "name": "anchor_reverse",
+          "per_anchor": 1
+        },
+        "evolution": {
+          "name": "tag_evol",
+          "sample_ratio": 0.3
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "concise_response"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring"
+          },
+          {
+            "name": "roundtrip",
+            "k": 3,
+            "pass_sim": 0.75,
+            "mean_sim": 0.6
+          },
+          {
+            "name": "exact_hash_dedup"
+          }
+        ],
+        "grading": "none"
+      },
+      "metrics": {
+        "recipe": "e2_a3_tag_evol",
+        "chunks": 4,
+        "questions": 5,
+        "distilled": 5,
+        "kept": 5,
+        "rejected": 0,
+        "answerability": 1.0,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 2.3219,
+        "type_distribution": {
+          "factual": 0.2,
+          "procedural": 0.2,
+          "conditional": 0.2,
+          "multihop": 0.2,
+          "comparative": 0.2
+        },
+        "retention": 1.0,
+        "s_ratio": 0.0,
+        "grade_distribution": {
+          "none": 5
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 21,
+        "prompt_tokens": 5689,
+        "completion_tokens": 5279,
+        "estimated_cost_usd": 0.002275,
+        "fallbacks": [
+          "anchor.ner_rake_textrank:backend=heuristic"
+        ],
+        "stage_seconds": {
+          "chunking": 0.0,
+          "anchor": 1.619,
+          "question_gen": 240.027,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 22.219,
+          "filter:rule_clean": 0.515,
+          "filter:evidence_substring": 0.0,
+          "filter:roundtrip": 44.35,
+          "filter:exact_hash_dedup": 0.0,
+          "grading": 0.0,
+          "total": 308.734
+        },
+        "rejected_by_filter": {},
+        "funnel": {
+          "rule_clean": {
+            "in": 5,
+            "out": 5,
+            "dropped": 0
+          },
+          "evidence_substring": {
+            "in": 5,
+            "out": 5,
+            "dropped": 0
+          },
+          "roundtrip": {
+            "in": 5,
+            "out": 5,
+            "dropped": 0
+          },
+          "exact_hash_dedup": {
+            "in": 5,
+            "out": 5,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 21936000
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    },
+    {
+      "id": "E2_a4",
+      "purpose": "锚点 + 无约束 Evol-Instruct",
+      "recipe": "e2_a4_unconstrained",
+      "recipe_snapshot": {
+        "name": "e2_a4_unconstrained",
+        "description": "E2-A4 锚点 + 无约束 Evol-Instruct。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 768,
+          "overlap": 0.12
+        },
+        "anchor": {
+          "name": "ner_rake_textrank",
+          "top_k": 5
+        },
+        "question_gen": {
+          "name": "anchor_reverse",
+          "per_anchor": 1
+        },
+        "evolution": {
+          "name": "evol_unconstrained",
+          "sample_ratio": 0.3
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "concise_response"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring"
+          },
+          {
+            "name": "roundtrip",
+            "k": 3,
+            "pass_sim": 0.75,
+            "mean_sim": 0.6
+          },
+          {
+            "name": "exact_hash_dedup"
+          }
+        ],
+        "grading": "none"
+      },
+      "metrics": {
+        "recipe": "e2_a4_unconstrained",
+        "chunks": 4,
+        "questions": 9,
+        "distilled": 9,
+        "kept": 7,
+        "rejected": 0,
+        "answerability": 0.7778,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 1.9502,
+        "type_distribution": {
+          "factual": 0.143,
+          "conditional": 0.286,
+          "multihop": 0.286,
+          "comparative": 0.286
+        },
+        "retention": 0.7778,
+        "s_ratio": 0.0,
+        "grade_distribution": {
+          "none": 7
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 32,
+        "prompt_tokens": 6771,
+        "completion_tokens": 9160,
+        "estimated_cost_usd": 0.003513,
+        "fallbacks": [
+          "anchor.ner_rake_textrank:backend=heuristic"
+        ],
+        "stage_seconds": {
+          "chunking": 0.0,
+          "anchor": 1.52,
+          "question_gen": 228.932,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 39.596,
+          "filter:rule_clean": 0.586,
+          "filter:evidence_substring": 0.0,
+          "filter:roundtrip": 75.528,
+          "filter:exact_hash_dedup": 0.0,
+          "grading": 0.0,
+          "total": 346.165
+        },
+        "rejected_by_filter": {
+          "rule_clean": 2
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 9,
+            "out": 7,
+            "dropped": 2
+          },
+          "evidence_substring": {
+            "in": 7,
+            "out": 7,
+            "dropped": 0
+          },
+          "roundtrip": {
+            "in": 7,
+            "out": 7,
+            "dropped": 0
+          },
+          "exact_hash_dedup": {
+            "in": 7,
+            "out": 7,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 22758571
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    },
+    {
+      "id": "E2_a5",
+      "purpose": "锚点 + Tag-Evol + 难度感知采样",
+      "recipe": "e2_a5_difficulty",
+      "recipe_snapshot": {
+        "name": "e2_a5_difficulty",
+        "description": "E2-A5 锚点 + Tag-Evol + 难度感知采样。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 768,
+          "overlap": 0.12
+        },
+        "anchor": {
+          "name": "ner_rake_textrank",
+          "top_k": 5
+        },
+        "question_gen": {
+          "name": "anchor_reverse",
+          "per_anchor": 1
+        },
+        "evolution": {
+          "name": "tag_evol",
+          "sample_ratio": 0.3
+        },
+        "question_filter": {
+          "name": "difficulty_sample",
+          "k": 2
+        },
+        "distillation": {
+          "name": "concise_response"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring"
+          },
+          {
+            "name": "roundtrip",
+            "k": 3,
+            "pass_sim": 0.75,
+            "mean_sim": 0.6
+          },
+          {
+            "name": "exact_hash_dedup"
+          }
+        ],
+        "grading": "none"
+      },
+      "metrics": {
+        "recipe": "e2_a5_difficulty",
+        "chunks": 4,
+        "questions": 4,
+        "distilled": 4,
+        "kept": 4,
+        "rejected": 0,
+        "answerability": 1.0,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 2.0,
+        "type_distribution": {
+          "conditional": 0.25,
+          "procedural": 0.25,
+          "comparative": 0.25,
+          "factual": 0.25
+        },
+        "retention": 1.0,
+        "s_ratio": 0.0,
+        "grade_distribution": {
+          "none": 4
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 25,
+        "prompt_tokens": 4081,
+        "completion_tokens": 3875,
+        "estimated_cost_usd": 0.001656,
+        "fallbacks": [
+          "anchor.ner_rake_textrank:backend=heuristic"
+        ],
+        "stage_seconds": {
+          "chunking": 0.0,
+          "anchor": 1.532,
+          "question_gen": 211.598,
+          "evolution": 0.0,
+          "question_filter": 21.273,
+          "teacher_router": 0.0,
+          "distillation": 12.684,
+          "filter:rule_clean": 0.254,
+          "filter:evidence_substring": 0.0,
+          "filter:roundtrip": 32.298,
+          "filter:exact_hash_dedup": 0.0,
+          "grading": 0.0,
+          "total": 279.641
+        },
+        "rejected_by_filter": {},
+        "funnel": {
+          "rule_clean": {
+            "in": 4,
+            "out": 4,
+            "dropped": 0
+          },
+          "evidence_substring": {
+            "in": 4,
+            "out": 4,
+            "dropped": 0
+          },
+          "roundtrip": {
+            "in": 4,
+            "out": 4,
+            "dropped": 0
+          },
+          "exact_hash_dedup": {
+            "in": 4,
+            "out": 4,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 19890000
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    },
+    {
+      "id": "E3_b1",
+      "purpose": "全量低成本单教师",
+      "recipe": "e3_b1_cheap",
+      "recipe_snapshot": {
+        "name": "e3_b1_cheap",
+        "description": "E3-B1 全量低成本单教师。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 768,
+          "overlap": 0.12
+        },
+        "anchor": {
+          "name": "ner_rake_textrank",
+          "top_k": 5
+        },
+        "question_gen": {
+          "name": "anchor_reverse",
+          "per_anchor": 1
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "concise_response"
+        },
+        "teacher_router": {
+          "name": "single",
+          "tier": "cheap"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "llm_judge",
+            "min_overall": 2.5
+          }
+        ],
+        "grading": "none"
+      },
+      "metrics": {
+        "recipe": "e3_b1_cheap",
+        "chunks": 0,
+        "questions": 5,
+        "distilled": 5,
+        "kept": 4,
+        "rejected": 0,
+        "answerability": 0.8,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": 5.0,
+        "type_entropy": 1.5,
+        "type_distribution": {
+          "factual": 0.25,
+          "conditional": 0.25,
+          "procedural": 0.5
+        },
+        "retention": 0.8,
+        "s_ratio": 0.0,
+        "grade_distribution": {
+          "none": 4
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 9,
+        "prompt_tokens": 1955,
+        "completion_tokens": 1770,
+        "estimated_cost_usd": 0.000769,
+        "fallbacks": [],
+        "stage_seconds": {
+          "teacher_router": 0.0,
+          "distillation": 19.211,
+          "filter:rule_clean": 0.393,
+          "filter:llm_judge": 29.06,
+          "grading": 0.0,
+          "total": 48.665
+        },
+        "rejected_by_filter": {
+          "rule_clean": 1
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 5,
+            "out": 4,
+            "dropped": 1
+          },
+          "llm_judge": {
+            "in": 4,
+            "out": 4,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 9312500
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    },
+    {
+      "id": "E3_b2",
+      "purpose": "全量强教师",
+      "recipe": "e3_b2_strong",
+      "recipe_snapshot": {
+        "name": "e3_b2_strong",
+        "description": "E3-B2 全量强教师。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 768,
+          "overlap": 0.12
+        },
+        "anchor": {
+          "name": "ner_rake_textrank",
+          "top_k": 5
+        },
+        "question_gen": {
+          "name": "anchor_reverse",
+          "per_anchor": 1
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "cot_mixed"
+        },
+        "teacher_router": {
+          "name": "always_strong"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "llm_judge",
+            "min_overall": 2.5
+          }
+        ],
+        "grading": "none"
+      },
+      "metrics": {
+        "recipe": "e3_b2_strong",
+        "chunks": 0,
+        "questions": 5,
+        "distilled": 5,
+        "kept": 4,
+        "rejected": 0,
+        "answerability": 0.8,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": 5.0,
+        "type_entropy": 1.5,
+        "type_distribution": {
+          "factual": 0.25,
+          "conditional": 0.25,
+          "procedural": 0.5
+        },
+        "retention": 0.8,
+        "s_ratio": 0.0,
+        "grade_distribution": {
+          "none": 4
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 9,
+        "prompt_tokens": 2182,
+        "completion_tokens": 2564,
+        "estimated_cost_usd": 0.001023,
+        "fallbacks": [],
+        "stage_seconds": {
+          "teacher_router": 0.0,
+          "distillation": 40.31,
+          "filter:rule_clean": 0.387,
+          "filter:llm_judge": 27.381,
+          "grading": 0.0,
+          "total": 68.079
+        },
+        "rejected_by_filter": {
+          "rule_clean": 1
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 5,
+            "out": 4,
+            "dropped": 1
+          },
+          "llm_judge": {
+            "in": 4,
+            "out": 4,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 11865000
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    },
+    {
+      "id": "E3_b3",
+      "purpose": "按题型分级路由",
+      "recipe": "e3_b3_graded",
+      "recipe_snapshot": {
+        "name": "e3_b3_graded",
+        "description": "E3-B3 按题型分级路由。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 768,
+          "overlap": 0.12
+        },
+        "anchor": {
+          "name": "ner_rake_textrank",
+          "top_k": 5
+        },
+        "question_gen": {
+          "name": "anchor_reverse",
+          "per_anchor": 1
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "cot_mixed"
+        },
+        "teacher_router": {
+          "name": "grade_by_qtype"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "llm_judge",
+            "min_overall": 2.5
+          }
+        ],
+        "grading": "none"
+      },
+      "metrics": {
+        "recipe": "e3_b3_graded",
+        "chunks": 0,
+        "questions": 5,
+        "distilled": 5,
+        "kept": 4,
+        "rejected": 0,
+        "answerability": 0.8,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": 5.0,
+        "type_entropy": 1.5,
+        "type_distribution": {
+          "factual": 0.25,
+          "conditional": 0.25,
+          "procedural": 0.5
+        },
+        "retention": 0.8,
+        "s_ratio": 0.0,
+        "grade_distribution": {
+          "none": 4
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 9,
+        "prompt_tokens": 2125,
+        "completion_tokens": 2320,
+        "estimated_cost_usd": 0.000947,
+        "fallbacks": [],
+        "stage_seconds": {
+          "teacher_router": 0.002,
+          "distillation": 34.768,
+          "filter:rule_clean": 0.382,
+          "filter:llm_judge": 27.841,
+          "grading": 0.0,
+          "total": 62.995
+        },
+        "rejected_by_filter": {
+          "rule_clean": 1
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 5,
+            "out": 4,
+            "dropped": 1
+          },
+          "llm_judge": {
+            "in": 4,
+            "out": 4,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 11112500
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    },
+    {
+      "id": "E3_b4",
+      "purpose": "仅难题子集多教师选优",
+      "recipe": "e3_b4_multi_hard",
+      "recipe_snapshot": {
+        "name": "e3_b4_multi_hard",
+        "description": "E3-B4 仅难题子集走多教师并裁判选优。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 768,
+          "overlap": 0.12
+        },
+        "anchor": {
+          "name": "ner_rake_textrank",
+          "top_k": 5
+        },
+        "question_gen": {
+          "name": "anchor_reverse",
+          "per_anchor": 1
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "routed_teacher",
+          "teachers": [
+            "cheap",
+            "strong"
+          ]
+        },
+        "teacher_router": {
+          "name": "grade_by_qtype"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "llm_judge",
+            "min_overall": 2.5
+          }
+        ],
+        "grading": "none"
+      },
+      "metrics": {
+        "recipe": "e3_b4_multi_hard",
+        "chunks": 0,
+        "questions": 5,
+        "distilled": 5,
+        "kept": 4,
+        "rejected": 0,
+        "answerability": 0.8,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": 5.0,
+        "type_entropy": 1.5,
+        "type_distribution": {
+          "factual": 0.25,
+          "conditional": 0.25,
+          "procedural": 0.5
+        },
+        "retention": 0.8,
+        "s_ratio": 0.0,
+        "grade_distribution": {
+          "none": 4
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 9,
+        "prompt_tokens": 2126,
+        "completion_tokens": 2330,
+        "estimated_cost_usd": 0.00095,
+        "fallbacks": [],
+        "stage_seconds": {
+          "teacher_router": 0.003,
+          "distillation": 29.962,
+          "filter:rule_clean": 0.327,
+          "filter:llm_judge": 27.161,
+          "grading": 0.0,
+          "total": 57.455
+        },
+        "rejected_by_filter": {
+          "rule_clean": 1
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 5,
+            "out": 4,
+            "dropped": 1
+          },
+          "llm_judge": {
+            "in": 4,
+            "out": 4,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 11140000
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    },
+    {
+      "id": "E4_c1",
+      "purpose": "无锚点，纯 LLM 自由生成",
+      "recipe": "e4_c1_none",
+      "recipe_snapshot": {
+        "name": "e4_c1_none",
+        "description": "E4 锚点消融的公共提问与过滤设置。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 768,
+          "overlap": 0.12
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "self_instruct",
+          "per_chunk": 3
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "concise_response"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring"
+          },
+          {
+            "name": "nli_fact",
+            "pass": 0.7,
+            "downgrade": 0.5
+          }
+        ],
+        "grading": "none"
+      },
+      "metrics": {
+        "recipe": "e4_c1_none",
+        "chunks": 4,
+        "questions": 12,
+        "distilled": 12,
+        "kept": 1,
+        "rejected": 0,
+        "answerability": 0.0833,
+        "nli_mean": 1.0,
+        "hallucination_proxy": 0.0,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {
+          "conditional": 1.0
+        },
+        "retention": 0.0833,
+        "s_ratio": 0.0,
+        "grade_distribution": {
+          "none": 1
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 27,
+        "prompt_tokens": 6860,
+        "completion_tokens": 6891,
+        "estimated_cost_usd": 0.00289,
+        "fallbacks": [
+          "nli_fact:backend=llm"
+        ],
+        "stage_seconds": {
+          "chunking": 0.0,
+          "anchor": 0.0,
+          "question_gen": 75.239,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 71.274,
+          "filter:rule_clean": 0.883,
+          "filter:evidence_substring": 0.0,
+          "filter:nli_fact": 33.015,
+          "grading": 0.0,
+          "total": 180.415
+        },
+        "rejected_by_filter": {
+          "rule_clean": 1,
+          "nli_fact": 10
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 12,
+            "out": 11,
+            "dropped": 1
+          },
+          "evidence_substring": {
+            "in": 11,
+            "out": 11,
+            "dropped": 0
+          },
+          "nli_fact": {
+            "in": 11,
+            "out": 1,
+            "dropped": 10
+          }
+        },
+        "tokens_per_10k_kept": 137510000
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    },
+    {
+      "id": "E4_c2",
+      "purpose": "仅 TF-IDF 关键词",
+      "recipe": "e4_c2_tfidf",
+      "recipe_snapshot": {
+        "name": "e4_c2_tfidf",
+        "description": "E4 锚点消融的公共提问与过滤设置。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 768,
+          "overlap": 0.12
+        },
+        "anchor": {
+          "name": "tfidf_keyword",
+          "top_k": 5
+        },
+        "question_gen": {
+          "name": "anchor_reverse",
+          "per_anchor": 1
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "concise_response"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring"
+          },
+          {
+            "name": "nli_fact",
+            "pass": 0.7,
+            "downgrade": 0.5
+          }
+        ],
+        "grading": "none"
+      },
+      "metrics": {
+        "recipe": "e4_c2_tfidf",
+        "chunks": 4,
+        "questions": 0,
+        "distilled": 0,
+        "kept": 0,
+        "rejected": 0,
+        "answerability": 0.0,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {},
+        "retention": 0.0,
+        "s_ratio": 0.0,
+        "grade_distribution": {},
+        "evidence_grounded": 0.0,
+        "llm_calls": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {
+          "chunking": 0.0,
+          "anchor": 0.549,
+          "question_gen": 240.238,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 0.0,
+          "filter:rule_clean": 0.0,
+          "filter:evidence_substring": 0.0,
+          "filter:nli_fact": 5.456,
+          "grading": 0.0,
+          "total": 246.244
+        },
+        "rejected_by_filter": {},
+        "funnel": {
+          "rule_clean": {
+            "in": 0,
+            "out": 0,
+            "dropped": 0
+          },
+          "evidence_substring": {
+            "in": 0,
+            "out": 0,
+            "dropped": 0
+          },
+          "nli_fact": {
+            "in": 0,
+            "out": 0,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": null
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    },
+    {
+      "id": "E4_c3",
+      "purpose": "NER + TF-IDF",
+      "recipe": "e4_c3_ner_tfidf",
+      "recipe_snapshot": {
+        "name": "e4_c3_ner_tfidf",
+        "description": "E4 锚点消融的公共提问与过滤设置。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 768,
+          "overlap": 0.12
+        },
+        "anchor": {
+          "name": "ner_tfidf",
+          "top_k": 5
+        },
+        "question_gen": {
+          "name": "anchor_reverse",
+          "per_anchor": 1
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "concise_response"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring"
+          },
+          {
+            "name": "nli_fact",
+            "pass": 0.7,
+            "downgrade": 0.5
+          }
+        ],
+        "grading": "none"
+      },
+      "metrics": {
+        "recipe": "e4_c3_ner_tfidf",
+        "chunks": 4,
+        "questions": 5,
+        "distilled": 5,
+        "kept": 0,
+        "rejected": 0,
+        "answerability": 0.0,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {},
+        "retention": 0.0,
+        "s_ratio": 0.0,
+        "grade_distribution": {},
+        "evidence_grounded": 0.0,
+        "llm_calls": 9,
+        "prompt_tokens": 2434,
+        "completion_tokens": 2814,
+        "estimated_cost_usd": 0.001129,
+        "fallbacks": [],
+        "stage_seconds": {
+          "chunking": 0.0,
+          "anchor": 0.539,
+          "question_gen": 221.74,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 18.153,
+          "filter:rule_clean": 0.277,
+          "filter:evidence_substring": 0.0,
+          "filter:nli_fact": 16.082,
+          "grading": 0.0,
+          "total": 256.794
+        },
+        "rejected_by_filter": {
+          "rule_clean": 2,
+          "nli_fact": 3
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 5,
+            "out": 3,
+            "dropped": 2
+          },
+          "evidence_substring": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          },
+          "nli_fact": {
+            "in": 3,
+            "out": 0,
+            "dropped": 3
+          }
+        },
+        "tokens_per_10k_kept": null
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    },
+    {
+      "id": "E4_c4",
+      "purpose": "NER + TF-IDF + 关键句",
+      "recipe": "e4_c4_ner_sentence",
+      "recipe_snapshot": {
+        "name": "e4_c4_ner_sentence",
+        "description": "E4 锚点消融的公共提问与过滤设置。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 768,
+          "overlap": 0.12
+        },
+        "anchor": {
+          "name": "ner_rake_textrank",
+          "top_k": 5
+        },
+        "question_gen": {
+          "name": "anchor_reverse",
+          "per_anchor": 1
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "concise_response"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring"
+          },
+          {
+            "name": "nli_fact",
+            "pass": 0.7,
+            "downgrade": 0.5
+          }
+        ],
+        "grading": "none"
+      },
+      "metrics": {
+        "recipe": "e4_c4_ner_sentence",
+        "chunks": 4,
+        "questions": 0,
+        "distilled": 0,
+        "kept": 0,
+        "rejected": 0,
+        "answerability": 0.0,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {},
+        "retention": 0.0,
+        "s_ratio": 0.0,
+        "grade_distribution": {},
+        "evidence_grounded": 0.0,
+        "llm_calls": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [
+          "anchor.ner_rake_textrank:backend=heuristic",
+          "nli_fact:backend=llm"
+        ],
+        "stage_seconds": {
+          "chunking": 0.001,
+          "anchor": 1.681,
+          "question_gen": 240.251,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 0.0,
+          "filter:rule_clean": 0.0,
+          "filter:evidence_substring": 0.0,
+          "filter:nli_fact": 0.0,
+          "grading": 0.0,
+          "total": 241.935
+        },
+        "rejected_by_filter": {},
+        "funnel": {
+          "rule_clean": {
+            "in": 0,
+            "out": 0,
+            "dropped": 0
+          },
+          "evidence_substring": {
+            "in": 0,
+            "out": 0,
+            "dropped": 0
+          },
+          "nli_fact": {
+            "in": 0,
+            "out": 0,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": null
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    },
+    {
+      "id": "E4_c5",
+      "purpose": "纯 LLM 抽取锚点",
+      "recipe": "e4_c5_llm",
+      "recipe_snapshot": {
+        "name": "e4_c5_llm",
+        "description": "E4 锚点消融的公共提问与过滤设置。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 768,
+          "overlap": 0.12
+        },
+        "anchor": {
+          "name": "llm_extract",
+          "top_k": 5
+        },
+        "question_gen": {
+          "name": "anchor_reverse",
+          "per_anchor": 1
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "concise_response"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring"
+          },
+          {
+            "name": "nli_fact",
+            "pass": 0.7,
+            "downgrade": 0.5
+          }
+        ],
+        "grading": "none"
+      },
+      "metrics": {
+        "recipe": "e4_c5_llm",
+        "chunks": 4,
+        "questions": 5,
+        "distilled": 5,
+        "kept": 0,
+        "rejected": 0,
+        "answerability": 0.0,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {},
+        "retention": 0.0,
+        "s_ratio": 0.0,
+        "grade_distribution": {},
+        "evidence_grounded": 0.0,
+        "llm_calls": 12,
+        "prompt_tokens": 3098,
+        "completion_tokens": 4880,
+        "estimated_cost_usd": 0.0018,
+        "fallbacks": [
+          "anchor.llm_extract:empty,fallback=tfidf"
+        ],
+        "stage_seconds": {
+          "chunking": 0.0,
+          "anchor": 165.834,
+          "question_gen": 223.59,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 19.097,
+          "filter:rule_clean": 0.295,
+          "filter:evidence_substring": 0.0,
+          "filter:nli_fact": 13.502,
+          "grading": 0.0,
+          "total": 422.32
+        },
+        "rejected_by_filter": {
+          "rule_clean": 1,
+          "nli_fact": 4
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 5,
+            "out": 4,
+            "dropped": 1
+          },
+          "evidence_substring": {
+            "in": 4,
+            "out": 4,
+            "dropped": 0
+          },
+          "nli_fact": {
+            "in": 4,
+            "out": 0,
+            "dropped": 4
+          }
+        },
+        "tokens_per_10k_kept": null
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "not_requested"
+      },
+      "note": ""
+    },
+    {
+      "id": "E5_annotation",
+      "purpose": "导出 S/A 抽检表；无人工标签则不计算 Kappa",
+      "recipe": "",
+      "recipe_snapshot": {},
+      "metrics": {
+        "kept": 0
+      },
+      "sft": {},
+      "note": "未提供人工标签，不计算 Cohen's Kappa",
+      "annotation": {
+        "exported": 0,
+        "path": "runs/design_suite/E5_annotation/annotation.jsonl",
+        "annotated": false,
+        "reason": "未提供人工标签，不计算 Cohen's Kappa",
+        "kappa": null
+      }
+    },
+    {
+      "id": "E6_cost",
+      "purpose": "汇总推荐路线的过滤漏斗、token 与费用",
+      "recipe": "",
+      "recipe_snapshot": {},
+      "metrics": {
+        "recipe": "recommended",
+        "chunks": 4,
+        "questions": 10,
+        "distilled": 10,
+        "kept": 0,
+        "rejected": 0,
+        "answerability": 0.0,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {},
+        "retention": 0.0,
+        "s_ratio": 0.0,
+        "grade_distribution": {},
+        "evidence_grounded": 0.0,
+        "llm_calls": 21,
+        "prompt_tokens": 6165,
+        "completion_tokens": 8657,
+        "estimated_cost_usd": 0.003287,
+        "fallbacks": [
+          "anchor.ner_rake_textrank:backend=heuristic"
+        ],
+        "stage_seconds": {
+          "chunking": 0.005,
+          "anchor": 1.607,
+          "question_gen": 223.802,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 74.346,
+          "filter:rule_clean": 0.616,
+          "filter:nli_fact": 34.061,
+          "filter:roundtrip": 0.0,
+          "filter:knowledge_ablation": 0.0,
+          "filter:selfcheck": 0.0,
+          "filter:llm_judge": 0.0,
+          "filter:exact_hash_dedup": 0.0,
+          "filter:semdedup": 0.0,
+          "filter:diversity_sample": 0.0,
+          "grading": 0.0,
+          "total": 334.441
+        },
+        "rejected_by_filter": {
+          "rule_clean": 2,
+          "nli_fact": 8
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 10,
+            "out": 8,
+            "dropped": 2
+          },
+          "nli_fact": {
+            "in": 8,
+            "out": 0,
+            "dropped": 8
+          },
+          "roundtrip": {
+            "in": 0,
+            "out": 0,
+            "dropped": 0
+          },
+          "knowledge_ablation": {
+            "in": 0,
+            "out": 0,
+            "dropped": 0
+          },
+          "selfcheck": {
+            "in": 0,
+            "out": 0,
+            "dropped": 0
+          },
+          "llm_judge": {
+            "in": 0,
+            "out": 0,
+            "dropped": 0
+          },
+          "exact_hash_dedup": {
+            "in": 0,
+            "out": 0,
+            "dropped": 0
+          },
+          "semdedup": {
+            "in": 0,
+            "out": 0,
+            "dropped": 0
+          },
+          "diversity_sample": {
+            "in": 0,
+            "out": 0,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": null,
+        "api_cost_usd": 0.003287,
+        "cost_note": "教师 qwen3.8-27b 为内网接口，API 费用按 0 计，tokens_per_10k_kept 为等价 token。"
+      },
+      "sft": {},
+      "note": "教师 qwen3.8-27b 为内网接口，API 费用按 0 计，tokens_per_10k_kept 为等价 token。"
+    },
+    {
+      "id": "E7_refusal",
+      "purpose": "对比基线与推荐路线在干扰上下文上的拒答",
+      "recipe": "",
+      "recipe_snapshot": {},
+      "metrics": {},
+      "sft": {},
+      "note": "{\"E1_baseline\": {\"n\": 10, \"refusal_rate\": 1.0, \"gold_f1\": 0.6649, \"false_refusal_rate\": 0.0, \"refusal_f1\": 1.0}, \"E1_ours_full\": {\"skipped\": true, \"reason\": \"no_adapter\"}}",
+      "refusal": {
+        "skipped": false,
+        "arms": {
+          "E1_baseline": {
+            "n": 10,
+            "refusal_rate": 1.0,
+            "gold_f1": 0.6649,
+            "false_refusal_rate": 0.0,
+            "refusal_f1": 1.0
+          },
+          "E1_ours_full": {
+            "skipped": true,
+            "reason": "no_adapter"
+          }
+        }
+      }
+    },
+    {
+      "id": "E8_d1",
+      "purpose": "基线全量训练数据",
+      "recipe": "",
+      "recipe_snapshot": {},
+      "metrics": {
+        "recipe": "E8_d1",
+        "chunks": 0,
+        "questions": 6,
+        "distilled": 6,
+        "kept": 6,
+        "rejected": 0,
+        "answerability": 1.0,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {
+          "factual": 1.0
+        },
+        "retention": 1.0,
+        "s_ratio": 0.0,
+        "grade_distribution": {
+          "A": 6
+        },
+        "evidence_grounded": 1.0,
+        "llm_calls": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {},
+        "rejected_by_filter": {},
+        "funnel": {},
+        "tokens_per_10k_kept": 0
+      },
+      "sft": {
+        "train_samples": 6,
+        "heldout": 10,
+        "train_jsonl": "runs/design_suite/E1_baseline/sft/train.jsonl",
+        "train": {
+          "skipped": false,
+          "train_loss": 2.6873913208643594,
+          "train_samples": 6,
+          "epochs": 3,
+          "base_model": "/data1/pjw/models/Qwen2.5-7B-Instruct",
+          "adapter": "runs/design_suite/E1_baseline/sft/lora/adapter"
+        },
+        "base": {
+          "em": 0.0,
+          "f1": 0.0975,
+          "n": 10
+        },
+        "tuned": {
+          "em": 0.0,
+          "f1": 0.2294,
+          "n": 10
+        },
+        "delta_f1": 0.1319,
+        "delta_em": 0.0,
+        "judge_base": 0.0,
+        "judge_tuned": 0.0,
+        "delta_judge": 0.0,
+        "reused": true
+      },
+      "note": ""
+    },
+    {
+      "id": "E8_d2",
+      "purpose": "仅 S 级",
+      "recipe": "",
+      "recipe_snapshot": {},
+      "metrics": {
+        "recipe": "E8_d2",
+        "chunks": 0,
+        "questions": 0,
+        "distilled": 0,
+        "kept": 0,
+        "rejected": 0,
+        "answerability": 0.0,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {},
+        "retention": 0.0,
+        "s_ratio": 0.0,
+        "grade_distribution": {},
+        "evidence_grounded": 0.0,
+        "llm_calls": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {},
+        "rejected_by_filter": {},
+        "funnel": {},
+        "tokens_per_10k_kept": null
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "empty_train"
+      },
+      "note": ""
+    },
+    {
+      "id": "E8_d3",
+      "purpose": "S+A",
+      "recipe": "",
+      "recipe_snapshot": {},
+      "metrics": {
+        "recipe": "E8_d3",
+        "chunks": 0,
+        "questions": 0,
+        "distilled": 0,
+        "kept": 0,
+        "rejected": 0,
+        "answerability": 0.0,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {},
+        "retention": 0.0,
+        "s_ratio": 0.0,
+        "grade_distribution": {},
+        "evidence_grounded": 0.0,
+        "llm_calls": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {},
+        "rejected_by_filter": {},
+        "funnel": {},
+        "tokens_per_10k_kept": null
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "empty_train"
+      },
+      "note": ""
+    },
+    {
+      "id": "E8_d4",
+      "purpose": "S+A+B",
+      "recipe": "",
+      "recipe_snapshot": {},
+      "metrics": {
+        "recipe": "E8_d4",
+        "chunks": 0,
+        "questions": 0,
+        "distilled": 0,
+        "kept": 0,
+        "rejected": 0,
+        "answerability": 0.0,
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {},
+        "retention": 0.0,
+        "s_ratio": 0.0,
+        "grade_distribution": {},
+        "evidence_grounded": 0.0,
+        "llm_calls": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {},
+        "rejected_by_filter": {},
+        "funnel": {},
+        "tokens_per_10k_kept": null
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "empty_train"
+      },
+      "note": ""
+    }
+  ]
+}
