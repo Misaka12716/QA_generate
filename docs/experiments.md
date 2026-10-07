@@ -85,6 +85,8 @@ qa-pipeline eval-adapter --base-model /path/to/base-model --base-id base-v1 --ad
 
 人工表用 `qa-pipeline import-review --run <运行目录>` 导入。该命令按 `review/batches.json` 校验 ID、内容哈希和审核完整性，并写出 `review/import_result.json`。`runs/drug_v25_eval/review/review_guide.md` 是这一轮审核包的填写说明，包含不含真实药品内容的示例。开发集用来构造新条件；诊断集描述见过来源或固定行为边界；正式测试仍是独立来源上的冻结协议。三者的分母和结论不能合并。
 
+`teacher-review` 把教师裁定写到新的运行目录，不回写人工 CSV。`review_source=teacher` 的记录不能通过正式模式的人工门禁；正式主指标仍是 `not_executed`。教师接受只允许配置范围内的探索推理，并且技术失败、预算停止、弃权和分歧都不会被当成内容通过。历史报告里的规则分和文件存在性都不是这次教师审核的结论。
+
 ### 产物、缓存与结果解释
 
 查看 `protocol_check.json`、`eval_report.json` 和适用的预测、评分产物。协议失败或未执行时不一定存在预测文件。来源清单无效时报告仍保留计划分母，并记录清单哈希。

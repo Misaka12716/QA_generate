@@ -310,6 +310,25 @@ class FakeLLM(LLMClient):
             self.call_log.append(result.as_dict())
             self._charge(model_name, 1, 1)
             return result
+        if self.script:
+            item = self.script.pop(0)
+            status = str(item.get("__status") or "")
+            if status:
+                result = LLMResponse(
+                    status=status,
+                    model=model_name,
+                    error=str(item.get("__error") or status),
+                    raw_summary=str(item.get("__raw") or ""),
+                )
+                self.call_log.append(result.as_dict())
+                self._charge(model_name, 1, 1)
+                return result
+            raw = json.dumps(item, ensure_ascii=False)
+            pin = sum(approx_tokens(m["content"]) for m in messages)
+            self._charge(model_name, pin, approx_tokens(raw))
+            result = LLMResponse(status="ok", data=item, model=model_name, finish_reason="stop", raw_summary=raw)
+            self.call_log.append(result.as_dict())
+            return result
         pin = sum(approx_tokens(m["content"]) for m in messages)
         data = _fake_json(blob, user)
         raw = json.dumps(data, ensure_ascii=False)
@@ -349,6 +368,15 @@ def _extract_listed_items(user: str, label: str) -> list[str]:
 
 def _fake_json(blob: str, user: str) -> dict[str, Any]:
     sent = _pick_sentence(user)
+    if "审核任务" in blob:
+        return {
+            "decision": "abstain",
+            "dimensions": {},
+            "claims": [],
+            "reason_codes": ["fake_unscripted"],
+            "evidence_summary": "未提供脚本裁定",
+            "contradictions": [],
+        }
     if "知识单元" in blob:
         return {
             "units": [

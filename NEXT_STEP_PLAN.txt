@@ -1,0 +1,507 @@
+你是本项目的开发执行者。请阅读本计划和当前仓库后，按里程碑持续实施；不要停留在重新输出一份泛泛的方案。目标是接续已经开展的 QA 生成与微调实验，临时以教师模型承担数据审核和回答评估，并交付配套的流程可视化、数据集浏览、微调前后对比和交互问答页面。
+
+本文件中“现状”来自指定提交的源码、配置及已提交报告；“新增”“建议”“拟新增命令”是开发要求，不代表仓库已有能力。执行时若 HEAD 或本地实验产物已经变化，应先更新事实表，再继续适配，不能照抄旧结论。
+
+## 一、执行范围与不可破坏的约束
+
+1. 先阅读 AGENTS.md、README.md、docs/usage.md、docs/development.md、docs/experiments.md。保留用户未提交改动；使用新分支和新的 runs 子目录，不覆盖历史报告、原始预测、训练 JSONL、adapter、冻结语料或人工审核表。
+2. 当前任务明确要求增加教师审核路径。可以新增这一能力并解除“必须等待人工”的本轮探索实验阻塞，但必须保留原人工审核语义。不得冒充人工填写 reviewer_a/reviewer_b，不得把教师结论标为 agreed/dual_agreed，不得直接删除机器审核者检查。
+3. 教师审核可以支持开发集诊断、自动质量筛选、实验性训练与自动评估；不能据此宣称获得人工金标、已验证的真实语义正确率或正式泛化结论。原 formal 人工金标门禁继续有效。本轮交付验收不要求补做人工审核。
+4. 架构必须适用于不同领域。药品、精神卫生等仅作为历史实验或可选领域包，不进入默认核心逻辑、页面字段、接口命名和教师配置。
+5. 复用现有 Pipeline、策略注册、来源/样本家族、内容哈希、预测缓存、FastAPI 和 JSONL 文件对接能力。不要新建一套平行管线，不修改外部智训平台的 data_governance 业务代码。
+6. FakeLLM、合成测试、真实 API、历史报告、实际 GPU 运行分别标记。技术失败、超时、解析失败、预算停止不能变成“资料不足”、审核拒绝或成功结果。
+7. 真实服务调用由已配置的提供方、模型和硬预算驱动。缺少凭据、语料、模型或 GPU 时记录明确阻塞及继续条件，继续完成不依赖该资源的代码、契约、离线验证与页面工作。不得虚构实验数据或默认下载大模型来补齐条件。
+8. 文档更新现有主题页；不要制造 docs/v2.6、v2.7 等平行说明。机器状态和运行结果写入新运行目录，旧报告保留历史语境。
+
+## 二、当前项目阶段研判
+
+### 2.1 阶段结论
+
+当前是“已有通用管线原型、历史单 seed 微调及探索评测，正在补齐审核与实验可信性”的阶段。最新工作推进到 v2.5 审核材料和实验 A/B 候选准备，尚未形成经可靠审核的实验闭环，也尚未完成通用平台前后端。
+
+应从“实验资产盘点 → 教师审核闭环 → 行为诊断 → A/B 接续推理”继续，而非重新从锚点生成做起，也不应立即扩大训练或启动 G1–G3。
+
+### 2.2 事实与证据
+
+| 模块 | 核查到的事实 | 结论及限制 | 证据路径 |
+| --- | --- | --- | --- |
+| 生成管线 | 可配置切块、锚点、出题、演化、教师路由、蒸馏、过滤、分级及导出；有来源族、样本族和验证哈希 | 已有实现；策略存在不代表真实运行过 | src/qa_pipeline/pipeline.py、schemas.py、plugins/、adapters/zhixun.py |
+| 推荐配方 | direct_grounded + reuse_candidate + claim_evidence/risk_escalate 等；默认 rag_grounded | 仍是 max_chunks=3、max_samples=8 的小规模配方；不能作为全量生产配置 | configs/recipes/recommended.yaml |
+| 历史训练 | v2.3 审计报告记载 v2.2 G0 使用 74 条训练数据、seed=42 | 有单 seed 历史训练证据；原训练时 git_dirty，且 tokenizer 配置不一致，不能作为新训练对照的干净基线 | runs/drug_v23_eval/report.md、runs/drug_v25_eval/report.md |
+| 历史新题评测 | v2.3 报告有 100 题、200 份 base/adapter 回答，分 seen_rephrase 60、independent 30、behavior 10 | 是探索性辅助结果；不能将规则分改善直接称为微调质量提升 | runs/drug_v23_eval/report.md |
+| 可靠性审计 | v2.4 离线重评分、来源审计、审核包及补推理已在报告中记录 | 人工裁定仍为 0；还发现行为规则误判风险 | runs/drug_v24_audit/report.md |
+| v2.5 接续材料 | batch1 行为审核、实验 A/B 候选已准备；没有新训练或教师调用 | 当前主要阻塞为金标准备和审核接受状态 | runs/drug_v25_eval/report.md、experiments/v25_prepare.py |
+| 审核实现 | import-review 检查人工身份、内容哈希与完整性；机器名会被拒绝 | 不能直接让模型填写现有人工 CSV；必须新增教师审核通道 | experiments/review_io.py |
+| 评测入口 | eval-adapter 支持已有 adapter、预测/评分分离、formal/exploratory、来源清单 | 现有规则评分器仍不产生正式语义主指标；exploratory 目前不强制教师审核 | experiments/adapter_eval.py、scoring.py |
+| 前端 | 已有 FastAPI + 原生 JavaScript 结果对照台 | 只有已有实验结果浏览，不是任务管理服务，也没有在线问答接口 | demo/app.py、demo/static/app.js |
+| 可复现资产 | GitHub 有报告和部分指标，但缺完整冻结语料、审核协议、预测及模型权重 | 报告中“存在”指历史执行机器；不能推断当前 checkout 可直接接续 | Git tree、README.md、docs/experiments.md |
+
+### 2.3 v2.5 的接续分母
+
+| 批次 | 用例数 | 历史报告中的有效预测记录数 | 下一步 |
+| --- | ---: | ---: | --- |
+| batch1_behavior | 14：v2.3 的 10 题 + v2.4 的 4 个新输入 | 28：每题 base/adapter 各一份 | 先审题与金标，再对现有回答做匿名教师评估 |
+| experiment_a | 90：30 个核心问题 × 原题/两种改写 | 60：30 个原题 × 两个模型 | 审核全部 90 个输入；匹配身份后复用原题预测，最多补 120 份改写预测 |
+| experiment_b | 48：12 个核心问题 × 四种证据条件 | 0 | 审核全部条件，最多新增 96 份预测 |
+
+说明：三个批次共 152 个金标审核用例；v2.5 的“待审核 180”是 152 条金标审核记录加 batch1 的 28 条回答盲评记录，不是 180 道题。A 的 90 是输入用例数，不是已有预测数。预计新增 216 份预测，仅在输入未改且原题的 60 份预测全部可复用时成立。
+
+另一个实现缺口：v25_prepare.py 的 maybe_execute_batch 只判断 blocked/not_started/ready，并未真正执行 generate_fn。不能以为完成审核并加 --allow-inference 就会自动完成 A/B；需接入实际评测编排入口。
+
+### 2.4 本计划核查的边界
+
+已通过 GitHub 固定提交读取源码、配置、测试及报告。尝试在当前分析环境运行 pytest，但环境缺少 pytest，命令未进入测试收集；未执行真实教师调用、GPU 推理或训练。因此历史报告中的测试成绩不能作为本次核查的测试成绩。Cursor 必须在实际开发环境重新执行基线验证。
+
+## 三、按优先级推进的开发与实验路线
+
+### P0 / M0：资产盘点和可复现基线，先完成
+
+目标：回答“代码到了哪、产物在哪、哪些步骤真正执行过、接下来缺什么”。
+
+执行：
+
+1. 检查 git status、当前分支、HEAD 和远端差异。若工作区有用户改动，保留并记录，不 reset/clean。记录本次运行基于哪个 commit，必要时记录 diff 哈希；不把修改后的脏工作区称为可复现基线。
+2. 在隔离环境安装项目开发依赖并运行：
+   - python -X utf8 -m pytest -q
+   - qa-pipeline list-strategies
+   - qa-pipeline run --recipe configs/recipes/smoke.yaml --input fixtures/sample_manual.md --out <新的运行目录>/smoke --fake
+   - qa-pipeline experiment --suite configs/experiments/suite.yaml --out <新的运行目录>/suite --fake
+   路径占位符必须替换成实际的新目录。报告 passed/failed/skipped，历史产物依赖测试的 skip 不算通过。
+3. 新增只读盘点功能，建议命令 audit-state；扫描已配置的资产根目录，不扫描任意磁盘路径。核对训练 JSONL、consumed_ids、adapter、base 配置、tokenizer、冻结 inventory、train family manifest、source universe、v2.3/v2.4 预测、v2.5 protocols/review/batches.json。
+4. 为每项资产记录 asset_id、role、relative_path、exists、sha256、schema_version、record_count、producing_run、git_commit、integrity_status、missing_reason。模型记录权重/配置/模板摘要，不把整个模型复制进仓库。
+5. 输出新运行目录下 state_snapshot.json 和 state_report.md。阶段状态至少区分 implemented、reported_executed、artifact_verified、reproduced、blocked、not_started；每条“已完成”必须附证据路径和验证范围。
+6. 若缺旧资产：停止历史接续分支，列出精确缺失项及期望身份；继续教师审核与 API 的 fixture 开发。若另建实验，使用全新的数据集与 run_id，明确是新试点，不冒充旧实验复现。
+
+验收：得到可机器读取的当前状态；不存在“只有文件名就判断成功”的逻辑；缺文件不会被当成空数据集或内联正文继续运行；历史文件哈希未变。
+
+### P0 / M1：教师审核与审核状态改造
+
+先实现第四节的契约、审核后端、预算、缓存和门禁；先用可控 FakeLLM 检验状态迁移，再对 batch1 的 14 题进行小范围真实试运行。
+
+第一批真实运行默认建议上限：并发 2、调用总上限 120（含重试、复核和裁决）、单项最多 1 次技术重试、单项最多 1 次内容修订。调用总上限不是质量目标；同时配置 token 上限。美元价格未知时记 unknown，不能记为免费。
+
+双裁判覆盖 batch1 的 14 个金标和 28 份回答至少需要 84 个单项审核调用；余量用于失败重试和有限裁决。具体预算根据模型接口长度、上下文窗口与实际计费配置确认，硬上限触发后保留未执行项，不自动放行。
+
+验收：无需人工 CSV 就能产生可追溯的 teacher_review；同一对象重复运行可复用有效审核；任何失败、分歧或过期哈希不会自动通过；原人工审核路径及 formal 门禁回归通过。
+
+### P0 / M2：接续诊断，默认按 batch1 → B → A 执行
+
+1. batch1：先审核题目与金标；金标确定后再让教师查看匿名学生回答。复用旧预测的前提是完整输入与模型身份可校验。输出规则与教师的分歧表、过度拒答、证据不足仍作答、错误对象回答、部分可答处理错误及技术失败，不先训练。
+2. 实验 B 优先：12 个核心问题，每组 sufficient、removed_support、wrong_object、distractor 四个条件。逐组检查移除支持后的全文是否仍有等价信息，错对象名称是否可见，干扰条件是否保留原支持；不能只用关键词删除来证明资料不足。审完整组后冻结，针对 base 与旧 adapter 做成对推理与匿名评估。
+3. 实验 A：保持 system、上下文和答案需求固定，只改变问题表述。核对全部 30 组的语义、数字、对象、条件及否定词；每组原题与两条改写成组审核。补齐缺失预测，报告原题/改写分别表现及核心问题内的一致性。
+4. A、B 各自是独立批次，可以分别通过门禁；某个批次未就绪不阻塞其他已就绪批次。批次内部不得静默删掉审核失败用例。修复后生成新协议版本；仍无法就绪则保留原计划分母并标 blocked/incomplete。需要改变实验规模时必须创建新协议版本并记录原因，不覆盖旧计划。
+5. 评测版本全部标记 exploratory_teacher_reviewed 或 diagnostic_teacher_reviewed；不把 A 称为独立泛化，B 来自 dev，也不能冒充 locked test。
+6. 只改金标或评分器而实际模型输入未变：保留预测身份，生成新评分版本；改 question/context/system/template/推理参数：重新审输入并重新推理。不要因为 case_id 相同就命中缓存。
+
+验收：A/B 具备真实执行器、协议冻结记录、逐条预测、逐条教师评估、计划分母、覆盖率、失败和分歧记录。报告不依赖手工填写的汇总数字。
+
+### P1 / M3：依据诊断结果开展可控训练
+
+训练前先给出诊断结论和选择依据：
+
+- 若主要问题是规则误判或候选金标不合理，先修审核与评测，不用训练掩盖测量错误。
+- 若 A 显示问法鲁棒性不足，优先设计表达覆盖的数据干预；其训练材料只能来自训练来源，不能使用 A/B/dev 评测题本身。
+- 若 B 显示证据边界处理错误，设计普通 SFT 对照与加入行为样本的单因素对照。
+- 若独立来源简单题存在天花板，在 dev 构造条件、否定、数值绑定、多证据等难题；冻结选题规则，保留原简单题作锚定，不根据某模型输出挑有利题。
+
+新实验要求：
+
+1. 建立新的可复现 G0：统一 base revision、tokenizer、chat template、精度、LoRA 参数、优化器、最大长度及数据版本；旧 adapter 仅供历史诊断。
+2. 先完成单 seed 小试，验证训练数据实际被使用、assistant token mask 正确、无空目标和静默截断，再在预算具备时运行至少 3 个配对 seed。只有 1 个 seed 时必须标为 pilot，不能宣称稳定改进。
+3. 对照和干预组的有效监督 token 预算、优化步数及其他超参预先对齐；明确行为样本替换了什么、增加了什么。建议有效监督 token 差异控制在预先登记的容差内（初始可取 1%）；无法对齐时记录差异，不能归因于单一算法。
+4. 记录实际采样 ID、样本权重是否被 sampler/loss 真正消费、有效目标 token、global_step、训练时长、显存峰值和最终 adapter 哈希。仅有配置字段不算干预落地。
+5. 在相同冻结协议上做 base/G0/干预模型对比，单独报告质量、行为、保留能力及成本，不只报告训练 loss。
+6. 没有真实学生探测器、有效选样/降权实现、冻结回放池及预算约束时，G1–G3 保持 not_executed，不为完整展示实验编号而启动。
+
+### P1 / M4：通用化与前后端闭环
+
+数据契约、事件记录和通用化 P0 项与 M1 一起完成；页面在契约稳定后增量实现，不必等训练结束。先展示真实历史/新运行产物，再增加受控任务启动和在线问答。具体见第五至第八节。
+
+## 四、教师模型替代人工审核的技术方案
+
+### 4.1 分开三类工作，避免循环自证
+
+| 工作 | 输入 | 输出 | 约束 |
+| --- | --- | --- | --- |
+| 训练数据审核 | 最终问题、学生可见上下文、最终 assistant 目标、来源证据、任务模式 | 内容与行为是否合格、证据定位、修订/隔离原因 | 保留已有确定性过滤和最终哈希；教师通过不能覆盖结构失败 |
+| 评测协议审核 | 题干、可见上下文、候选参考答案/要点、expected_action、条件变换 | 可冻结的机器审核参考版本及其证据 | 审核时不展示 base/adapter 回答，防止按学生答案反向改金标 |
+| 回答效果评估 | 冻结后的题目/可见上下文/审核参考，匿名学生回答 | 任务完成、行为适当、证据支持、错误标签 | 不透露模型身份或微调前后标签；评估版本与预测版本分离 |
+
+对 rag_grounded，裁判必须按学生实际可见的完整上下文判定可答性。来源原文可用于追溯候选事实，但其中隐藏的信息不得被当作学生可用支持。closed_book_domain 单独使用对应 rubric 和外部参考证据，不能套用“所有答案必须由可见上下文支持”的标准。
+
+### 4.2 审核后端与兼容方式
+
+建议新增 reviewing/ 包，包含 schemas.py、service.py、policy.py、teacher.py、cache.py 和 prompts/，或采用等价但统一的目录结构。
+
+- ReviewBackend：统一 review_gold、review_training_sample、review_answer；实现 human、teacher、hybrid。human 适配原 review_io，不改写其历史语义。
+- review_mode=teacher_only 为本轮实验配置；旧配置默认保持兼容，不自动转换历史记录。
+- reviewer_role 区分 generator、gold_reviewer、answer_judge、arbiter；模型提供方、精确 model/revision、prompt_version、rubric_version 独立配置。
+- 优先使用与生成器不同的强模型作审核，第二裁判尽量使用不同模型族。两个端点或两个名字不等于独立模型；必须记录真实身份和 independence_level。
+- 只有一个模型可用时可配置 single 模式，标记 teacher_single_accepted、uncalibrated，报告自评偏差；不能把重复调用包装成双模型共识。需要双审的高风险项在第二裁判缺失时保持隔离，其他低风险探索工作可以继续。
+
+### 4.3 结构化审核记录
+
+至少实现以下类型；使用 Pydantic 严格校验，禁止靠自由文本中的“通过”判断。
+
+ReviewRecord：
+- review_id、batch_id、subject_type（training_sample/protocol_case/prediction）、subject_id、subject_version。
+- review_source（human/teacher/hybrid）、review_mode、review_policy_id、policy_version。
+- subject_hash、model_input_hash、evidence_snapshot_hash、gold_hash（不适用可为 null）。
+- provider_id、model_id、model_revision、model_identity_verified、prompt_hash、rubric_version、inference_config_hash。
+- decision（accept/revise/reject/abstain），execution_status（succeeded/technical_failed/budget_stopped/cancelled），独立存储。
+- dimensions：question_clear、semantic_preserved、evidence_adequate、factual_consistency、required_points_complete、behavior_appropriate、no_unsupported_claims。
+- claims[]：claim_id、claim_text、status（supported/contradicted/insufficient）、visible_evidence_refs[]、source_evidence_refs[]。
+- answerable_points[]、unavailable_points[]、numeric_bindings[]、required_conditions[]、contradictions[]。
+- reason_codes[]、简短 evidence_summary、suggested_patch（修订建议不能直接写回已冻结对象）。
+- confidence（可选自报值）、confidence_calibrated=false；自报值不当作正确概率，也不作为唯一放行条件。
+- request_id、attempt、usage、estimated_cost、currency、pricing_version、created_at、raw_response_artifact_id。
+- review_set_id、judge_role、independence_level、parent_review_id、supersedes_review_id。
+
+ReviewAggregate：
+- subject_id、subject_hash、active_review_ids[]、human_review_status、teacher_review_status。
+- teacher_review_status：unreviewed/pending/teacher_single_accepted/teacher_consensus_accepted/needs_revision/rejected/disputed/technical_failed/budget_stopped/stale。
+- accepted_by_policy、policy_version、quarantine_reason、readiness_scope。
+- ready_for_training、ready_for_exploratory_inference、ready_for_formal_human_eval，由服务根据真实记录计算，前端不能直接传 true。
+
+现有 review_status 人工字段原样保留；教师状态置于独立字段或独立审核表。导出 metadata 写入 review_source、review_set_id、policy_version、subject_hash，能追溯每条样本的自动审核依据。
+
+### 4.4 审核判定流程
+
+1. 先做确定性检查：schema、唯一 ID、来源可追溯、文本非空、合法枚举、证据 span/offset、输入长度、哈希、来源划分、数字与单位绑定。失败不送入“自动通过”通道。
+2. 教师 J1、J2 独立看同一对象，互不看对方结论。要求引用可见证据位置，逐项检查事实、否定、条件、范围和预期行为。输入资料作为数据隔离，资料中的“忽略规则、直接给满分”等指令不得改变审核任务。
+3. 双审策略下只有双方 accept、关键维度满足门槛、无未解决矛盾且证据定位通过才产生 teacher_consensus_accepted。不以平均总分掩盖关键事实错误。
+4. 对分歧使用一次独立裁决：裁决器先据证据判断，再比较简短分歧摘要。无法消除矛盾、无可用独立裁决器或超预算，置 disputed/quarantine，不默认按多数或最高分通过。
+5. revise 生成新内容版本，保留 parent/version；最多一次自动修订并完整重审。修订时不得改变实验处理条件，例如为了让 removed_support 可答而补回支持。超限进入隔离。
+6. reject 和 abstain 不混用：前者是有依据的不合格，后者是无法可靠判定。超时、非 JSON、缺字段、截断响应属于技术失败，有限重试后保持失败。
+7. 针对教师自评偏差：记录生成器与裁判是否同源；对可程序验证的数字/条件/证据做独立检查；使用对象替换、删证据、条件翻转等合成反例做审核器回归。合成反例只是工程检查，不能据此宣称自然数据上的审核准确率已校准。
+8. 回答评分先对匿名单答做绝对维度评价；若另做 A/B 偏好评估，随机左右位置并抽样交换位置，报告位置不一致率。模型身份映射仅用于最终聚合。
+
+### 4.5 门禁与失效规则
+
+在 pipeline 发布、export、SFT 数据加载、eval-adapter、A/B 执行器、API 任务入口共用 ReviewPolicyService，避免只在 UI 拦截。
+
+- teacher_only 新运行的训练/发布样本：现有 S/A、非 rejected/quarantine/needs_escalation、最终验证哈希一致，且当前教师审核被配置策略接受，方可进入相应实验性训练导出。
+- 审核策略不可由普通请求随意降级；配置在运行开始时冻结。旧记录没有审核字段时标 legacy_unreviewed，历史浏览仍可用，新 teacher_only 训练不能自动继承通过。
+- 评测协议：教师接受仅允许 teacher_only 范围内的探索推理。formal 的人工门禁仍拒绝纯教师记录；formal_main_metric 保持 not_executed。
+- case 输入变化使教师金标审核和预测均失效；gold/rubric 改变使相关审核/评分失效，输入不变时预测可复用；模型/模板/推理参数变化使预测失效。
+- 审核依赖实际内容、策略、模型、模板和证据版本；不能通过重填哈希或改状态来迁移。
+- 正式协议无效整批停止的现有规则不变。新的 A/B teacher_only 批次也要求完整组就绪；不能利用 exploratory 原来较宽松的验证绕过本轮审核政策。
+- 不回写既有人工审核 CSV，不将模型名写入“人类审核者”字段。保留原 import-review CLI，新增独立 teacher-review 与审计读取入口。
+
+### 4.6 运行可靠性与落盘
+
+- 复用 LLMClient 的用量与错误结构；增加并发限流、请求超时、有限指数退避、调用/token 硬预算和在途请求预算预留。失败和重试也记入账本。
+- 缓存键至少覆盖 subject_hash、review_kind、实际模型 revision、prompt/rubric/policy 版本、推理配置及 evidence_snapshot_hash。未知 revision 明确记录，并通过配置版本控制失效。
+- append-only 保存 reviews.jsonl、review_aggregates.jsonl、review_events.jsonl、usage.jsonl、policy_snapshot.json、prompt_manifest.json；失败可恢复但不能重复裁定或重复计费汇总。
+- 单样本提交原子化；中断恢复只跳过已提交且签名匹配的审核，半条记录不得视为成功。重跑产生新 attempt，保留旧记录。
+
+## 五、通用化改造方案
+
+### 5.1 已发现的实际耦合与修改位置
+
+| 当前位置 | 具体问题 | 改造要求 |
+| --- | --- | --- |
+| config.py、llm.py | 默认教师被固定为 qwen3.8-27b，内网 URL 与旧凭据路径回退；仅 --model 不会覆盖 recipe.teacher_models | 实现统一 Provider/Model 配置解析和生效配置预览；真实模式缺配置快速失败，fake 不要求凭据；旧实验配置作为可选 profile 显式保留 |
+| experiments/sft.py | DEFAULT_BASE 是个人机器绝对路径；通用评测加载依赖 drug_corpus.admits_main_metric | 模型路径通过配置/注册模型 ID 传入；把通用准入与来源校验抽到领域无关 evaluation 模块 |
+| textutil.py::parse_quality | 主体识别包含药品名称/成份，强度检查含医疗单位和“规格”规则 | 拆分基础文本质量检查与 domain validators；无标题的合法通用文本不能因医疗假设被判不合格 |
+| plugins/filters.py::_behavior_view | 不相关材料、错对象、澄清句写死“药品” | 改为通用对象/属性/条件转换器；领域词汇由 profile 提供；错对象应来自真实不同对象材料，不能靠一句占位句冒充证据条件 |
+| experiments/v25_prepare.py、dev_candidates.py | 历史问题、药品解析、运行目录与模型路径硬编码 | 将可复用 A/B 构造器提取为通用服务；保留历史脚本包装层及旧 ID，不破坏旧报告重现 |
+| experiments/runner.py、parallel.py | 报告说明写死特定教师、内网地址、学生模型和零美元成本 | 根据实际运行配置和用量生成，未知价格记 null/unknown；不泄露内部地址与凭据 |
+| demo/app.py、static/app.js | COMPARE_GROUPS、名称、阶段/过滤器展示大量硬编码 E1–E4 | 后端返回 capabilities、stage definitions、experiment groups 和 labels；前端按数据渲染，旧映射仅作历史兼容 |
+| pipeline.py::load_documents | 不存在的路径可能被当作内联正文 | CLI/API 明确 input_kind=file/directory/inline；路径缺失直接报错，内联文本只能显式选择 |
+
+### 5.2 分层与接口
+
+保留已有模块，逐步形成：
+
+- 核心层：通用数据 schema、Pipeline、策略注册、审核政策、来源划分、评测身份与缓存。
+- 适配层：DocumentParser、SourceFamilyResolver、ModelProvider、TrainingBackend、ArtifactStore、Exporter。
+- 领域扩展层：DomainProfile、DomainValidator、TaskTemplate、EvidenceTransform；默认 generic，可选 drug_instructions、psychiatry。
+- 应用层：运行编排、审核服务、数据集服务、训练/评测服务、问答服务。
+- 表现层：CLI 与 FastAPI 共用应用服务，前端不包含算法或业务放行规则。
+
+避免强制把所有文件迁入新目录。先抽出真实复用边界，保留旧 import/CLI 兼容壳；新增插件要注册并加入 plugins/__init__.py 加载列表。
+
+DomainProfile 至少描述 domain_id、language、entity_schema、family_key_strategy、任务模板集合、扩展校验器、单位/数值规则和 rubric 扩展；不能改变核心字段语义。通用流程不得根据 recipe 名字包含 drug 等字符串分支。
+
+### 5.3 数据输入、来源和划分
+
+- 首期稳定支持 Markdown/TXT；JSON/JSONL 通过显式字段映射解析；PDF/DOCX 作为可选解析插件，未实现时返回 unsupported_format，不能伪装为读取成功。
+- Document 保存原文哈希、规范化哈希、source_uri/source_id、解析器版本、语言、来源版本、许可证/可用范围（若已知）。未知信息不猜填。
+- SourceFamilyResolver 支持用户提供映射、文档元数据规则和默认归并策略。文件名或单一内容哈希不足以证明来源独立；修订版、近重复、同一实体资料需在切分前成组。
+- 在来源族级别冻结 train/dev/locked_test。所有改写、行为变体、派生 QA 继承 lineage；多来源和干扰材料的所有来源族都参与泄漏检查，不仅检查主文档。
+- generic 行为转换覆盖空上下文、移除支持、错误对象、保留支持加干扰、缺条件、部分可答、对象歧义；转换结果依旧需要审核，不能靠模板名称断言成立。
+- 分清任务模式与检索系统：rag_grounded 表示给定资料回答，并不表示项目已经有完整 RAG 检索。检索器可作为后续适配器扩展。
+
+### 5.4 通用性验收
+
+至少准备三类小型可公开 fixture：设备/软件使用说明、业务流程/政策说明、百科或产品规格。另保留药品历史 fixture 作为兼容回归。
+
+同一条 CLI/API 路径、同一核心 schema 和 generic profile 能完成三类文档的解析→生成→审核→导出；不修改核心代码，不出现无关的药品话术。验证数字、否定、条件、表格、跨段和无标题正文等输入。
+
+这只能证明工程接入通用性；若要声称跨领域模型效果提升，需要另行建立来源隔离的真实跨领域评测，不能将 fixture 跑通等同泛化验证。
+
+## 六、可观测性与后端公共数据契约
+
+### 6.1 先补中间产物，才能做真实全流程页面
+
+现有 chunks/questions/raw/kept/rejected/stats 不足以完整解释全部丢弃样本；某些过滤器直接移除条目。现有 meta.json 也不是完整配置快照。
+
+新增要求：
+
+1. 单次运行保存不可变 run_manifest：代码、有效配置、输入版本、随机种子、模型/模板、依赖环境、审核政策、预算、产物清单与哈希。敏感字段仅保留 secret reference。
+2. 阶段前后保存可查询快照或内容寻址记录，至少覆盖 parsed_documents、chunks、anchors/knowledge_units（如执行）、questions、evolved_questions、routed_questions、qa.raw、逐过滤器 decisions、teacher_reviews、graded/selected/released。
+3. 每次保留、删除、隔离、降权、修订、生成派生样本都生成事件，记录 entity_id、parent_ids、before_hash、after_hash、reason_code 和策略版本。直接过滤掉的样本也有明确 disposition；不要从 raw−kept 的集合差编造具体原因。
+4. 新运行要求阶段计数可核对。过滤阶段需表达 input_n + created_n = output_n + removed_n；output_n 的 kept/quarantine/rejected 子状态互斥，不能重复加总。每个计数带 count_unit（document/chunk/question/qa/case/prediction）。
+5. 旧产物没有事件时展示 historical_partial 与 missing_fields；未知耗时、失败原因和阶段计数为 null，不补零、不猜测。
+
+### 6.2 最小实体及字段
+
+| 实体 | 必须返回/持久化的字段 |
+| --- | --- |
+| Project | project_id、name、default_domain_profile、capabilities、created_at |
+| DatasetVersion | dataset_id、version_id、name、domain_profile、languages、formats、document_n、source_family_n、chunk_n、qa_raw_n、qa_accepted_n、qa_released_n、train/dev/test counts、snapshot_hash、split_manifest_hash、lineage_parent、created_at |
+| DatasetStatistics | 统计口径/数据版本、题型/意图/证据状态/动作/等级/审核来源分布、长度和 token 分位数、缺失字段率、重复率、来源覆盖、parse_failures、quality_proxies、每项分母 |
+| Run | run_id、project_id、dataset_version_id、kind、status、is_fake、git_commit、git_dirty、config_hash、recipe_id/version、review_policy_id、model_refs、parent_run_id、timestamps、budget、usage、artifact_manifest、blocked_reasons |
+| StageRun | stage_run_id、run_id、stage_key、strategy/version、dependency_ids、attempt、status、input/output/created/removed_n、count_unit、start/end、duration、usage、fallbacks、error、artifact_refs |
+| Document/Chunk | id、version、source_id、source_family_id、source_hash、parser_version、title_path、text、offset_unit、start/end、page（适用时）、parse_status、parent_ids |
+| QASample | 复用 QAPair 字段；补 dataset/run/version、final_messages、student_context、review_summary、source_refs、lifecycle_status、terminal_disposition、publishable、reason_codes；保留 family/task_variant/parent 与各类 evidence refs |
+| ReviewBatch | batch_id、subject_kind、policy_id/version、planned_n、processed_n、accepted/revise/reject/disputed/failed/pending_n、coverage、readiness、artifact_refs |
+| ReviewRecord | 第四节全部字段；普通列表只传摘要，详情按权限读取证据和响应 |
+| Model/Adapter | model_id、display_name、provider_id、base_revision、adapter_revision、tokenizer_hash、template_hash、capabilities、availability、training_run_id；不向浏览器返回密钥或服务器绝对路径 |
+| TrainingRun | train_run_id、dataset_version、train_manifest_hash、base/adapter refs、hyperparams、seed、effective_target_tokens、steps、loss series、duration、GPU stats、consumed_ids artifact、status、failure_reason |
+| EvaluationRun | eval_id、protocol_id/version/hash、partition/stratum、review_source、result_class、model_refs、infer_config/hash、pred/score run ids、scorer/rubric versions、source audit、planned/generated/scored/failed/unresolved_n、metrics、CI、status |
+| CaseComparison | case_id、core_question_id、condition_id、source_family_ids、input_hash、question、student_context、reference/version、expected_action、before/after prediction refs、独立得分/理由、transition、failure flags |
+| Artifact | artifact_id、run_id、kind、media_type、schema_version、sha256、size_bytes、record_count、availability、受控下载地址；不允许客户端指定任意绝对路径 |
+| Job/Event | job_id、kind、resource_id、status、progress_done/total/unit、attempt、heartbeat、cancel_requested、error；event_id/seq、timestamp、event_type、entity_id、payload |
+
+证据坐标约定必须固定：以指定文本版本的 Unicode code point、半开区间 [start,end) 为标准，并附 text_hash 和 quote；前端 JavaScript 的 UTF-16 索引需要转换，不能直接使用 Python 字符偏移高亮。解析规范化时保存与原文的映射，不能只返回脱离版本的 span。
+
+### 6.3 统计口径
+
+- qa 保留率=accepted/raw；发布率=released/accepted；审核覆盖率=有有效裁定的对象/planned；共识率的分母必须写明为双审完成对象。
+- 不把 accepted、exported、consumed、eval case、prediction 混成一条“样本数”。
+- 效果指标同时返回 name、value、numerator、denominator、unit、metric_role、review_source、result_class、missing_reason、confidence_interval/method、scorer_version。
+- planned_n 固定，失败/未决不静默删除。可报告有判定样本上的条件通过率 P/S，同时展示 S/N 覆盖率；另给 P/N 至 (P+N−S)/N 的未决上下界并明确不是语义正确率。技术失败单列，不直接计为内容错误。
+- A 按核心问题、来源族聚合，三种问法不算三份独立证据；B 报告四条件分别结果、成组一致率、充分证据的过度拒答率、不足/错对象条件的无依据作答率、干扰下退化。
+- 前后对比对齐同一 case 与实际输入；使用来源族聚类的配对区间。多 seed 额外报告 seed 间变化，不把多 seed × 多改写当作独立样本数。
+- 教师评分和规则评分分开展示；nli_mean/judge_mean 未执行为 null + reason，不为填仪表盘而临时调用模型。
+
+## 七、前端整体模块与页面清单
+
+### 7.1 实施方式
+
+基于现有 FastAPI 与静态页面增量开发。第一阶段将 app.js 拆为 api/state/router/components/pages 等 ES modules，保留现有 CSS 和轻量发布方式；本轮不为换框架而重写。算法和训练仍在 Python 服务中，页面只调用类型明确的 API。
+
+所有页面共享项目、数据版本和运行选择器；刷新后保留路由/过滤条件。对象详情用稳定 ID 深链。阶段、实验组、模型名、领域标签由后端返回。现有对照台保留兼容入口。
+
+### 7.2 页面清单
+
+| 页面/建议路由 | 展示与交互 | 后端依赖 | 首期优先级 |
+| --- | --- | --- | --- |
+| 总览 / | 当前阶段、最近运行、已验证/历史报告/未执行状态、阻塞、预算与审核覆盖；点击进入对应批次 | projects、runs、state snapshot、jobs | P1 |
+| 数据集 /datasets | 数据集及版本、来源数/来源族数、语言/格式、划分、处理进度；导入与版本切换 | datasets、versions、statistics、import job | P1 |
+| 数据集详情 /datasets/:id/versions/:version | 基础信息、分布、来源列表、解析问题、重复与泄漏审计、训练/测试清单 | documents、stats、split manifest、artifacts | P1 |
+| 运行列表 /runs | 类型、配置、fake/真实、状态、时间、成本、关联数据集；创建/取消任务 | runs、capabilities、jobs | P1，写操作后置 |
+| 全流程 /runs/:id/pipeline | 按真实执行顺序展示阶段图、计数/耗时/失败；选择节点查看输入、输出、差异及丢弃理由；显示可跳过/未执行阶段 | stages、events、stage records、artifacts | P1 |
+| 样本详情 /samples/:id | 问题、最终答案、学生可见资料、原始来源、证据高亮、生成/演化/过滤/审核/分级轨迹、父子样本 | samples、lineage、documents/chunks、reviews | P1 |
+| 自动审核 /reviews | 批次队列、通过/修订/分歧/失败、裁判身份、证据、预算；有权限时重试技术失败或创建新修订版本 | review batches/records、jobs、policies | P1 |
+| 训练实验 /training | 基座/adapter、数据版本、seed/预算/配置、loss 与有效 token、训练产物和失败原因 | training runs、models、events | P1，可先只读 |
+| 效果对比 /evaluations/:id | 微调前后配对指标、分层与条件结果、置信区间、覆盖率、逐题回答和退化案例；过滤审核来源及失败类型 | evaluations、metrics、cases、predictions、scores | P1 |
+| 问答 Demo /playground | 选择 base/adapter、输入问题、选择资料或无上下文模式、单模型/双栏比较、流式输出、停止、延迟与 token | models、chat sessions/messages/events | P1 |
+| 配置与运行环境 /settings | 可用 provider/model、领域 profile、recipe、审核政策、价格版本；只显示配置状态不显示密钥 | capabilities、recipes、profiles、policies、provider status | P2；P1 提供只读必要项 |
+
+### 7.3 交互与真实性要求
+
+- 全流程首期展示“实际发生的 DAG/阶段链”，不做拖拽工作流编辑器。未执行、跳过、失败、预算停止、缓存复用分别显示。
+- 样本页以“学生可见资料”和“原始来源证据”分栏，防止把隐藏信息误解为学生输入；突出最终训练 messages 和审核绑定的内容版本。
+- 审核页显示 review_source=teacher，并展示单模型/双模型/同族模型关系；不能用“人工已审核”“金标准确率”标签。
+- 效果页的默认对比必须同协议、同输入、同解码条件；条件不匹配时标不可直接比较。分别展示 train_seen、seen_rephrase、dev_independent、behavior、locked_test，默认不计算混合总分。
+- 问答 Demo 首期支持用户提供上下文或选取已登记资料；如无检索器，不展示“自动检索”按钮。双模型使用同一份已固定上下文、system 与生成预算；关闭共享检索重复运行导致的输入差异。
+- 在线问答是实时演示，不写入冻结评测集或训练集。可收藏为待审核候选，但必须另建版本并审核。
+- 模型不可用时显示 unavailable/配置原因；不能返回 fake 答案冒充线上模型。fake 演示需要显眼标记。
+- 每页具有 loading/empty/partial/missing_artifacts/failed/cancelled 状态；旧产物不完整时可看已有数据，不生成虚构图表。
+- 列表后端分页，较长正文/完整证据按需加载；全文详情不能只返回截断 clip。Markdown/HTML 安全渲染，不直接将模型文本塞入 innerHTML。
+
+## 八、后端接口清单与工程契约
+
+### 8.1 当前已有接口，继续兼容
+
+| 接口 | 当前能力 | 限制 |
+| --- | --- | --- |
+| GET /api/suite | 读取实验套件指标 | 绑定一个运行目录 |
+| GET /api/experiments/{exp_id} | kept/rejected 列表，offset/limit/clip | 不含完整生命周期或全阶段产物 |
+| GET /api/compare | e1–e4 固定分组比较 | 实验组硬编码，不是通用模型前后评测接口 |
+
+以下全部为拟新增 /api/v1 契约，不能在文档中写成已经存在。
+
+### 8.2 公共规范
+
+- 成功响应：{data, meta:{request_id,schema_version,next_cursor,total,as_of}}；错误：{error:{code,message,details,retryable},request_id}。统计里的 null 与 0 不同。
+- 列表使用稳定 cursor + limit（默认 20，最大 100），支持声明过的筛选/排序；禁止每次把整个 JSONL 读入内存再分页。
+- 长任务 POST 返回 202 + job_id/resource_id；同步校验不通过返回 422/409。创建任务支持 Idempotency-Key，重复请求不能重复跑模型。
+- 409 用于版本冲突/未就绪/协议不匹配，404 为对象缺失，429 为限流；服务端资源不可用使用明确错误码。技术失败不返回空成功列表。
+- 时间统一 ISO 8601 UTC，前端按用户时区展示；ID 不直接映射用户提供的任意路径。
+- API OpenAPI schema 作为字段唯一契约。可生成前端类型或校验器；保留旧接口的适配测试。
+
+### 8.3 接口与请求/返回字段
+
+| 方法与路径 | 请求关键字段 | 返回内容 |
+| --- | --- | --- |
+| GET /api/v1/capabilities | project_id 可选 | 支持的 stages/strategies、input formats、profiles、review modes、training/chat availability、model capabilities |
+| GET /api/v1/projects | cursor,limit | Project 列表 |
+| GET /api/v1/state | project_id | 最新 state_snapshot、资产状态、阶段研判、阻塞与证据 |
+| GET /api/v1/datasets | project_id,cursor,limit | Dataset 与 latest_version 摘要 |
+| POST /api/v1/datasets | name,domain_profile,language | dataset_id |
+| POST /api/v1/datasets/{id}/imports | 上传文件或 registered_artifact_id、parser_id、field_mapping、source metadata | import job；限制类型/大小并保存原始哈希 |
+| GET /api/v1/datasets/{id}/versions | cursor,limit | 不可变版本及谱系 |
+| GET /api/v1/datasets/{id}/versions/{version} | 无 | DatasetVersion、manifest、availability |
+| GET /api/v1/datasets/{id}/versions/{version}/statistics | filters 可选 | DatasetStatistics，每项含分母和统计版本 |
+| GET /api/v1/documents | dataset_version_id,parse_status,cursor,limit | 来源摘要与来源族信息 |
+| GET /api/v1/documents/{id} | version、range 可选 | 指定版本正文与结构；有大小限制 |
+| GET /api/v1/chunks/{id} | 无 | chunk 正文、来源坐标、标题路径及映射 |
+| GET /api/v1/recipes | 无 | 可用 recipe ID/version、配置 schema、适用能力 |
+| GET /api/v1/review-policies | 无 | 已登记政策、审核阈值/要求、作用范围 |
+| GET /api/v1/runs | kind,status,dataset_version_id,cursor,limit | Run 列表 |
+| POST /api/v1/runs | dataset_version_id,recipe_id/version,review_policy_id,budget,is_fake | 新 pipeline job；服务端解析并冻结实际配置 |
+| GET /api/v1/runs/{id} | 无 | manifest、运行摘要、产物完整性 |
+| GET /api/v1/runs/{id}/stages | 无 | 实际 StageRun、依赖、策略和计数 |
+| GET /api/v1/runs/{id}/stages/{stage_id}/records | view=input/output/decisions,status,cursor,limit | 阶段快照/处置记录 |
+| GET /api/v1/runs/{id}/events | after_seq；SSE Last-Event-ID | 可恢复阶段事件流 |
+| GET /api/v1/samples | run_id,dataset_version_id,grade,review_status,disposition,q_type,cursor,limit | QASample 摘要 |
+| GET /api/v1/samples/{id} | version 可选 | 完整 QA、final_messages、证据与审核摘要 |
+| GET /api/v1/samples/{id}/lineage | version 可选 | 祖先/派生关系、变更事件及内容哈希 |
+| GET /api/v1/review-batches | run_id,status,cursor,limit | ReviewBatch |
+| POST /api/v1/review-batches | subject_manifest_id,subject_kind,review_policy_id,model_refs,budget | 新审核 job，不接受前端传入的“已通过”状态 |
+| GET /api/v1/review-batches/{id} | 无 | 计数、就绪状态、原因及配置快照 |
+| GET /api/v1/review-batches/{id}/records | decision,execution_status,cursor,limit | 审核详情/摘要 |
+| POST /api/v1/review-batches/{id}/retry | failure_ids,expected_version | 只重试可重试失败，保留历史 attempt |
+| GET /api/v1/models | role,availability | 可选择的 base/adapter/teacher 及能力 |
+| GET /api/v1/training-runs | dataset_version_id,status,cursor,limit | TrainingRun 摘要 |
+| POST /api/v1/training-runs | dataset_version_id,release_manifest_id,base_model_id,training_config_id,seed,budget | 经发布门禁的新训练 job |
+| GET /api/v1/training-runs/{id} | 无 | 配置、loss/step/token、消费清单、adapter 产物 |
+| GET /api/v1/evaluations | protocol_id,model_id,result_class,cursor,limit | EvaluationRun 摘要 |
+| POST /api/v1/evaluations | protocol_version_id,model_ids,mode,review_policy_id,inference_config_id,budget | 经协议/来源/审核检查的新评测 job |
+| GET /api/v1/evaluations/{id} | 无 | 元信息、完整性、分母、来源审计 |
+| GET /api/v1/evaluations/{id}/metrics | stratum,condition_id,metric_role | 机器评估/规则辅助指标、配对差值和区间 |
+| GET /api/v1/evaluations/{id}/cases | transition,error_tag,stratum,cursor,limit | 同题前后回答、审核与失败标记 |
+| POST /api/v1/evaluation-comparisons | evaluation_ids,metric_names | 协议/模板/输入兼容检查及可比较指标；不匹配返回原因 |
+| POST /api/v1/chat/sessions | project_id,model_ids,mode,context_mode,inference_config | session_id、实际配置；双模型最多两个 |
+| POST /api/v1/chat/sessions/{id}/messages | question,context 或 context_artifact_ids,client_message_id | request_id/message_id、公共输入哈希和流地址 |
+| GET /api/v1/chat/requests/{id}/events | Last-Event-ID | SSE：started/delta/usage/model_done/error/done；每条含 model_id |
+| POST /api/v1/chat/requests/{id}/cancel | 无 | 取消状态；一个模型失败不会伪造另一模型结果 |
+| GET /api/v1/jobs/{id} | 无 | Job、真实进度、heartbeat 与错误 |
+| POST /api/v1/jobs/{id}/cancel | expected_version 可选 | 协作取消请求，最终状态由 worker 落盘 |
+| GET /api/v1/artifacts/{id} | 无 | 元信息及授权下载入口 |
+| POST /api/v1/exports | dataset_version_id,release_manifest_id,format,split | 导出 job/artifact；split 参数不代替真实划分 |
+
+API 数量可按服务边界合理合并，但上述数据与行为必须覆盖。第一版优先只读状态、产物、审核、评测和 chat；上传、训练启动等写操作在持久任务系统和门禁具备后启用，不能做空按钮。
+
+### 8.4 服务运行与存储
+
+- JSONL/manifest 继续作为可追溯事实来源；增加 SQLite 元数据/索引用于分页、查询、job 状态与事件序号，可从产物重建。先保持单机部署，不提前引入多服务集群。
+- API、worker、模型服务分离生命周期。GPU 任务在独立 worker/进程执行，不放在 HTTP 请求或易丢失的 FastAPI BackgroundTasks 内；同 GPU 调度有资源锁与上限。
+- 任务状态 queued/running/succeeded/failed/cancelled/blocked；中断通过 heartbeat 识别，不把上次 running 自动标 succeeded。只恢复已校验产物。
+- SSE 基于持久事件序号续传，支持断线重连与重复事件去重；取消以检查点协作执行，记录已发生用量。
+- 配置服务器端允许的 artifact/model/provider ID，不让浏览器传任意磁盘路径、URL 或 shell 命令。访问根目录内的 resolve 检查也要防符号链接越界。
+- 默认本地监听；对外提供服务时加入认证及项目级资源授权、CORS 白名单、上传大小限制和调用限流。教师与学生 API key 只保存在服务端。
+- 运行报告和 UI 使用脱敏 provider 名称；敏感完整提示词/响应仅按权限读取。模型评委没有工具执行权限。
+
+## 九、建议代码改动边界
+
+| 改动范围 | 首批工作 | 必须同步检查的消费者 |
+| --- | --- | --- |
+| schemas.py/config.py | 审核引用、运行/事件 schema、provider/profile 配置与版本 | 存储、导出、训练、评测、API |
+| 新 reviewing/ | 审核契约、teacher 后端、政策判定、缓存/账本 | pipeline、export、SFT、eval-adapter、A/B、API |
+| experiments/review_io.py | 作为 human adapter 保持原规则；必要时抽出公共哈希/字段逻辑 | 原 CSV 导入及 formal 回归 |
+| pipeline.py/plugins/ | 统一事件、过滤处置、实际执行信息，插入教师审核并重验证最终对象 | store、grading、release |
+| adapters/zhixun.py、experiments/sft.py | 复用统一发布门禁，导出审核来源；记录训练跳过与消费原因 | 外部平台 JSONL 兼容、训练清单 |
+| experiments/adapter_eval.py/scoring.py | 接受独立 teacher policy，新增自动评分产物与聚合；保留 formal | 缓存身份、离线重评分、前后比较 |
+| experiments/v25_prepare.py 等 | 提取通用 A/B 准备服务，补真正的执行编排 | 保留历史参数、ID、报告生成兼容 |
+| textutil.py、filters.py | 去领域硬编码，领域规则插件化 | 通用 fixture 与药品兼容回归 |
+| store.py + 新 artifact/index/jobs 服务 | 版本化快照、完整事件、查询索引与长任务持久化 | CLI、API、恢复逻辑 |
+| demo/app.py + api/services | 保留旧路由，增加 /api/v1 | OpenAPI、旧前端兼容 |
+| demo/static/ | 模块化路由、通用组件、状态与四项核心页面能力 | API 契约、HTML/JS 安全渲染 |
+| docs/usage.md、experiments.md、development.md | 真实命令、自动审核限制、资产准备、页面/API 与扩展指南 | README 仅更新入口 |
+
+## 十、验收标准与必要测试
+
+### 10.1 必须自动验证的风险
+
+1. 缺字段、非法 JSON、超时、预算停止、裁判 abstain 均不通过审核，且错误类型不混同内容拒绝。
+2. 双审分歧、同模型伪装双模型、缺证据和关键条件矛盾不能产生 teacher_consensus_accepted。
+3. question/context/system/answer 任一变化触发对应审核/预测/评分失效；仅改金标时不错误重用旧评分，也不无谓重跑输入相同的预测。
+4. 教师记录不能通过原 formal 人工审核门禁；原人工 CSV 的空白、machine_reviewer、哈希错误检查仍有效。
+5. 隔离/B 级/待修订/审核过期样本从 CLI、API、export、SFT 任何入口均不能绕过新运行的发布政策。
+6. 来源族、多来源干扰材料、样本派生关系均参与 split/泄漏检查；空清单不能作为“无重叠”的证据。
+7. 预算在并发和重试下不失控；中断恢复不重复提交有效裁定；取消与失败不伪造完成事件。
+8. 所有过滤处置留痕且计数可核对；历史缺失项显示未知，不凭集合差生成假理由。
+9. A/B 全批未就绪时不加载模型；准备函数就绪与实际执行完成明确区分；缓存复用遵守完整身份。
+10. API 分页/版本冲突/权限/路径约束、事件重连、上传限制及模型不可用状态正确。
+11. 页面能从运行节点追到样本和原文，能查看同题前后回答；chat 双模型同输入、流式输出、单边失败和取消均能正确显示。
+12. generic profile 在至少三类非医疗 fixture 上走通，不出现领域词汇泄漏；旧药品入口保持可用。
+
+沿用相关现有测试：test_pipeline.py、test_contracts.py、test_review_io.py、test_adapter_eval.py、test_eval_reliability.py、test_v25_prepare.py、test_demo.py。为新增审核、事件/恢复、通用输入和 API 契约补充针对性测试。最终行为变更运行完整 pytest；不增加只复述实现或文档的低价值测试。
+
+### 10.2 每个里程碑的交付物
+
+| 里程碑 | 可核验交付物 | 通过条件 |
+| --- | --- | --- |
+| M0 | state_snapshot.json、资产 manifest、基线测试结果、缺失项列表 | 当前阶段和接续条件可追溯 |
+| M1 | 教师审核服务、策略/提示词版本、FakeLLM 回归、小批真实审核（资源可用时） | 无人工代填、失败不放行、预算/缓存有效 |
+| M2 | batch1/A/B 新协议、预测、自动评分、覆盖率/分歧/失败报告 | 已执行与未执行分开，分母完整，旧资产不变 |
+| M3 | 新训练对照协议、训练 manifest、adapter、同协议前后结果 | 训练条件可比；单 seed 和多 seed 结论范围明确 |
+| M4 | 流程/数据集/评测/问答页面、/api/v1、运行说明 | 四项用户需求均有真实数据路径，资源缺失时状态可信 |
+| M5 | 通用 profile、三领域 fixture、兼容/泄漏测试和扩展文档 | 新领域接入无需改核心，领域无关 API 可复用 |
+
+M4/M5 可与 M2/M3 交错推进；它们不以昂贵训练完成作为开始条件。主依赖为 M0→M1→M2→是否需要 M3；事件/契约是 M4 的前置，核心领域解耦从 M1 同步进行。
+
+## 十一、Cursor 的具体执行顺序与交付形式
+
+按以下变更批次实施，每批保持可运行并给出简短进展：
+
+1. 审计与基线：完成 M0，报告当前 HEAD 与本计划基线的差异，给出阻塞矩阵。
+2. 契约与通用门禁：增加 review schema/policy、配置解析和核心领域解耦；保留 human/旧接口兼容。
+3. 教师审核运行器：FakeLLM 测试通过后，在已配置预算内执行 batch1；缺真实资源则交付 dry-run 和具体阻塞，不假造结论。
+4. 接续实验执行器：补齐 B、A 的冻结/就绪/缓存/真实推理/自动评分/聚合流程。
+5. 中间产物与 API：落盘事件、索引、运行/审核/评测只读 API，之后启用持久任务写接口。
+6. 前端：先流程与样本追溯、数据集信息，再效果对比和在线问答，最后补配置/任务管理。
+7. 依据已得到的诊断运行新训练对照，验证训练干预真实生效。
+8. 完成三类非医疗接入与回归，更新现有文档，给出最终完成/阻塞列表。
+
+建议新增 CLI（实现前不要声称能直接执行）：
+
+- qa-pipeline audit-state：只读输出当前资产与阶段。
+- qa-pipeline teacher-review：指定 subject manifest、policy、models、budget、out，支持 dry-run/resume。
+- qa-pipeline run-reviewed-eval：读取已冻结协议、执行教师审核政策门禁，再调用已有 eval-adapter 服务。
+- qa-pipeline index-runs：从运行产物建立/重建查询索引。
+- qa-pipeline serve：启动通用工作台；原 demo 入口保持兼容。
+
+具体参数以实现后的 --help 和 OpenAPI 为准。配置中的策略参数继续与 name 同级，不嵌套 params。
+
+每批完成时输出：
+
+- 已改文件与对应目标。
+- 真正执行的命令、测试 passed/failed/skipped；未执行的真实任务及资源原因。
+- 新增产物路径、哈希和状态；本轮代码 commit/config/prompt/policy/protocol 版本。
+- 若有指标，说明计划分母、有效分母、失败/未决、自动审核来源及结论边界。
+- 下一项可直接执行的动作；不得用“代码已完成”替代“实验已执行”。
+
+在既有授权和资源范围内持续完成计划，不反复询问是否继续。仅当真实运行缺不可推断的配置/资产，或需要改变实验目标、扩大明确预算时提出具体问题；同时继续可独立完成的工程工作。
+
+## 附：本计划的仓库证据入口
+
+以下链接固定到核查提交，便于区别后续变化：
+
+- README：https://github.com/Misaka12716/QA_generate/blob/cf06d453fe2314f1931889335849f1b2f09d124f/README.md
+- 协作约定：https://github.com/Misaka12716/QA_generate/blob/cf06d453fe2314f1931889335849f1b2f09d124f/AGENTS.md
+- 当前实验说明：https://github.com/Misaka12716/QA_generate/blob/cf06d453fe2314f1931889335849f1b2f09d124f/docs/experiments.md
+- v2.3 报告：https://github.com/Misaka12716/QA_generate/blob/cf06d453fe2314f1931889335849f1b2f09d124f/runs/drug_v23_eval/report.md
+- v2.4 报告：https://github.com/Misaka12716/QA_generate/blob/cf06d453fe2314f1931889335849f1b2f09d124f/runs/drug_v24_audit/report.md
+- v2.5 报告：https://github.com/Misaka12716/QA_generate/blob/cf06d453fe2314f1931889335849f1b2f09d124f/runs/drug_v25_eval/report.md
+- 人工审核实现：https://github.com/Misaka12716/QA_generate/blob/cf06d453fe2314f1931889335849f1b2f09d124f/src/qa_pipeline/experiments/review_io.py
+- A/B 准备实现：https://github.com/Misaka12716/QA_generate/blob/cf06d453fe2314f1931889335849f1b2f09d124f/src/qa_pipeline/experiments/v25_prepare.py
+- 评测入口：https://github.com/Misaka12716/QA_generate/blob/cf06d453fe2314f1931889335849f1b2f09d124f/src/qa_pipeline/experiments/adapter_eval.py
+- 当前前端 API：https://github.com/Misaka12716/QA_generate/blob/cf06d453fe2314f1931889335849f1b2f09d124f/src/qa_pipeline/demo/app.py
+
+以上历史实验数值均是仓库报告所记载的结果，不是本计划重新执行得到的效果结论。

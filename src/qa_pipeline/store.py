@@ -57,7 +57,64 @@ def save_result(result: PipelineResult, out_dir: str | Path) -> Path:
         ),
         encoding="utf-8",
     )
+    _write_events(result, out)
     return out
+
+
+def _write_events(result: PipelineResult, out: Path) -> None:
+    from .observability import stage_count_balanced
+
+    events: list[dict[str, Any]] = []
+    seq = 0
+    funnel = getattr(result.stats, "funnel", None) or {}
+    for name, row in funnel.items():
+        seq += 1
+        inn = row.get("in") if isinstance(row, dict) else None
+        out_n = row.get("out") if isinstance(row, dict) else None
+        removed = row.get("dropped") if isinstance(row, dict) else None
+        events.append(
+            {
+                "event_id": f"evt_{seq:04d}",
+                "seq": seq,
+                "event_type": "stage_count",
+                "stage_key": name,
+                "input_n": inn,
+                "created_n": 0,
+                "output_n": out_n,
+                "removed_n": removed,
+                "count_unit": "qa",
+                "balance_ok": stage_count_balanced(inn, 0, out_n, removed),
+                "duration_sec": None,
+                "itemized_reasons": False,
+            }
+        )
+    kept_ids = {pair.qa_id for pair in result.pairs}
+    for pair in [*result.pairs, *result.rejected]:
+        seq += 1
+        reasons = []
+        trace = pair.filter_trace or {}
+        if isinstance(trace, dict):
+            for key, payload in trace.items():
+                if not isinstance(payload, dict):
+                    continue
+                action = payload.get("action")
+                reason = payload.get("reason")
+                if reason or action not in {None, "pass"}:
+                    reasons.append({"filter": key, "action": action, "reason": reason})
+        events.append(
+            {
+                "event_id": f"evt_{seq:04d}",
+                "seq": seq,
+                "event_type": "sample_disposition",
+                "entity_id": pair.qa_id,
+                "terminal_disposition": "kept" if pair.qa_id in kept_ids else "rejected",
+                "reason_codes": reasons,
+                "reason_source": "filter_trace",
+            }
+        )
+    with (out / "events.jsonl").open("w", encoding="utf-8") as handle:
+        for event in events:
+            handle.write(json_line(event))
 
 
 def load_pairs(path: str | Path) -> list[QAPair]:

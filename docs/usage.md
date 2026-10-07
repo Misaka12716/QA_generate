@@ -19,9 +19,41 @@
 ```sh
 qa-pipeline --help
 qa-pipeline list-strategies
+qa-pipeline audit-state --out runs/local_state
 ```
 
+`audit-state` 只读取代码里登记的仓库资产和基座路径，并在 `--out` 写出 `state_snapshot.json` 与 `state_report.md`。它不扫描任意磁盘，也不会把缺失或空文件当成空数据集。`git_dirty` 为真时，快照不会把当前工作区标成可复现基线。
+
 如果终端找不到 `qa-pipeline`，可用同一 Python 环境的 `python -m qa_pipeline` 替代。CLI 定义位于 [cli.py](../src/qa_pipeline/cli.py)。
+
+## 教师审核
+
+教师审核与人工 CSV 分开。`import-review` 仍只接受人工表；模型名不能填进 `reviewer_a` / `reviewer_b`，也不会被写成 `agreed` 或 `dual_agreed`。
+
+```sh
+qa-pipeline teacher-review \
+  --manifest path/to/subjects.jsonl \
+  --policy configs/review/teacher_only_v1.json \
+  --models path/to/judges.json \
+  --out runs/local_teacher_review \
+  --max-calls 120 \
+  --max-tokens 200000 \
+  --concurrency 2 \
+  --dry-run
+```
+
+没有可用的 API key 时，真实模式会停在 `teacher_credentials_missing`，不会发起调用。`--fake` 只用于流程检查。费用未知时记录为 `unknown`，不要把内置估价 0 当成已核对账单。教师通过不能打开 `--mode formal` 的人工门禁。
+
+`run-reviewed-eval` 读取已有协议和 `review_aggregates.jsonl`。未同时给出 `--allow-inference`、`--authorize-inference`、`--device` 和生成预算时，它不加载学生模型。当前命令本身也不附带权重推理实现；缓存未命中时保持未执行。
+
+```sh
+qa-pipeline run-reviewed-eval \
+  --protocol path/to/protocol.jsonl \
+  --reviews path/to/review_aggregates.jsonl \
+  --policy configs/review/teacher_only_v1.json \
+  --mode exploratory \
+  --out runs/local_reviewed_eval
+```
 
 ## 输入与单次运行
 

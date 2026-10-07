@@ -119,6 +119,8 @@ def review_content_hash(case: dict[str, Any]) -> str:
 
 def _review_reasons(case: dict[str, Any]) -> list[str]:
     reasons: list[str] = []
+    if str(case.get("review_source") or "") == "teacher":
+        return ["teacher_review_not_formal"]
     status = case.get("review_status")
     if status not in REVIEWED_STATUS:
         reasons.append("unreviewed")

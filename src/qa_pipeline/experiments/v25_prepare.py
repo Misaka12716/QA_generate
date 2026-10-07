@@ -749,16 +749,31 @@ def maybe_execute_batch(
     allow_inference: bool,
     self_check_blocked: bool = False,
     generate_fn: Any = None,
+    inference_authorized: bool = False,
+    pending: Any = None,
 ) -> dict[str, Any]:
+    """准备完成和实际执行分开。未授权时不调用 generate_fn，也不标记已加载模型。"""
     if self_check_blocked:
-        return {"status": "blocked", "reason": "self_check_failed", "model_loaded": False}
+        return {"status": "blocked", "reason": "self_check_failed", "model_loaded": False, "executed": False}
     if not ready:
-        return {"status": "blocked", "reason": "pending_review", "model_loaded": False}
+        return {"status": "blocked", "reason": "pending_review", "model_loaded": False, "executed": False}
     if not allow_inference:
-        return {"status": "not_started", "reason": "inference_not_requested", "model_loaded": False}
-    if generate_fn is not None:
-        return {"status": "ready", "reason": "generate_fn_supplied", "model_loaded": False}
-    return {"status": "not_started", "reason": "inference_not_requested", "model_loaded": False}
+        return {"status": "not_started", "reason": "inference_not_requested", "model_loaded": False, "executed": False}
+    if generate_fn is None:
+        return {"status": "not_started", "reason": "executor_missing", "model_loaded": False, "executed": False}
+    if not inference_authorized:
+        return {"status": "blocked", "reason": "inference_budget_missing", "model_loaded": False, "executed": False}
+    outcome = generate_fn([] if pending is None else pending)
+    if not isinstance(outcome, dict):
+        return {"status": "not_started", "reason": "executor_invalid_result", "model_loaded": False, "executed": False}
+    executed = bool(outcome.get("executed"))
+    return {
+        "status": "executed" if executed else str(outcome.get("status") or "not_started"),
+        "reason": outcome.get("reason"),
+        "model_loaded": bool(outcome.get("model_loaded")),
+        "executed": executed,
+        "result": outcome,
+    }
 
 
 def _auxiliary_behavior_counts(cases: list[dict[str, Any]], predictions: list[dict[str, Any]]) -> dict[str, Any]:

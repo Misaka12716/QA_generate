@@ -8,9 +8,11 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import Response
+import uuid
+from datetime import datetime, timezone
 
 class _Static(StaticFiles):
     async def get_response(self, path: str, scope) -> Response:
@@ -123,6 +125,43 @@ def create_app(run_dir: str | Path) -> FastAPI:
             ],
         }
 
+    @app.get("/api/v1/state")
+    def state_v1() -> Any:
+        path = root / "state_snapshot.json"
+        if not path.is_file():
+            return _api_error("missing_state", "没有 state_snapshot.json", 404)
+        return {"data": json.loads(path.read_text(encoding="utf-8")), "meta": _api_meta(total=1)}
+
+    @app.get("/api/v1/runs")
+    def runs_v1(cursor: str = Query(default="0"), limit: int = Query(default=20, ge=1, le=100)) -> Any:
+        start, error = _cursor_index(cursor)
+        if error is not None:
+            return error
+        names = sorted(path.name for path in root.iterdir() if path.is_dir() and _looks_like_run(path)) if root.is_dir() else []
+        page = names[start : start + limit]
+        next_cursor = str(start + limit) if start + limit < len(names) else None
+        return {
+            "data": [{"run_id": name, "availability": "present" if (root / name / "events.jsonl").is_file() else "historical_partial"} for name in page],
+            "meta": _api_meta(total=len(names), next_cursor=next_cursor),
+        }
+
+    @app.get("/api/v1/review-batches")
+    def review_batches(cursor: str = Query(default="0"), limit: int = Query(default=20, ge=1, le=100)) -> Any:
+        path = root / "review_aggregates.jsonl"
+        if not path.is_file():
+            meta = _api_meta(total=0)
+            meta["availability"] = "historical_partial"
+            meta["missing_fields"] = ["review_aggregates.jsonl"]
+            return {"data": [], "meta": meta}
+        start, error = _cursor_index(cursor)
+        if error is not None:
+            return error
+        rows, total = _stream_page(path, start, limit)
+        next_cursor = str(start + limit) if start + limit < total else None
+        meta = _api_meta(total=total, next_cursor=next_cursor)
+        meta["availability"] = "present"
+        return {"data": rows, "meta": meta}
+
     return app
 
 
@@ -130,6 +169,46 @@ def serve(run_dir: str | Path, host: str = "127.0.0.1", port: int = 8765) -> Non
     import uvicorn
 
     uvicorn.run(create_app(run_dir), host=host, port=port, log_level="info")
+
+
+def _api_meta(total: int | None = None, next_cursor: str | None = None) -> dict[str, Any]:
+    return {
+        "request_id": uuid.uuid4().hex[:16],
+        "schema_version": "v1",
+        "next_cursor": next_cursor,
+        "total": total,
+        "as_of": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def _api_error(code: str, message: str, status: int) -> JSONResponse:
+    return JSONResponse(
+        status_code=status,
+        content={"error": {"code": code, "message": message, "details": {}, "retryable": False}, "request_id": uuid.uuid4().hex[:16]},
+    )
+
+
+def _cursor_index(cursor: str) -> tuple[int, JSONResponse | None]:
+    if not str(cursor).isdigit():
+        return 0, _api_error("invalid_cursor", "cursor 必须是非负整数", 422)
+    return int(cursor), None
+
+
+def _looks_like_run(path: Path) -> bool:
+    return any((path / name).is_file() for name in ("stats.json", "report.md", "meta.json", "metrics.json"))
+
+
+def _stream_page(path: Path, start: int, limit: int) -> tuple[list[dict[str, Any]], int]:
+    rows: list[dict[str, Any]] = []
+    total = 0
+    with path.open(encoding="utf-8") as handle:
+        for line in handle:
+            if not line.strip():
+                continue
+            if total >= start and len(rows) < limit:
+                rows.append(json.loads(line))
+            total += 1
+    return rows, total
 
 
 def _require_id(exp_id: str) -> None:

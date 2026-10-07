@@ -141,6 +141,10 @@ def to_zhixun_row(pair: QAPair, split: str | None = None, *, bind: bool = True) 
             "kb_gain": pair.kb_gain,
             "teacher_model": pair.teacher_model,
             "review_history": pair.audit,
+            "review_source": pair.metadata.get("review_source"),
+            "review_set_id": pair.metadata.get("review_set_id"),
+            "policy_version": pair.metadata.get("policy_version"),
+            "subject_hash": pair.metadata.get("subject_hash"),
             "family_id": pair.family_id,
             "source_family_id": pair.source_family_id,
             "task_variant_id": pair.task_variant_id,
@@ -149,11 +153,25 @@ def to_zhixun_row(pair: QAPair, split: str | None = None, *, bind: bool = True) 
     }
 
 
-def export_zhixun(pairs: Iterable[QAPair], path: str | Path, split: str | None = None) -> Path:
+def export_zhixun(
+    pairs: Iterable[QAPair],
+    path: str | Path,
+    split: str | None = None,
+    *,
+    review_policy: Any = None,
+    review_aggregates: dict[str, Any] | None = None,
+) -> Path:
     path = Path(path)
     rows = []
     for pair in pairs:
         assert_releasable(pair)
+        if review_policy is not None:
+            from ..reviewing.policy import release_block_reasons
+
+            aggregate = None if review_aggregates is None else review_aggregates.get(pair.qa_id)
+            reasons = release_block_reasons(pair.model_dump(), aggregate, review_policy)
+            if reasons:
+                raise ReleaseRejected(f"样本 {pair.qa_id} 未通过审核政策: {','.join(reasons)}")
         if pair.data_stage in {None, "accepted", "selected"}:
             pair.data_stage = "released"
         rows.append(to_zhixun_row(pair, split=split, bind=False))

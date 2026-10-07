@@ -1,0 +1,16 @@
+[
+  {
+    "judge_role": "gold_reviewer",
+    "provider_id": "unconfigured",
+    "model_id": "unconfigured-a",
+    "model_revision": "unknown",
+    "independence_level": "unverified"
+  },
+  {
+    "judge_role": "gold_reviewer",
+    "provider_id": "unconfigured",
+    "model_id": "unconfigured-b",
+    "model_revision": "unknown",
+    "independence_level": "unverified"
+  }
+]

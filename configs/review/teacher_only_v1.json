@@ -1,0 +1,11 @@
+{
+  "review_policy_id": "teacher_only_v1",
+  "policy_version": "1",
+  "review_mode": "teacher_only",
+  "require_dual": true,
+  "allow_single": false,
+  "rubric_version": "rubric-v1",
+  "prompt_version": "gold-v1",
+  "max_technical_retries": 1,
+  "max_auto_revisions": 1
+}

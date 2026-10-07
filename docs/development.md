@@ -14,7 +14,8 @@
 | [llm.py](../src/qa_pipeline/llm.py) / [embeddings.py](../src/qa_pipeline/embeddings.py) | 教师客户端、FakeLLM、可选本地模型和向量后端 |
 | [store.py](../src/qa_pipeline/store.py) / [adapters/zhixun.py](../src/qa_pipeline/adapters/zhixun.py) | 结果落盘、最终消息构造和发布检查 |
 | [experiments](../src/qa_pipeline/experiments) | 套件编排、SFT、评测、评分及历史审计 |
-| [demo](../src/qa_pipeline/demo) | 已有实验结果的 API 与静态界面 |
+| [reviewing](../src/qa_pipeline/reviewing) | 教师审核契约、政策、缓存和运行器；人工 CSV 仍由 `review_io` 负责 |
+| [demo](../src/qa_pipeline/demo) | 已有实验结果的 API 与静态界面；另有只读 `/api/v1/state`、`/runs`、`/review-batches` |
 | [configs](../configs) / [fixtures](../fixtures) / [tests](../tests) | 配方和套件、示例数据、回归测试 |
 
 ## 主流程与数据边界
@@ -91,6 +92,11 @@ python -X utf8 -m pytest -q
 | `test_adapter_eval.py` | adapter 独立评测、缓存、协议和历史文件保护 |
 | `test_eval_reliability.py` | 评分可靠性、复核失效、固定分母和错误预测 |
 | `test_demo.py` | 对照台接口与样本对齐 |
+| `test_review_io.py` | 人工审核 CSV 的哈希、机器名和待审核状态 |
+| `test_teacher_review.py` | 教师审核的失败类型、双审、预算、缓存和正式门禁 |
+| `test_reviewed_eval.py` | 已审核评测编排、预测身份和未授权不加载模型 |
+| `test_state_audit.py` | 资产缺失、空文件和路径越界 |
+| `test_api_v1.py` | 只读状态、运行列表和审核批次的缺失状态 |
 | `test_v24_historical.py` | 依赖历史运行文件的集成检查；干净 checkout 通常跳过 |
 
 常规测试使用 FakeLLM、测试替身和临时目录；无需为文档检查调用真实服务或启动训练。历史文件缺失造成的 skip 需单独报告，不能声称历史实验已验证。

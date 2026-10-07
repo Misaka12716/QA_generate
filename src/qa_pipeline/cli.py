@@ -203,6 +203,73 @@ def cmd_import_review(args) -> int:
     return 0 if not result.get("error_n") else 1
 
 
+def cmd_audit_state(args) -> int:
+    from .experiments.state_audit import write_state
+
+    repo = Path(args.repo) if args.repo else Path.cwd()
+    snapshot = write_state(repo, Path(args.out))
+    print(json.dumps({"out": args.out, "git_commit": snapshot["git"].get("git_commit"), "git_dirty": snapshot["git"].get("git_dirty"), "historical_hashes_unchanged": snapshot.get("historical_hashes_unchanged")}, ensure_ascii=False))
+    return 0
+
+
+def cmd_teacher_review(args) -> int:
+    from .reviewing.service import assert_safe_review_out, run_teacher_review
+
+    try:
+        assert_safe_review_out(Path(args.out))
+        result = run_teacher_review(
+            manifest=args.manifest,
+            policy_path=args.policy,
+            models_path=args.models,
+            out_dir=args.out,
+            max_calls=args.max_calls,
+            max_tokens=args.max_tokens,
+            concurrency=args.concurrency,
+            dry_run=args.dry_run,
+            resume=args.resume,
+            fake=args.fake,
+            batch_id=args.batch_id,
+        )
+    except (FileExistsError, ValueError) as exc:
+        print(json.dumps({"status": "blocked", "reason": str(exc), "executed": False}, ensure_ascii=False))
+        return 2
+    print(json.dumps({"status": result.get("status"), "executed": result.get("executed"), "model_called": result.get("model_called"), "reason": result.get("reason"), "out": args.out}, ensure_ascii=False))
+    return 0 if result.get("status") in {"succeeded", "dry_run"} else 2
+
+
+def cmd_run_reviewed_eval(args) -> int:
+    import json as jsonlib
+
+    from .experiments.reviewed_eval import execute_reviewed_batch
+    from .experiments.adapter_eval import read_jsonl
+    from .reviewing.policy import ReviewPolicy
+    from .reviewing.schemas import ReviewAggregate
+
+    cases = read_jsonl(args.protocol)
+    aggregates = {}
+    if args.reviews:
+        for row in read_jsonl(args.reviews):
+            item = ReviewAggregate.model_validate(row)
+            aggregates[item.subject_id] = item
+    policy = ReviewPolicy.model_validate(jsonlib.loads(Path(args.policy).read_text(encoding="utf-8")))
+    authorized = bool(args.device is not None and args.max_new_tokens and args.authorize_inference)
+    report = execute_reviewed_batch(
+        cases=cases,
+        aggregates=aggregates,
+        policy=policy,
+        mode=args.mode,
+        allow_inference=args.allow_inference,
+        inference_authorized=authorized,
+        generate_fn=None,
+        planned_n=len(cases),
+    )
+    out = Path(args.out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "reviewed_eval.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(json.dumps({"status": report.get("status"), "executed": report.get("executed"), "model_loaded": report.get("model_loaded"), "out": args.out}, ensure_ascii=False))
+    return 0 if report.get("executed") else 2
+
+
 def cmd_list(args) -> int:
     data = list_strategies()
     print(json.dumps(data, ensure_ascii=False, indent=2))
@@ -270,6 +337,37 @@ def main(argv: list[str] | None = None) -> int:
     review_p.add_argument("--run", required=True, help="含 review/batches.json 的运行目录")
     review_p.add_argument("--batch", default="", help="只导入指定批次；默认导入清单中的全部批次")
     review_p.set_defaults(func=cmd_import_review)
+
+    audit_p = sub.add_parser("audit-state", help="只读盘点已登记资产和阶段状态")
+    audit_p.add_argument("--out", required=True)
+    audit_p.add_argument("--repo", default=None)
+    audit_p.set_defaults(func=cmd_audit_state)
+
+    teacher_p = sub.add_parser("teacher-review", help="教师审核。不写入人工审核 CSV")
+    teacher_p.add_argument("--manifest", required=True)
+    teacher_p.add_argument("--policy", required=True)
+    teacher_p.add_argument("--models", required=True)
+    teacher_p.add_argument("--out", required=True)
+    teacher_p.add_argument("--max-calls", dest="max_calls", type=int, required=True)
+    teacher_p.add_argument("--max-tokens", dest="max_tokens", type=int, required=True)
+    teacher_p.add_argument("--concurrency", type=int, default=2)
+    teacher_p.add_argument("--batch-id", dest="batch_id", default="teacher_batch")
+    teacher_p.add_argument("--dry-run", action="store_true")
+    teacher_p.add_argument("--resume", action="store_true")
+    teacher_p.add_argument("--fake", action="store_true")
+    teacher_p.set_defaults(func=cmd_teacher_review)
+
+    reviewed_p = sub.add_parser("run-reviewed-eval", help="按教师审核政策检查协议。未授权时不加载模型")
+    reviewed_p.add_argument("--protocol", required=True)
+    reviewed_p.add_argument("--reviews", default=None)
+    reviewed_p.add_argument("--policy", required=True)
+    reviewed_p.add_argument("--out", required=True)
+    reviewed_p.add_argument("--mode", choices=("formal", "exploratory"), required=True)
+    reviewed_p.add_argument("--allow-inference", action="store_true")
+    reviewed_p.add_argument("--authorize-inference", action="store_true")
+    reviewed_p.add_argument("--device", type=int, default=None)
+    reviewed_p.add_argument("--max-new-tokens", dest="max_new_tokens", type=int, default=0)
+    reviewed_p.set_defaults(func=cmd_run_reviewed_eval)
 
     ls = sub.add_parser("list-strategies", help="列出已注册策略")
     ls.set_defaults(func=cmd_list)

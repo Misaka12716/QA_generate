@@ -22,7 +22,14 @@ DEFAULT_BASE = os.environ.get(
 )
 
 
-def write_sft_jsonl(pairs: list[QAPair], path: Path) -> Path:
+def write_sft_jsonl(
+    pairs: list[QAPair],
+    path: Path,
+    *,
+    review_policy: Any = None,
+    review_aggregates: dict[str, Any] | None = None,
+    skipped: list[dict[str, Any]] | None = None,
+) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8") as handle:
         for pair in pairs:
@@ -34,8 +41,19 @@ def write_sft_jsonl(pairs: list[QAPair], path: Path) -> Path:
                 continue
             try:
                 assert_releasable(pair)
-            except ReleaseRejected:
+            except ReleaseRejected as exc:
+                if skipped is not None:
+                    skipped.append({"id": pair.qa_id, "reasons": [str(exc)]})
                 continue
+            if review_policy is not None:
+                from ..reviewing.policy import release_block_reasons
+
+                aggregate = None if review_aggregates is None else review_aggregates.get(pair.qa_id)
+                reasons = release_block_reasons(pair.model_dump(), aggregate, review_policy)
+                if reasons:
+                    if skipped is not None:
+                        skipped.append({"id": pair.qa_id, "reasons": reasons})
+                    continue
             if pair.data_stage in {None, "accepted", "selected"}:
                 pair.data_stage = "released"
             handle.write(json.dumps(to_zhixun_row(pair, bind=False), ensure_ascii=False) + "\n")
