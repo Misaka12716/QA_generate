@@ -8,7 +8,14 @@ from pathlib import Path
 from typing import Any
 
 
+def _mode(case: dict[str, Any]) -> str:
+    from ..task_mode import canonical_task_mode
+
+    return canonical_task_mode(str(case.get("task_mode") or case.get("goal") or "rag_grounded"))
+
+
 def gold_subject(case: dict[str, Any], batch_id: str) -> dict[str, Any]:
+    answer = case.get("candidate_answer") if case.get("candidate_answer") is not None else (case.get("answer") or "")
     return {
         "subject_type": "protocol_case",
         "subject_id": str(case.get("case_id") or case.get("subject_id") or ""),
@@ -16,27 +23,40 @@ def gold_subject(case: dict[str, Any], batch_id: str) -> dict[str, Any]:
         "batch_id": batch_id,
         "question": case.get("question") or "",
         "student_context": case.get("student_context") if case.get("student_context") is not None else (case.get("context") or ""),
-        "answer": case.get("candidate_answer") if case.get("candidate_answer") is not None else (case.get("answer") or ""),
+        "answer": answer,
         "expected_action": case.get("expected_action") or "",
-        "task_mode": case.get("task_mode") or "rag_grounded",
+        "condition_id": case.get("condition_id") or "",
+        "required_points": list(case.get("required_points") or []),
+        "unavailable_points": list(case.get("unavailable_points") or []),
+        "task_mode": _mode(case),
+        "review_mode": "reference_based" if str(answer or "").strip() or case.get("required_points") else "reference_free",
         "messages": case.get("messages"),
+        "judge_source_context": case.get("judge_source_context") or "",
         "risk": "high",
     }
 
 
 def prediction_subject(case: dict[str, Any], role: str, batch_id: str) -> dict[str, Any]:
     slot = (case.get("answers") or {}).get(role) or {}
+    reference = case.get("candidate_answer") if case.get("candidate_answer") is not None else (case.get("answer") or "")
+    points = list(case.get("required_points") or [])
     return {
         "subject_type": "prediction",
         "subject_id": str(slot.get("prediction_subject_id") or f"{case.get('case_id')}::{role}"),
         "subject_version": "1",
         "batch_id": batch_id,
         "question": case.get("question") or "",
-        "student_context": case.get("student_context") or "",
+        "student_context": case.get("student_context") if case.get("student_context") is not None else (case.get("context") or ""),
         "answer_text": slot.get("text") or "",
+        "reference_answer": reference,
         "expected_action": case.get("expected_action") or "",
-        "task_mode": case.get("task_mode") or "rag_grounded",
+        "condition_id": case.get("condition_id") or "",
+        "required_points": points,
+        "unavailable_points": list(case.get("unavailable_points") or []),
+        "task_mode": _mode(case),
+        "review_mode": "reference_based" if str(reference or "").strip() or points else "reference_free",
         "messages": case.get("messages"),
+        "judge_source_context": case.get("judge_source_context") or "",
         "risk": "high",
     }
 

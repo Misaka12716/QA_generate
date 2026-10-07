@@ -31,7 +31,7 @@ def _accept() -> dict:
         "claims": [
             {
                 "claim_id": "c1",
-                "claim_text": "可见句子支持该要点",
+                "claim_text": "物品为红色",
                 "status": "supported",
                 "visible_evidence_refs": ["0:4"],
                 "source_evidence_refs": [],

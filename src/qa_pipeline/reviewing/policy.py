@@ -2,11 +2,15 @@
 
 from __future__ import annotations
 
+import re
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict
 
+from ..task_mode import CLOSED_BOOK
 from .schemas import ReviewAggregate, ReviewRecord
+
+_OFFSET = re.compile(r"^(\d+):(\d+)$")
 
 CRITICAL = (
     "evidence_adequate",
@@ -54,22 +58,55 @@ def _critical_ok(record: ReviewRecord) -> bool:
     return all(getattr(record.dimensions, name) is True for name in CRITICAL)
 
 
-def _evidence_ok(record: ReviewRecord, task_mode: str) -> bool:
+def locate_evidence_ref(ref: str, text: str) -> str | None:
+    """引用必须命中冻结文本。非空字符串本身不算定位成功。"""
+    token = str(ref or "").strip()
+    body = str(text or "")
+    if not token or not body:
+        return None
+    if token in body:
+        return token
+    matched = _OFFSET.fullmatch(token)
+    if not matched:
+        return None
+    start, end = int(matched.group(1)), int(matched.group(2))
+    if 0 <= start < end <= len(body):
+        quote = body[start:end].strip()
+        return quote or None
+    return None
+
+
+def claim_supported_by_quote(claim_text: str, quote: str) -> bool:
+    claim = " ".join(str(claim_text or "").split())
+    snippet = " ".join(str(quote or "").split())
+    if len(snippet) < 1 or len(claim) < 1:
+        return False
+    return snippet in claim or claim in snippet
+
+
+def _evidence_ok(
+    record: ReviewRecord,
+    task_mode: str,
+    *,
+    student_text: str = "",
+    source_text: str = "",
+) -> bool:
     if record.contradictions:
         return False
     if record.decision != "accept":
         return True
     if not record.claims:
         return False
+    closed = task_mode == CLOSED_BOOK
     for claim in record.claims:
         if claim.status == "contradicted":
             return False
         if claim.status != "supported":
             continue
-        if task_mode == "closed_book_domain":
-            if not (claim.source_evidence_refs or claim.visible_evidence_refs):
-                return False
-        elif not claim.visible_evidence_refs:
+        refs = claim.source_evidence_refs if closed else claim.visible_evidence_refs
+        corpus = source_text if closed else student_text
+        quotes = [quote for ref in refs if (quote := locate_evidence_ref(ref, corpus))]
+        if not quotes or not any(claim_supported_by_quote(claim.claim_text, quote) for quote in quotes):
             return False
     return True
 
@@ -115,6 +152,8 @@ def build_aggregate(
     human_review_status: str = "unreviewed",
     task_mode: str = "rag_grounded",
     risk: str = "high",
+    student_text: str = "",
+    source_text: str = "",
 ) -> ReviewAggregate:
     """忽略调用方传入的 ready_*。教师记录永远不能打开正式人工门禁。"""
     if not records:
@@ -202,7 +241,7 @@ def build_aggregate(
             scope="none",
         )
     if "accept" in decisions and "reject" in decisions:
-        resolved = _arbiter_accepts(arbiters, active, task_mode)
+        resolved = _arbiter_accepts(arbiters, active, task_mode, student_text=student_text, source_text=source_text)
         if resolved:
             return _closed(
                 subject_id=subject_id,
@@ -267,7 +306,10 @@ def build_aggregate(
             human_review_status=human_review_status,
             scope="none",
         )
-    if not all(_critical_ok(item) and _evidence_ok(item, task_mode) for item in active):
+    if not all(
+        _critical_ok(item) and _evidence_ok(item, task_mode, student_text=student_text, source_text=source_text)
+        for item in active
+    ):
         return _closed(
             subject_id=subject_id,
             subject_hash_value=expected_hash,
@@ -335,7 +377,14 @@ def build_aggregate(
     )
 
 
-def _arbiter_accepts(arbiters: list[ReviewRecord], active: list[ReviewRecord], task_mode: str) -> bool:
+def _arbiter_accepts(
+    arbiters: list[ReviewRecord],
+    active: list[ReviewRecord],
+    task_mode: str,
+    *,
+    student_text: str = "",
+    source_text: str = "",
+) -> bool:
     if len(arbiters) != 1:
         return False
     arbiter = arbiters[0]
@@ -346,7 +395,7 @@ def _arbiter_accepts(arbiters: list[ReviewRecord], active: list[ReviewRecord], t
     judge_ids = {(item.model_id, item.model_revision) for item in active}
     if (arbiter.model_id, arbiter.model_revision) in judge_ids:
         return False
-    return _critical_ok(arbiter) and _evidence_ok(arbiter, task_mode)
+    return _critical_ok(arbiter) and _evidence_ok(arbiter, task_mode, student_text=student_text, source_text=source_text)
 
 
 def release_block_reasons(sample: dict, aggregate: ReviewAggregate | None, policy: ReviewPolicy | None) -> list[str]:

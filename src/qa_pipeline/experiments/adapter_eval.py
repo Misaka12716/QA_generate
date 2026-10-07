@@ -21,6 +21,7 @@ from .scoring import (
     score_task_v2,
     score_task_v3,
 )
+from ..task_mode import TaskModeError, declared_task_mode, messages_conflict
 from .sft import eval_messages
 
 EXPLORATORY_DISCLAIMER = "未完成人工审核，仅供探索"
@@ -89,8 +90,17 @@ def case_question(case: dict[str, Any]) -> str:
 
 
 def canonical_messages(case: dict[str, Any]) -> list[dict[str, str]]:
-    raw = case.get("messages") or eval_messages(case)
-    return [{"role": str(item.get("role") or ""), "content": str(item.get("content") or "")} for item in raw]
+    """已有 messages 不能绕过声明模式。冲突时拒绝，不静默改成另一种任务。"""
+    mode = declared_task_mode(case)
+    explicit = case.get("messages")
+    if explicit:
+        normalized = [{"role": str(item.get("role") or ""), "content": str(item.get("content") or "")} for item in explicit]
+        if mode:
+            reason = messages_conflict(normalized, mode, case)
+            if reason:
+                raise TaskModeError(reason)
+        return normalized
+    return eval_messages(case)
 
 
 def review_content_hash(case: dict[str, Any]) -> str:

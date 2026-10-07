@@ -8,7 +8,8 @@ import os
 from pathlib import Path
 from typing import Any
 
-from ..adapters.zhixun import GROUNDED_POLICY, ReleaseRejected, assert_releasable, to_zhixun_row
+from ..adapters.zhixun import CLOSED_POLICY, GROUNDED_POLICY, ReleaseRejected, assert_releasable, to_zhixun_row
+from ..task_mode import CLOSED_BOOK, declared_task_mode
 from ..llm import json_payload
 from ..schemas import QAPair
 from ..textutil import exact_match, token_f1
@@ -334,10 +335,10 @@ def generate_answers(
 
 def eval_messages(row: dict, context_key: str = "context") -> list[dict[str, str]]:
     question = str(row.get("question") or "")
-    closed = row.get("task_mode") == "closed_book" or context_key == "closed_book"
-    if closed:
+    mode = declared_task_mode(row, context_key=context_key)
+    if mode == CLOSED_BOOK:
         return [
-            {"role": "system", "content": "可以运用已有领域知识回答。不确定时说明依据不足。"},
+            {"role": "system", "content": CLOSED_POLICY},
             {"role": "user", "content": question},
         ]
     context = str(row.get(context_key) or "")

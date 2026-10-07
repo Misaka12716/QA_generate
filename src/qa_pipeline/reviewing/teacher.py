@@ -10,6 +10,7 @@ from typing import Any
 from pydantic import ValidationError
 
 from ..llm import FakeLLM, LLMClient, LLMResponse
+from .identity import canonical_answer_text, reference_answer_of, review_mode_of, task_mode_field
 from .schemas import ClaimRecord, DimensionScores, ReviewRecord
 
 
@@ -43,17 +44,23 @@ def teacher_credentials_configured() -> dict[str, Any]:
 
 
 def build_messages(subject: dict[str, Any], *, prompt_text: str) -> list[dict[str, str]]:
+    body = canonical_answer_text(subject)
+    prediction = subject.get("subject_type") == "prediction"
+    mode = task_mode_field(subject) or "rag_grounded"
     payload = {
         "subject_type": subject.get("subject_type"),
         "question": subject.get("question") or "",
         "student_context": subject.get("student_context") or "",
-        "answer": subject.get("answer") or "",
-        "answer_text": subject.get("answer_text") or "",
+        "answer": "" if prediction else body,
+        "answer_text": body,
+        "reference_answer": reference_answer_of(subject) if prediction else "",
+        "review_mode": review_mode_of(subject),
         "expected_action": subject.get("expected_action") or "",
         "condition_id": subject.get("condition_id") or "",
-        "task_mode": subject.get("task_mode") or subject.get("goal") or "rag_grounded",
-        "required_points": subject.get("required_points") or [],
-        "unavailable_points": subject.get("unavailable_points") or [],
+        "task_mode": mode,
+        "required_points": list(subject.get("required_points") or []),
+        "unavailable_points": list(subject.get("unavailable_points") or []),
+        "judge_source_context": str(subject.get("judge_source_context") or "") if mode == "closed_book_domain" else "",
     }
     return [
         {"role": "system", "content": prompt_text},

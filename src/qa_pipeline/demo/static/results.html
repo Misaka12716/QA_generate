@@ -3,82 +3,88 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>历史预测结果</title>
-  <link rel="stylesheet" href="/static/style.css">
+  <title>效果对比</title>
   <link rel="stylesheet" href="/static/results.css">
 </head>
-<body>
-  <main class="bench">
-    <article class="sheet">
-      <header class="mast">
-        <p class="banner" id="banner">历史真实预测</p>
-        <h1>batch1 对照</h1>
-        <p class="lede" id="limitation"></p>
+<body class="qa-workbench">
+  <div class="qa-shell">
+    <nav class="qa-nav" id="nav" aria-label="工作台">
+      <p class="qa-brand">QA 工作台<span>历史真实预测</span></p>
+      <ul class="qa-nav-list">
+        <li><button type="button" data-view="overview"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>概览</button></li>
+        <li><button type="button" data-view="flow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h9M5 12h14M5 17h9"/><circle cx="17" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>数据与流程</button></li>
+        <li><button type="button" data-view="compare" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V9M12 19V5M19 19v-7"/></svg>效果对比</button></li>
+        <li><button type="button" data-view="chat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 16.5V7.5A2.5 2.5 0 0 1 7.5 5h9A2.5 2.5 0 0 1 19 7.5v6A2.5 2.5 0 0 1 16.5 16H9l-4 3z"/></svg>问答体验</button></li>
+        <li><button type="button" data-view="runs"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7h11M8 12h11M8 17h11"/><circle cx="4.5" cy="7" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="17" r="1"/></svg>实验记录</button></li>
+      </ul>
+    </nav>
+    <div class="qa-main">
+      <header class="qa-top">
+        <button type="button" class="qa-menu" id="menu" aria-label="打开导航" aria-expanded="false" aria-controls="nav">菜单</button>
+        <h1 id="page-title">效果对比</h1>
+        <div class="qa-controls">
+          <label>批次
+            <select class="qa-select" id="batch" aria-label="批次"></select>
+          </label>
+          <div class="qa-segment" role="group" aria-label="任务模式">
+            <button type="button" id="mode-rag" aria-pressed="true">有资料问答</button>
+            <button type="button" id="mode-closed" aria-pressed="false">闭卷问答</button>
+          </div>
+        </div>
       </header>
-      <section class="block">
-        <div class="filters">
-          <label>行为条件
-            <select id="pattern"><option value="">全部</option></select>
-          </label>
-          <label>规则分
-            <select id="rule">
-              <option value="">全部</option>
-              <option value="pass">通过</option>
-              <option value="fail">失败</option>
-              <option value="unscored">未评分</option>
-            </select>
-          </label>
-          <label>人工审核
-            <select id="review"><option value="">全部</option></select>
-          </label>
-          <label>区块
-            <select id="block">
-              <option value="">全部</option>
-              <option value="historical">历史预测</option>
-              <option value="b_pilot">实验 B 小试</option>
-            </select>
-          </label>
-        </div>
-        <p class="hint" id="count"></p>
-        <div class="scroller">
-          <table>
-            <thead>
-              <tr>
-                <th>用例</th>
-                <th>行为</th>
-                <th>规则</th>
-                <th>人工</th>
-                <th>自动评估</th>
-              </tr>
-            </thead>
-            <tbody id="rows"></tbody>
-          </table>
-        </div>
-      </section>
-      <section class="block" id="detail" hidden>
-        <h2 id="detail-title"></h2>
-        <p class="hint" id="detail-meta"></p>
-        <h3>题目</h3>
-        <pre id="question"></pre>
-        <h3>学生可见上下文</h3>
-        <pre id="context"></pre>
-        <h3>候选答案与期望行为</h3>
-        <pre id="gold"></pre>
-        <div class="pair">
-          <div>
-            <h3>base</h3>
-            <p class="hint" id="base-meta"></p>
-            <pre id="base-text"></pre>
-          </div>
-          <div>
-            <h3>adapter</h3>
-            <p class="hint" id="adapter-meta"></p>
-            <pre id="adapter-text"></pre>
-          </div>
-        </div>
-      </section>
-    </article>
-  </main>
+      <main class="qa-content" id="main">
+        <section class="qa-workspace" id="view-overview" hidden>
+          <article class="qa-panel">
+            <p class="qa-kicker">概览</p>
+            <h2>多批次总览尚未接入</h2>
+            <p class="qa-empty">当前可以查看的是效果对比里的真实历史结果和闭卷状态。这里不会把几次运行合成一个新实验，也不会预填提升百分比。</p>
+          </article>
+        </section>
+        <section class="qa-workspace" id="view-flow" hidden>
+          <article class="qa-panel">
+            <p class="qa-kicker">数据与流程</p>
+            <h2>阶段明细尚未接入</h2>
+            <p class="qa-empty">历史运行没有可回放的阶段事件。缺少记录时显示“未记录”，不会按总数补造漏斗或耗时。</p>
+          </article>
+        </section>
+        <section class="qa-workspace" id="view-compare">
+          <article class="qa-panel">
+            <p class="qa-kicker" id="kicker">效果对比</p>
+            <h2 id="headline">历史真实预测</h2>
+            <div class="qa-tags" id="tags"></div>
+            <div class="qa-cards" id="cards"></div>
+            <p class="qa-status" id="status" role="status">正在读取已保存的结果。</p>
+          </article>
+          <article class="qa-panel">
+            <h2 style="font-size:18px">子集对照</h2>
+            <p class="qa-note" id="scale-note"></p>
+            <div class="qa-bars" id="bars"></div>
+            <p><button type="button" class="qa-inline" id="clear-filter">清除筛选</button></p>
+          </article>
+          <article class="qa-panel">
+            <h2 style="font-size:18px">逐题对照</h2>
+            <div id="cases"></div>
+          </article>
+        </section>
+        <section class="qa-workspace" id="view-chat" hidden>
+          <article class="qa-panel">
+            <p class="qa-kicker">问答体验</p>
+            <h2>在线双模型问答尚未挂载</h2>
+            <p class="qa-empty">生成按钮已禁用。打开页面不会发起推理，也不会消耗教师额度。闭卷 adapter 未作为在线服务挂载，不会回退到有资料问答模型。</p>
+            <p><button type="button" class="qa-inline" disabled aria-describedby="chat-reason">生成回答</button></p>
+            <p class="qa-note" id="chat-reason">原因：当前进程没有挂载可取消的学生推理服务。</p>
+          </article>
+        </section>
+        <section class="qa-workspace" id="view-runs" hidden>
+          <article class="qa-panel">
+            <p class="qa-kicker">实验记录</p>
+            <h2>运行日志浏览器尚未接入</h2>
+            <p class="qa-empty">协议、预算和产物清单写在对应 run 目录。此页不把缺失日志显示成已完成训练。</p>
+          </article>
+        </section>
+      </main>
+    </div>
+  </div>
   <script src="/static/results.js"></script>
 </body>
 </html>

@@ -1,105 +1,343 @@
-const rows = document.querySelector("#rows");
-const count = document.querySelector("#count");
-const detail = document.querySelector("#detail");
-let current = "";
+const state = {
+  mode: "rag_grounded",
+  batch: "historical",
+  relation: "",
+  subset: "CB-paraphrase",
+  serial: 0,
+  view: "compare",
+};
 
-function fillSelect(id, values) {
-  const select = document.querySelector(id);
-  const existing = new Set([...select.options].map((item) => item.value));
-  values.filter(Boolean).forEach((value) => {
-    if (existing.has(value)) return;
-    const option = document.createElement("option");
-    option.value = value;
-    option.textContent = value;
-    select.append(option);
-  });
+const headline = document.querySelector("#headline");
+const tags = document.querySelector("#tags");
+const cards = document.querySelector("#cards");
+const bars = document.querySelector("#bars");
+const cases = document.querySelector("#cases");
+const status = document.querySelector("#status");
+const scaleNote = document.querySelector("#scale-note");
+const batchSelect = document.querySelector("#batch");
+
+function clearCompare() {
+  tags.replaceChildren();
+  cards.replaceChildren();
+  bars.replaceChildren();
+  cases.replaceChildren();
+  scaleNote.textContent = "";
+  document.querySelectorAll(".qa-retry").forEach((node) => node.remove());
 }
 
-function params() {
-  const query = new URLSearchParams();
-  ["pattern", "rule", "review", "block"].forEach((name) => {
-    const value = document.querySelector("#" + name).value;
-    if (value) query.set(name, value);
-  });
-  return query;
+function setStatus(text, kind) {
+  status.textContent = text;
+  status.dataset.state = kind || "";
 }
 
-function teacherText(label) {
-  return label || "待自动评估";
+function button(label, className, onClick) {
+  const node = document.createElement("button");
+  node.type = "button";
+  node.className = className;
+  node.textContent = label;
+  node.addEventListener("click", onClick);
+  return node;
 }
 
-async function loadList() {
-  const response = await fetch("/api/v1/result-cases?" + params().toString());
-  const body = await response.json();
-  if (!response.ok) {
-    count.textContent = body.error ? body.error.message : "结果不可用";
-    rows.replaceChildren();
+function formatCount(numerator, denominator) {
+  if (numerator === null || numerator === undefined) return "—";
+  if (denominator === null || denominator === undefined) return String(numerator);
+  return `${numerator} / ${denominator}`;
+}
+
+async function loadCompare() {
+  const serial = ++state.serial;
+  clearCompare();
+  setStatus("正在读取这一批次…", "");
+  const query = new URLSearchParams({ task_mode: state.mode, batch: state.batch });
+  let response;
+  let body;
+  try {
+    response = await fetch("/api/v1/comparisons?" + query.toString());
+    body = await response.json();
+  } catch (error) {
+    if (serial !== state.serial) return;
+    setStatus("网络请求失败。可以重试。", "error");
+    status.after(button("重试", "qa-inline qa-retry", () => loadCompare()));
     return;
   }
-  const view = body.meta.view || {};
-  document.querySelector("#banner").textContent = view.banner || "历史真实预测";
-  document.querySelector("#limitation").textContent = view.limitation || "";
-  fillSelect("#pattern", body.data.map((item) => item.pattern));
-  fillSelect("#review", body.data.map((item) => item.human_review_status));
-  const pilot = view.b_pilot_selected_n ? `；实验 B 小试 ${view.b_pilot_selected_n} / 父协议 ${view.b_parent_planned_n}` : "";
-  count.textContent = `显示 ${body.data.length} 题。历史计划 ${view.protocol_n ?? "—"} 题${pilot}。教师分未返回时显示待自动评估。`;
-  rows.replaceChildren();
-  body.data.forEach((item) => {
-    const tr = document.createElement("tr");
-    if (item.case_id === current) tr.setAttribute("aria-current", "true");
-    tr.innerHTML = `<td></td><td></td><td></td><td></td><td></td>`;
-    const cells = [...tr.children];
-    cells[0].textContent = `${item.block === "b_pilot" ? "新推理 · " : "历史 · "}${item.case_id}`;
-    cells[1].textContent = `${item.pattern || ""} / ${item.expected_action || ""}`;
-    cells[2].textContent = item.rule_status === "pass" ? "通过" : item.rule_status === "fail" ? "失败" : "未评分";
-    cells[3].textContent = item.human_review_status || "";
-    cells[4].textContent = teacherText(item.teacher_label);
-    tr.addEventListener("click", () => openCase(item.case_id));
-    rows.append(tr);
-  });
-}
-
-function slotText(slot) {
-  if (!slot || slot.match_status !== "matched") {
-    const reasons = (slot && slot.unmatch_reasons) || ["未匹配"];
-    return "未匹配：" + reasons.join("，");
+  if (serial !== state.serial) return;
+  if (!response.ok) {
+    const message = body.error ? body.error.message : "结果不可用";
+    setStatus(message, "error");
+    status.after(button("重试", "qa-inline qa-retry", () => loadCompare()));
+    return;
   }
-  return slot.text || "";
+  const data = body.data || {};
+  fillBatches(data.batches || []);
+  headline.textContent = data.headline || "没有可显示的结论";
+  (data.tags || []).forEach((tag) => {
+    const span = document.createElement("span");
+    span.className = "qa-tag" + (String(tag).includes("未") || String(tag).includes("受限") ? " warn" : "");
+    span.textContent = tag;
+    tags.append(span);
+  });
+  if (data.status === "not_executed" || data.availability === "empty") {
+    setStatus(data.headline || "尚无闭卷训练对照", "empty");
+    const note = document.createElement("p");
+    note.className = "qa-empty";
+    note.textContent = (data.limitations || []).join(" ");
+    cases.append(note);
+    if (data.protocol) {
+      const extra = document.createElement("p");
+      extra.className = "qa-note";
+      const blockers = (data.protocol.blockers || []).join("；");
+      extra.textContent = `协议状态：${data.protocol.status || "未记录"}。${blockers}`;
+      cases.append(extra);
+    }
+    return;
+  }
+  (data.cards || []).forEach((card) => renderCard(card));
+  const denominator = data.scale_denominator;
+  scaleNote.textContent = denominator
+    ? `条形图使用共同分母 ${denominator}。单位写在每行末尾。覆盖不足不会画成错误率。`
+    : "当前没有可比较的共同分母。";
+  (data.bars || []).forEach((bar) => renderBar(bar, denominator));
+  const limits = document.createElement("p");
+  limits.className = "qa-note";
+  limits.textContent = (data.limitations || []).join(" ");
+  bars.append(limits);
+  setStatus(data.availability === "summary_only" ? "指标来自已保存汇总。" : "已读取当前批次。", "");
+  await loadCases(serial);
 }
 
-function slotMeta(slot) {
-  if (!slot || slot.match_status !== "matched") return "未并入对比";
-  const teacher = slot.teacher;
-  const teacherLabel = teacher ? teacher.label : "待自动评估";
-  const passed = slot.rule_passed === true ? "规则通过" : slot.rule_passed === false ? "规则失败" : "规则未判定";
-  return `${passed}（辅助） · 自动评估 ${teacherLabel} · ${slot.model_id || ""} · ${slot.signature || ""}`;
+function fillBatches(batches) {
+  const current = state.batch;
+  batchSelect.replaceChildren();
+  batches.forEach((item) => {
+    const option = document.createElement("option");
+    option.value = item.batch_id;
+    option.textContent = item.label || item.batch_id;
+    batchSelect.append(option);
+  });
+  if ([...batchSelect.options].some((item) => item.value === current)) {
+    batchSelect.value = current;
+  } else if (batchSelect.options.length) {
+    state.batch = batchSelect.value;
+  }
 }
 
-async function openCase(caseId) {
-  current = caseId;
-  const response = await fetch("/api/v1/result-cases/" + encodeURIComponent(caseId));
+function renderCard(card) {
+  const node = document.createElement("button");
+  node.type = "button";
+  node.className = "qa-card";
+  node.setAttribute("aria-pressed", state.relation && card.name && card.name.includes(state.relation) ? "true" : "false");
+  const label = document.createElement("span");
+  label.textContent = card.name || "";
+  const value = document.createElement("b");
+  value.textContent = formatCount(card.numerator, card.denominator);
+  node.append(label, value);
+  const filter = card.name === "未决" ? "unresolved" : card.name === "旧口径持平" ? "tie" : card.name === "改善" ? "improve" : "";
+  if (filter) {
+    node.addEventListener("click", () => {
+      state.relation = state.relation === filter ? "" : filter;
+      loadCompare();
+    });
+  }
+  cards.append(node);
+}
+
+function renderBar(bar, scale) {
+  const row = document.createElement("div");
+  row.className = "qa-bar-row";
+  const name = document.createElement("button");
+  name.type = "button";
+  name.textContent = bar.label || "";
+  if (bar.filter) {
+    name.addEventListener("click", () => {
+      if (String(bar.filter).startsWith("CB-")) {
+        state.subset = bar.filter;
+        state.relation = "";
+      } else {
+        state.relation = bar.filter;
+      }
+      loadCompare();
+    });
+  }
+  const track = document.createElement("div");
+  track.className = "qa-track";
+  const fill = document.createElement("i");
+  const denom = Number(bar.denominator || scale || 0);
+  const numer = Number(bar.numerator || 0);
+  const width = denom > 0 ? Math.max(0, Math.min(100, (numer / denom) * 100)) : 0;
+  fill.style.width = width + "%";
+  track.append(fill);
+  track.setAttribute("aria-hidden", "true");
+  const count = document.createElement("span");
+  count.textContent = `${formatCount(bar.numerator, bar.denominator)} ${bar.unit || ""}`;
+  row.append(name, track, count);
+  bars.append(row);
+}
+
+async function loadCases(serial) {
+  const query = new URLSearchParams({
+    task_mode: state.mode,
+    relation: state.relation,
+    subset: state.mode === "closed_book_domain" ? state.subset : "",
+  });
+  const response = await fetch(`/api/v1/comparisons/${encodeURIComponent(state.batch)}/cases?` + query.toString());
   const body = await response.json();
-  if (!response.ok) return;
-  const item = body.data;
-  detail.hidden = false;
-  document.querySelector("#detail-title").textContent = item.case_id;
-  document.querySelector("#detail-meta").textContent =
-    `来源族 ${item.source_family_id || ""} · 人工 ${item.human_review_status || ""} · 金标自动评估 ${teacherText(item.teacher_label)}`;
-  document.querySelector("#question").textContent = item.question || "";
-  document.querySelector("#context").textContent = item.student_context || "";
-  document.querySelector("#gold").textContent =
-    `期望行为 ${item.expected_action || ""}\n候选答案 ${item.candidate_answer || ""}`;
-  const base = (item.answers || {}).base || {};
-  const adapter = (item.answers || {}).adapter || {};
-  document.querySelector("#base-meta").textContent = slotMeta(base);
-  document.querySelector("#adapter-meta").textContent = slotMeta(adapter);
-  document.querySelector("#base-text").textContent = slotText(base);
-  document.querySelector("#adapter-text").textContent = slotText(adapter);
-  await loadList();
-  detail.scrollIntoView({ block: "nearest" });
+  if (serial !== state.serial) return;
+  cases.replaceChildren();
+  if (!response.ok) {
+    const error = document.createElement("p");
+    error.className = "qa-error";
+    error.textContent = body.error ? body.error.message : "案例读取失败";
+    cases.append(error, button("重试", "qa-inline", () => loadCompare()));
+    return;
+  }
+  const meta = body.meta || {};
+  if (!body.data || !body.data.length) {
+    const empty = document.createElement("p");
+    empty.className = "qa-empty";
+    empty.textContent = meta.missing_reason || "当前筛选没有案例。";
+    cases.append(empty);
+    if (state.relation) {
+      const count = document.createElement("p");
+      count.className = "qa-note";
+      count.textContent = meta.matched_filter_count === null || meta.matched_filter_count === undefined
+        ? "汇总里没有这条筛选的原始案例。"
+        : `汇总计数为 ${meta.matched_filter_count}，原始案例未随运行目录提供。`;
+      cases.append(count);
+      return;
+    }
+    if ((meta.identifiers_only || []).length) {
+      const note = document.createElement("p");
+      note.className = "qa-note";
+      note.textContent = "下面只是规则分歧汇总里的标识，不是未决 4 题的原文。";
+      cases.append(note);
+    }
+    (meta.identifiers_only || []).forEach((item) => {
+      const line = document.createElement("p");
+      line.className = "qa-id";
+      line.textContent = `${item} · ${meta.identifier_note || "仅有标识"}`;
+      cases.append(line);
+    });
+    return;
+  }
+  body.data.forEach((item) => cases.append(renderCase(item)));
 }
 
-["pattern", "rule", "review", "block"].forEach((name) => {
-  document.querySelector("#" + name).addEventListener("change", loadList);
+function renderCase(item) {
+  const wrap = document.createElement("article");
+  wrap.className = "qa-case";
+  const title = document.createElement("h3");
+  title.textContent = item.question || "（问题缺失）";
+  const id = document.createElement("p");
+  id.className = "qa-id";
+  id.textContent = `${item.case_id || "未记录"} · ${item.eval_subset || item.relation || ""}`;
+  wrap.append(title, id);
+  const grid = document.createElement("div");
+  grid.className = "qa-answers";
+  grid.append(renderAnswer("微调前", item.base || {}), renderAnswer("微调后", item.adapter || {}));
+  wrap.append(grid);
+  const details = document.createElement("details");
+  details.className = "qa-evidence";
+  const summary = document.createElement("summary");
+  summary.textContent = item.task_mode === "closed_book_domain" ? "教师评分依据（学生未看到这些资料）" : "学生可见资料与审核理由";
+  const body = document.createElement("div");
+  const context = document.createElement("p");
+  context.textContent = item.task_mode === "closed_book_domain"
+    ? (item.judge_source_context || item.review_reason || "教师审核未执行。")
+    : (item.student_context || "学生可见资料未记录。");
+  const reason = document.createElement("p");
+  reason.textContent = item.review_reason || "审核理由：未记录";
+  body.append(context, reason);
+  details.append(summary, body);
+  wrap.append(details);
+  return wrap;
+}
+
+function renderAnswer(label, slot) {
+  const box = document.createElement("div");
+  box.className = "qa-answer";
+  const header = document.createElement("header");
+  const name = document.createElement("strong");
+  name.textContent = label;
+  const copy = button("复制", "qa-inline", async () => {
+    const text = slot.text || "";
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        throw new Error("clipboard unavailable");
+      }
+      copy.textContent = "已复制";
+    } catch (_error) {
+      const area = document.createElement("textarea");
+      area.value = text;
+      area.setAttribute("readonly", "");
+      area.style.position = "fixed";
+      area.style.left = "-9999px";
+      document.body.append(area);
+      area.select();
+      const ok = document.execCommand("copy");
+      area.remove();
+      copy.textContent = ok ? "已复制" : "复制失败";
+    }
+  });
+  header.append(name, copy);
+  const text = document.createElement("p");
+  text.className = "collapsed";
+  text.textContent = slot.text || slot.status || "（没有回答）";
+  const toggle = button("展开全文", "qa-inline", () => {
+    const closed = text.classList.toggle("collapsed");
+    toggle.textContent = closed ? "展开全文" : "收起";
+  });
+  const meta = document.createElement("p");
+  meta.className = "qa-note";
+  meta.textContent = slot.label || "";
+  box.append(header, text, toggle, meta);
+  return box;
+}
+
+function switchMode(mode) {
+  state.mode = mode;
+  state.relation = "";
+  state.batch = mode === "closed_book_domain" ? "cb1" : "historical";
+  document.querySelector("#mode-rag").setAttribute("aria-pressed", mode === "rag_grounded" ? "true" : "false");
+  document.querySelector("#mode-closed").setAttribute("aria-pressed", mode === "closed_book_domain" ? "true" : "false");
+  clearCompare();
+  headline.textContent = "正在切换模式…";
+  loadCompare();
+}
+
+document.querySelectorAll(".qa-nav-list button").forEach((node) => {
+  node.addEventListener("click", () => {
+    state.view = node.dataset.view;
+    document.querySelectorAll(".qa-nav-list button").forEach((item) => item.removeAttribute("aria-current"));
+    node.setAttribute("aria-current", "page");
+    document.querySelectorAll(".qa-workspace").forEach((section) => {
+      section.hidden = section.id !== "view-" + state.view;
+    });
+    document.querySelector("#page-title").textContent = node.textContent.trim();
+    document.querySelector("#nav").classList.remove("open");
+    document.querySelector("#menu").setAttribute("aria-expanded", "false");
+  });
 });
-loadList();
+
+document.querySelector("#menu").addEventListener("click", () => {
+  const nav = document.querySelector("#nav");
+  const open = nav.classList.toggle("open");
+  document.querySelector("#menu").setAttribute("aria-expanded", open ? "true" : "false");
+});
+
+document.querySelector("#mode-rag").addEventListener("click", () => switchMode("rag_grounded"));
+document.querySelector("#mode-closed").addEventListener("click", () => switchMode("closed_book_domain"));
+batchSelect.addEventListener("change", () => {
+  state.batch = batchSelect.value;
+  state.relation = "";
+  clearCompare();
+  loadCompare();
+});
+document.querySelector("#clear-filter").addEventListener("click", () => {
+  state.relation = "";
+  loadCompare();
+});
+
+loadCompare();

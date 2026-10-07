@@ -1,0 +1,115 @@
+{
+  "task_mode": "closed_book_domain",
+  "status": "predicted",
+  "availability": "partial",
+  "default_subset": "CB-paraphrase",
+  "headline": "闭卷主评测计划 40 个输入，已生成完整配对 40。教师审核未执行，不能判断改善或没有改善。",
+  "tags": [
+    "教师审核未执行",
+    "探索性",
+    "闭卷",
+    "单种子"
+  ],
+  "cards": [
+    {
+      "name": "计划输入",
+      "numerator": 40,
+      "denominator": 40,
+      "unit": "input",
+      "status": "available"
+    },
+    {
+      "name": "完整预测配对",
+      "numerator": 40,
+      "denominator": 40,
+      "unit": "pair",
+      "status": "partial"
+    },
+    {
+      "name": "教师有效配对",
+      "numerator": null,
+      "denominator": 40,
+      "unit": "pair",
+      "status": "not_executed"
+    },
+    {
+      "name": "未决",
+      "numerator": 40,
+      "denominator": 40,
+      "unit": "pair",
+      "status": "teacher_not_executed"
+    }
+  ],
+  "bars": [
+    {
+      "id": "CB-paraphrase",
+      "label": "CB-paraphrase",
+      "numerator": 20,
+      "denominator": 40,
+      "unit": "计划输入",
+      "filter": "CB-paraphrase"
+    },
+    {
+      "id": "CB-retention",
+      "label": "CB-retention",
+      "numerator": 20,
+      "denominator": 40,
+      "unit": "计划输入",
+      "filter": "CB-retention"
+    }
+  ],
+  "scale_denominator": 40,
+  "outcomes": {
+    "wrong_to_right": null,
+    "right_to_wrong": null,
+    "both_correct": null,
+    "both_wrong": null,
+    "unresolved": 40,
+    "status": "teacher_not_executed",
+    "reason": "没有教师审核，不能把未决写成两者错误或没有改善"
+  },
+  "subsets": {
+    "CB-paraphrase": {
+      "planned_inputs": 20,
+      "complete_pairs": 20,
+      "wrong_to_right": null,
+      "right_to_wrong": null,
+      "both_correct": null,
+      "both_wrong": null,
+      "unresolved": 20,
+      "status": "teacher_not_executed"
+    },
+    "CB-retention": {
+      "planned_inputs": 20,
+      "complete_pairs": 20,
+      "wrong_to_right": null,
+      "right_to_wrong": null,
+      "both_correct": null,
+      "both_wrong": null,
+      "unresolved": 20,
+      "status": "teacher_not_executed"
+    },
+    "CB-memory": {
+      "planned_inputs": 10,
+      "complete_pairs": 10,
+      "wrong_to_right": null,
+      "right_to_wrong": null,
+      "both_correct": null,
+      "both_wrong": null,
+      "unresolved": 10,
+      "status": "teacher_not_executed"
+    }
+  },
+  "limitations": [
+    "历史样本原为 rag_grounded。只有通过脱离上下文明确性检查的题目进入闭卷训练集。",
+    "旧教师接受不是闭卷 rubric 下的重新审核。",
+    "CB-paraphrase 允许事实重叠，测试问法不进入训练。",
+    "保留题是冻结的通用题，不是药品语料，也不是训练样本。",
+    "全局来源隔离仍然适用于独立来源评测；本协议显式标记为已训练知识诊断。",
+    "教师审核未执行。下面的未决是缺少裁判，不是模型没有变化。",
+    "词面差异不代表事实对错。"
+  ],
+  "review_source": "not_executed",
+  "rubric_version": null,
+  "formal_ready": 0
+}

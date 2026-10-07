@@ -11,12 +11,15 @@ from typing import Any, Callable
 from .cache import JsonlStore
 from .identity import (
     evidence_snapshot_hash,
+    gold_hash,
     inference_config_hash,
     prompt_for,
     prompt_hash,
     review_cache_key,
     subject_hash,
+    task_mode_field,
 )
+from ..task_mode import TaskModeError, canonical_task_mode
 from .policy import ReviewPolicy, build_aggregate, normalize_judges
 from .schemas import ReviewRecord
 from .teacher import (
@@ -121,7 +124,12 @@ def normalize_subject(raw: dict[str, Any], batch_id: str) -> dict[str, Any]:
     subject["batch_id"] = str(subject.get("batch_id") or batch_id)
     if "student_context" not in subject:
         subject["student_context"] = subject.get("context") or ""
-    subject["task_mode"] = subject.get("task_mode") or subject.get("goal") or "rag_grounded"
+    raw_mode = subject.get("task_mode") or subject.get("goal") or "rag_grounded"
+    try:
+        subject["task_mode"] = canonical_task_mode(str(raw_mode))
+    except TaskModeError as exc:
+        subject["task_mode"] = str(raw_mode)
+        subject["_task_mode_error"] = str(exc)
     subject["risk"] = subject.get("risk") or ("high" if subject["subject_type"] == "protocol_case" else "low")
     return subject
 
@@ -145,6 +153,8 @@ def deterministic_issues(subject: dict[str, Any]) -> list[str]:
         issues.append("missing_expected_action")
     if kind == "prediction" and not str(subject.get("answer_text") or subject.get("prediction") or "").strip():
         issues.append("empty_prediction")
+    if subject.get("_task_mode_error"):
+        issues.append("unknown_task_mode")
     return issues
 
 
@@ -283,6 +293,7 @@ def run_teacher_review(
                 policy_version=policy.policy_version,
                 evidence_hash=evidence_snapshot_hash(subject),
                 judge_role=str(judge.get("judge_role") or "gold_reviewer"),
+                reference_hash=gold_hash(subject),
             )
             hit = cached_success(key, digest)
             if hit is not None:
@@ -312,6 +323,8 @@ def run_teacher_review(
             policy=policy,
             task_mode=str(subject.get("task_mode") or "rag_grounded"),
             risk=str(subject.get("risk") or "high"),
+            student_text=str(subject.get("student_context") or ""),
+            source_text=str(subject.get("judge_source_context") or ""),
         )
         arbiter = next((item for item in judges if item.get("judge_role") == "arbiter"), None)
         if aggregate.teacher_review_status == "disputed" and aggregate.quarantine_reason == "judge_disagreement" and arbiter is not None:
@@ -342,19 +355,21 @@ def run_teacher_review(
             produced = list(pool.map(review_subject, subjects))
     flat = [record for group in produced for record in group]
     aggregates = []
-    by_id: dict[str, list[ReviewRecord]] = {}
+    by_identity: dict[tuple[str, str], list[ReviewRecord]] = {}
     for record in flat:
-        by_id.setdefault(record.subject_id, []).append(record)
-    subjects_by_id = {item["subject_id"]: item for item in subjects}
-    for subject_id, group in by_id.items():
-        subject = subjects_by_id[subject_id]
+        by_identity.setdefault((record.subject_id, record.subject_hash), []).append(record)
+    for subject in subjects:
+        digest = subject_hash(subject)
+        group = by_identity.get((str(subject["subject_id"]), digest), [])
         aggregate = build_aggregate(
             group,
-            subject_id=subject_id,
-            expected_hash=subject_hash(subject),
+            subject_id=str(subject["subject_id"]),
+            expected_hash=digest,
             policy=policy,
-            task_mode=str(subject.get("task_mode") or "rag_grounded"),
+            task_mode=task_mode_field(subject) or str(subject.get("task_mode") or "rag_grounded"),
             risk=str(subject.get("risk") or "high"),
+            student_text=str(subject.get("student_context") or ""),
+            source_text=str(subject.get("judge_source_context") or ""),
         )
         aggregates.append(aggregate.model_dump())
     agg_store = JsonlStore(out / "review_aggregates.jsonl")
@@ -440,6 +455,7 @@ def _judge_once(
         policy_version=policy.policy_version,
         evidence_hash=evidence_snapshot_hash(subject),
         judge_role=str(judge.get("judge_role") or "gold_reviewer"),
+        reference_hash=gold_hash(subject),
     )
     hit = resume_hit(key, digest)
     if hit is not None:

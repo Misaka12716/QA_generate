@@ -13,30 +13,67 @@ EXAMPLE_RULE = (
 )
 
 
+def _empty_judgment(state: str, reasons: list[str] | None = None) -> dict[str, Any]:
+    return {
+        "state": state,
+        "rank": None,
+        "legacy_rank": None,
+        "rubric_version": None,
+        "task_complete": None,
+        "behavior_appropriate": None,
+        "factual_consistency": None,
+        "required_points_complete": None,
+        "evidence_adequate": None,
+        "no_unsupported_claims": None,
+        "task_success": None,
+        "reason_codes": list(reasons or []),
+    }
+
+
 def answer_judgment(record: dict[str, Any] | None) -> dict[str, Any]:
     if not record:
-        return {"state": "not_reviewed", "rank": None, "task_complete": None, "behavior_appropriate": None, "reason_codes": []}
+        return _empty_judgment("not_reviewed")
     reasons = list(record.get("reason_codes") or [])
+    rubric = str(record.get("rubric_version") or "rubric-v1")
     if record.get("execution_status") != "succeeded":
-        return {"state": "technical_failed", "rank": None, "task_complete": None, "behavior_appropriate": None, "reason_codes": reasons}
+        judgment = _empty_judgment("technical_failed", reasons)
+        judgment["rubric_version"] = rubric
+        return judgment
     if record.get("decision") == "abstain":
-        return {"state": "abstain", "rank": None, "task_complete": None, "behavior_appropriate": None, "reason_codes": reasons}
+        judgment = _empty_judgment("abstain", reasons)
+        judgment["rubric_version"] = rubric
+        return judgment
     dimensions = record.get("dimensions") or {}
     task = dimensions.get("required_points_complete") is True
     behavior = dimensions.get("behavior_appropriate") is True
     rank = int(task) + int(behavior) + int(record.get("decision") == "accept")
+    factual = dimensions.get("factual_consistency")
+    points = dimensions.get("required_points_complete")
+    evidence = dimensions.get("evidence_adequate")
+    unsupported = dimensions.get("no_unsupported_claims")
+    task_success = None
+    if rubric != "rubric-v1":
+        needed = [factual, points, dimensions.get("behavior_appropriate"), evidence, unsupported]
+        if all(item is not None for item in needed):
+            task_success = all(item is True for item in needed) and record.get("decision") == "accept"
     return {
         "state": record.get("decision"),
         "rank": rank,
+        "legacy_rank": rank,
+        "rubric_version": rubric,
         "task_complete": task,
         "behavior_appropriate": behavior,
-        "evidence_adequate": dimensions.get("evidence_adequate"),
-        "no_unsupported_claims": dimensions.get("no_unsupported_claims"),
+        "factual_consistency": factual,
+        "required_points_complete": points,
+        "evidence_adequate": evidence,
+        "no_unsupported_claims": unsupported,
+        "task_success": task_success,
         "reason_codes": reasons,
     }
 
 
 def compare_pair(base: dict[str, Any], adapter: dict[str, Any]) -> str:
+    """旧 rank 对照。持平只表示旧分相同，不是两者正确。"""
     if base.get("rank") is None or adapter.get("rank") is None:
         return "unresolved"
     if adapter["rank"] > base["rank"]:
@@ -44,6 +81,24 @@ def compare_pair(base: dict[str, Any], adapter: dict[str, Any]) -> str:
     if adapter["rank"] < base["rank"]:
         return "regress"
     return "tie"
+
+
+def compare_outcomes(base: dict[str, Any], adapter: dict[str, Any]) -> dict[str, Any]:
+    """新维度对照。旧口径无法推出的关系保持 unavailable。"""
+    legacy = compare_pair(base, adapter)
+    if base.get("task_success") is None or adapter.get("task_success") is None:
+        return {"legacy_relation": legacy, "relation": "unavailable", "reason": "rubric_dimension_unavailable"}
+    adapter_ok = adapter.get("task_success") is True
+    base_ok = base.get("task_success") is True
+    if adapter_ok and not base_ok:
+        relation = "wrong_to_right"
+    elif base_ok and not adapter_ok:
+        relation = "right_to_wrong"
+    elif adapter_ok and base_ok:
+        relation = "both_correct"
+    else:
+        relation = "both_wrong"
+    return {"legacy_relation": legacy, "relation": relation, "reason": None}
 
 
 def rule_disagrees(rule_passed: bool | None, judgment: dict[str, Any]) -> bool:
@@ -73,9 +128,15 @@ def label_case(case: dict[str, Any], base: dict[str, Any], adapter: dict[str, An
 
 
 def latest_by_subject(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    latest: dict[str, dict[str, Any]] = {}
+    """同一 subject_id 下哈希不一致时不取最后一条。"""
+    grouped: dict[str, list[dict[str, Any]]] = {}
     for row in rows:
-        latest[str(row.get("subject_id") or "")] = row
+        grouped.setdefault(str(row.get("subject_id") or ""), []).append(row)
+    latest: dict[str, dict[str, Any]] = {}
+    for subject_id, group in grouped.items():
+        hashes = {str(item.get("subject_hash") or "") for item in group}
+        if len(hashes) == 1:
+            latest[subject_id] = group[-1]
     return latest
 
 

@@ -251,13 +251,26 @@ def _teacher_view(record: dict[str, Any] | None, aggregate: dict[str, Any] | Non
     }
 
 
+def _single_identity(rows: list[dict[str, Any]]) -> dict[str, Any] | None:
+    if not rows:
+        return None
+    hashes = {str(row.get("subject_hash") or "") for row in rows}
+    if len(hashes) != 1:
+        return None
+    succeeded = [row for row in rows if row.get("execution_status") == "succeeded"]
+    return (succeeded or rows)[-1]
+
+
 def attach_reviews(cases: list[dict[str, Any]], records: list[dict[str, Any]], aggregates: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """把已落盘的教师记录接到同一题上。没有记录时保持 null，不填 0。"""
-    by_subject_records: dict[str, dict[str, Any]] = {}
+    """把已落盘的教师记录接到同一题上。同一 ID 有多份身份时不取最后一条。"""
+    grouped_records: dict[str, list[dict[str, Any]]] = {}
+    grouped_aggs: dict[str, list[dict[str, Any]]] = {}
     for row in records:
-        if row.get("execution_status") == "succeeded" or row.get("subject_id") not in by_subject_records:
-            by_subject_records[str(row.get("subject_id") or "")] = row
-    by_subject_agg = {str(row.get("subject_id") or ""): row for row in aggregates}
+        grouped_records.setdefault(str(row.get("subject_id") or ""), []).append(row)
+    for row in aggregates:
+        grouped_aggs.setdefault(str(row.get("subject_id") or ""), []).append(row)
+    by_subject_records = {key: picked for key, rows in grouped_records.items() if (picked := _single_identity(rows))}
+    by_subject_agg = {key: picked for key, rows in grouped_aggs.items() if (picked := _single_identity(rows))}
     attached: list[dict[str, Any]] = []
     for case in cases:
         item = json.loads(json.dumps(case))

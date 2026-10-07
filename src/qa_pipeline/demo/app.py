@@ -197,6 +197,42 @@ def create_app(run_dir: str | Path) -> FastAPI:
             return _api_error("unknown_case", f"没有用例 {case_id}", 404)
         return {"data": public_case(found, full=True), "meta": {**_api_meta(total=1), "view": meta}}
 
+    @app.get("/api/v1/comparisons")
+    def comparisons(task_mode: str = "rag_grounded", batch: str = "historical") -> Any:
+        from ..experiments.workbench import comparison_view
+
+        payload = comparison_view(root, task_mode=task_mode, batch=batch)
+        if payload.get("status") == "error" and payload.get("error", {}).get("code") == "unknown_task_mode":
+            return _api_error("unknown_task_mode", payload["error"]["message"], 422)
+        if payload.get("availability") == "missing":
+            return _api_error("missing_metrics", payload.get("headline") or "没有指标", 404)
+        return {"data": payload, "meta": _api_meta(total=1)}
+
+    @app.get("/api/v1/comparisons/{batch_id}")
+    def comparison_one(batch_id: str, task_mode: str = "rag_grounded") -> Any:
+        from ..experiments.workbench import comparison_view
+
+        _require_id(batch_id)
+        payload = comparison_view(root, task_mode=task_mode, batch=batch_id)
+        if payload.get("availability") == "missing":
+            return _api_error("missing_metrics", payload.get("headline") or "没有指标", 404)
+        return {"data": payload, "meta": _api_meta(total=1)}
+
+    @app.get("/api/v1/comparisons/{batch_id}/cases")
+    def comparison_case_list(
+        batch_id: str,
+        task_mode: str = "rag_grounded",
+        relation: str = "",
+        subset: str = "",
+    ) -> Any:
+        from ..experiments.workbench import comparison_cases
+
+        _require_id(batch_id)
+        payload = comparison_cases(root, task_mode=task_mode, batch=batch_id, relation=relation, subset=subset)
+        if payload.get("availability") == "error":
+            return _api_error(payload.get("error", {}).get("code") or "bad_request", payload.get("error", {}).get("message") or "无法读取案例", 422)
+        return {"data": payload.get("data") or [], "meta": {**_api_meta(total=len(payload.get("data") or [])), **payload}}
+
     return app
 
 

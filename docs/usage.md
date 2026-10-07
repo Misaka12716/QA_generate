@@ -46,7 +46,20 @@ qa-pipeline teacher-review \
 
 `configs/review/teacher_single_exploratory_v1.json` 允许单模型给出 `teacher_single_accepted`。这只表示探索性自动评估，`ready_for_formal_human_eval` 仍为 false。同一模型再评一次不能变成共识。
 
-结果页和方案对照台分开。`qa-pipeline demo --run <含 cases.jsonl 的目录> --host 0.0.0.0 --port 8775` 后打开 `/results`。列表接口是 `GET /api/v1/result-cases`，详情返回完整上下文。教师分还没有时显示「待自动评估」，不填 0。
+结果页和方案对照台分开。`qa-pipeline demo --run runs/batch1_view_20261007 --host 127.0.0.1 --port 8775` 后打开 `/results`。8775 已被占用时改用其他端口。页面读取该目录里的历史指标，并在同级目录发现 `cb1_20261007` 时显示闭卷批次。有资料问答与闭卷问答使用不同的查询。闭卷还没有预测时显示「尚无闭卷训练对照」，不借用 RAG 分数，也不把缺失写成 0%。`runs/cb1_20261007` 已有 base 与 adapter 预测时，标题写明配对已生成、教师审核未执行。旧列表接口 `GET /api/v1/result-cases` 仍然可用；新的只读摘要是 `GET /api/v1/comparisons`。
+
+闭卷协议与历史 RAG 训练文件分开写出：
+
+```sh
+qa-pipeline prepare-closed-book \
+  --source runs/drug_v22/E3_g0/sft/train.jsonl \
+  --retention configs/protocols/cb_retention_v1.jsonl \
+  --base-model /path/to/Qwen2.5-7B-Instruct \
+  --out runs/cb1_20261007 \
+  --ledger runs/batch1_view_20261007/metrics.json
+```
+
+`--base-model` 必须换成实际学生基座目录。`--train` 和 `--predict` 要分两次执行，并显式传入空闲 GPU 的 `--device`。教师额度不够时命令仍会留下协议和阻塞说明，不会把未审核预测写成改善或没有改善。
 
 `run-reviewed-eval` 读取已有协议和 `review_aggregates.jsonl`。未同时给出 `--allow-inference`、`--authorize-inference`、`--device` 和生成预算时，它不加载学生模型。当前命令本身也不附带权重推理实现；缓存未命中时保持未执行。
 

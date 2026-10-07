@@ -95,6 +95,21 @@ qa-pipeline eval-adapter --base-model /path/to/base-model --base-id base-v1 --ad
 
 `eval-adapter` 成功执行返回 0，捕获的协议错误、来源清单错误或缺少 tokenizer 配置返回 1，返回未执行报告时返回 2。`import-review` 在校验错误时返回 1。进一步判断应查看报告中的 `executed`、失败项和统计分母，不能只检查输出文件是否存在。
 
+## 闭卷首轮 CB-1
+
+`runs/cb1_20261007` 是 2026-10-07 的单种子探索，不是正式结果。它从历史 74 条 RAG 训练题里保留 22 条脱离原文后仍然明确的问题，训练新的闭卷 adapter；10 个知识单元各 2 个表面改写构成 20 个 CB-paraphrase，另加 20 个冻结保留题。base 与 adapter 的 40 个主评测输入都已生成回答。教师共享额度剩余 23 次调用，整轮审核需要 120 次，所以审核未执行，页面上的未决表示缺少裁判。训练损失下降没有被写成问答改善。细节见该目录的 `result_report.md`。
+
+```sh
+qa-pipeline prepare-closed-book \
+  --source runs/drug_v22/E3_g0/sft/train.jsonl \
+  --retention configs/protocols/cb_retention_v1.jsonl \
+  --base-model /path/to/Qwen2.5-7B-Instruct \
+  --out runs/cb1_YYYYMMDD \
+  --ledger runs/batch1_view_20261007/metrics.json
+```
+
+训练和预测分开追加 `--train --device <空闲GPU>` 与 `--predict --device <空闲GPU>`。不要覆盖 `runs/cb1_20261007`。
+
 ## 如何阅读实验结论
 
 - 接受条数、导出条数、训练条数和主评测条数是不同分母。

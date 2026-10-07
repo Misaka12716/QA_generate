@@ -106,6 +106,41 @@ def cmd_demo(args) -> int:
     return 0
 
 
+def cmd_prepare_closed_book(args) -> int:
+    from .experiments.closed_book import predict_closed_book, prepare_closed_book, train_closed_book
+
+    if args.train and args.predict:
+        print("训练和预测要分开运行，避免显卡编号被同一次进程改写。", file=sys.stderr)
+        return 2
+    out = Path(args.out)
+    should_prepare = not (args.train or args.predict) or not (out / "protocol.json").is_file()
+    if should_prepare:
+        ledger = None
+        snapshot = Path(args.ledger) if args.ledger else None
+        if snapshot and snapshot.is_file():
+            payload = json.loads(snapshot.read_text(encoding="utf-8"))
+            ledger = payload.get("budget") if isinstance(payload, dict) else None
+        protocol = prepare_closed_book(
+            source=args.source,
+            out_dir=out,
+            retention_path=args.retention,
+            base_model=args.base_model,
+            ledger=ledger,
+        )
+        print(json.dumps({"status": protocol["status"], "train_planned": protocol["train_planned"], "eval_planned": protocol["eval_planned"], "teacher_budget": protocol["teacher_budget"]["status"], "shortfalls": protocol["shortfalls"]}, ensure_ascii=False))
+    if args.train:
+        metrics = train_closed_book(out, device=args.device)
+        print(json.dumps({"train_skipped": metrics.get("skipped"), "train_samples": metrics.get("train_samples"), "reason": metrics.get("reason")}, ensure_ascii=False))
+        if metrics.get("skipped"):
+            return 1
+    if args.predict:
+        metrics = predict_closed_book(out, device=args.device)
+        print(json.dumps({"status": metrics.get("status"), "headline": metrics.get("headline"), "reason": metrics.get("reason")}, ensure_ascii=False))
+        if metrics.get("status") not in {"predicted", "partial"}:
+            return 1
+    return 0
+
+
 def _formal_source_arguments(args):
     """正式模式读取冻结训练来源清单和来源宇宙。探索模式不借此改称正式结果。"""
     from .experiments.adapter_eval import (
@@ -368,6 +403,17 @@ def main(argv: list[str] | None = None) -> int:
     reviewed_p.add_argument("--device", type=int, default=None)
     reviewed_p.add_argument("--max-new-tokens", dest="max_new_tokens", type=int, default=0)
     reviewed_p.set_defaults(func=cmd_run_reviewed_eval)
+
+    closed_p = sub.add_parser("prepare-closed-book", help="冻结闭卷协议；可选继续训练或预测")
+    closed_p.add_argument("--source", required=True, help="历史合格池 JSONL，不会原地改写")
+    closed_p.add_argument("--out", required=True)
+    closed_p.add_argument("--retention", default="configs/protocols/cb_retention_v1.jsonl")
+    closed_p.add_argument("--base-model", required=True, help="学生基座目录。不写入通用前端")
+    closed_p.add_argument("--ledger", default="runs/batch1_view_20261007/metrics.json", help="只读取已记录的调用汇总")
+    closed_p.add_argument("--train", action="store_true")
+    closed_p.add_argument("--predict", action="store_true")
+    closed_p.add_argument("--device", type=int, default=None)
+    closed_p.set_defaults(func=cmd_prepare_closed_book)
 
     ls = sub.add_parser("list-strategies", help="列出已注册策略")
     ls.set_defaults(func=cmd_list)
