@@ -62,6 +62,10 @@ def create_app(run_dir: str | Path) -> FastAPI:
     def index() -> FileResponse:
         return FileResponse(STATIC / "index.html")
 
+    @app.get("/results")
+    def results_page() -> FileResponse:
+        return FileResponse(STATIC / "results.html")
+
     @app.get("/api/suite")
     def suite() -> dict[str, Any]:
         return _load_suite(root)
@@ -161,6 +165,37 @@ def create_app(run_dir: str | Path) -> FastAPI:
         meta = _api_meta(total=total, next_cursor=next_cursor)
         meta["availability"] = "present"
         return {"data": rows, "meta": meta}
+
+    @app.get("/api/v1/result-cases")
+    def result_cases(
+        pattern: str = "",
+        rule: str = "",
+        review: str = "",
+        block: str = "",
+    ) -> Any:
+        from ..experiments.result_view import load_result_cases, public_case, select_cases
+
+        if not (root / "cases.jsonl").is_file():
+            return _api_error("missing_results", "没有 cases.jsonl", 404)
+        cases, meta = load_result_cases(root)
+        selected = select_cases(cases, pattern=pattern, rule=rule, review=review, block=block)
+        return {
+            "data": [public_case(case, full=False) for case in selected],
+            "meta": {**_api_meta(total=len(selected)), "view": meta, "availability": "present"},
+        }
+
+    @app.get("/api/v1/result-cases/{case_id}")
+    def result_case(case_id: str) -> Any:
+        from ..experiments.result_view import load_result_cases, public_case
+
+        _require_id(case_id)
+        if not (root / "cases.jsonl").is_file():
+            return _api_error("missing_results", "没有 cases.jsonl", 404)
+        cases, meta = load_result_cases(root)
+        found = next((case for case in cases if case.get("case_id") == case_id), None)
+        if found is None:
+            return _api_error("unknown_case", f"没有用例 {case_id}", 404)
+        return {"data": public_case(found, full=True), "meta": {**_api_meta(total=1), "view": meta}}
 
     return app
 

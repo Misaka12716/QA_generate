@@ -309,6 +309,160 @@ def test_teacher_records_fail_formal_gate_and_machine_names_stay_pending(tmp_pat
     assert "machine_reviewer" in imported["rows"][0]["reasons"]
 
 
+def test_string_patch_does_not_become_schema_failure():
+    from qa_pipeline.reviewing.teacher import parse_teacher_payload
+
+    payload = _accept()
+    payload["suggested_patch"] = "把参考答案改成说明资料不足。"
+    payload["reason_codes"] = "over_refusal"
+    parsed, error = parse_teacher_payload(payload)
+    assert error is None
+    assert parsed["decision"] == "accept"
+    assert parsed["suggested_patch"] == {"note": "把参考答案改成说明资料不足。"}
+    assert parsed["reason_codes"] == ["over_refusal"]
+
+
+def test_prediction_request_hides_role_and_gold(tmp_path: Path):
+    from qa_pipeline.experiments.exploratory_review import gold_subject, prediction_subject
+    from qa_pipeline.reviewing.teacher import build_messages
+
+    case = {
+        "case_id": "case_ok",
+        "question": "剂量是多少？",
+        "student_context": "成人一次 1 片。",
+        "candidate_answer": "1 片",
+        "expected_action": "answer",
+        "task_mode": "grounded",
+        "answers": {"base": {"prediction_subject_id": "case_ok::base", "text": "建议改用另一药品"}},
+    }
+    gold = gold_subject(case, "batch")
+    pred = prediction_subject(case, "base", "batch")
+    messages = build_messages(pred, prompt_text="审核")
+    payload = json.loads(messages[-1]["content"].split("<subject>", 1)[1].split("</subject>", 1)[0])
+    assert "subject_id" not in payload
+    assert payload.get("answer_text") == "建议改用另一药品"
+    assert not payload.get("answer")
+    assert "建议改用另一药品" not in json.dumps(gold, ensure_ascii=False)
+    assert gold["answer"] == "1 片"
+
+
+def test_single_high_risk_stays_exploratory(tmp_path: Path):
+    _result, aggregate, _reviews, _shared = _run(
+        tmp_path,
+        [_judge("qwen3.8-27b", "unknown", [_accept()])],
+        policy_overrides={"allow_single": True, "require_dual": False},
+        subject_extra={"subject_type": "protocol_case", "risk": "high"},
+    )
+    assert aggregate["teacher_review_status"] == "teacher_single_accepted"
+    assert aggregate["readiness_scope"] == "teacher_single_uncalibrated"
+    assert aggregate["ready_for_formal_human_eval"] is False
+    assert aggregate["accepted_by_policy"] is True
+
+
+def test_same_model_second_call_is_not_consensus(tmp_path: Path):
+    _result, aggregate, _reviews, _shared = _run(
+        tmp_path,
+        [
+            _judge("qwen3.8-27b", "unknown", [_accept()]),
+            _judge("qwen3.8-27b", "unknown", [_accept()]),
+        ],
+        policy_overrides={"allow_single": True, "require_dual": False},
+    )
+    assert aggregate["teacher_review_status"] != "teacher_consensus_accepted"
+    assert aggregate["teacher_review_status"] != "teacher_single_accepted"
+    assert aggregate["ready_for_formal_human_eval"] is False
+
+
+def test_real_token_budget_persists_across_processes(tmp_path: Path):
+    first = _accept()
+    first["__prompt_tokens"] = 30
+    first["__completion_tokens"] = 20
+    subject = tmp_path / "subjects.jsonl"
+    subject.write_text(
+        "\n".join(
+            [
+                json.dumps({"subject_type": "training_sample", "subject_id": "s1", "question": "一", "student_context": "甲", "answer": "甲", "risk": "low"}, ensure_ascii=False),
+                json.dumps({"subject_type": "training_sample", "subject_id": "s2", "question": "二", "student_context": "乙", "answer": "乙", "risk": "low"}, ensure_ascii=False),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    judges = [_judge("model-a", "rev-a", [first, _accept()])]
+    shared, factory = _clients(judges)
+    policy = _policy(tmp_path, allow_single=True, require_dual=False)
+    models = _models(tmp_path, judges)
+    first_result = run_teacher_review(
+        manifest=subject,
+        policy_path=policy,
+        models_path=models,
+        out_dir=tmp_path / "out",
+        max_calls=10,
+        max_tokens=40,
+        concurrency=1,
+        fake=True,
+        llm_factory=factory,
+    )
+    usage = [json.loads(line) for line in (tmp_path / "out" / "usage.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
+    counted = [row for row in usage if row.get("counted_call")]
+    assert first_result["usage"]["tokens"] == 50
+    assert sum((row.get("prompt_tokens") or 0) + (row.get("completion_tokens") or 0) for row in counted) == 50
+    assert any(row.get("status") == "budget_stopped" and row.get("counted_call") is False for row in usage)
+    assert next(iter(shared.values())).calls == 1
+    shared_again, factory_again = _clients([_judge("model-a", "rev-a", [_accept(), _accept()])])
+    second = run_teacher_review(
+        manifest=subject,
+        policy_path=policy,
+        models_path=models,
+        out_dir=tmp_path / "out",
+        max_calls=10,
+        max_tokens=40,
+        concurrency=1,
+        fake=True,
+        resume=True,
+        llm_factory=factory_again,
+    )
+    assert second["model_called"] is False
+    assert all(client.calls == 0 for client in shared_again.values())
+    assert second["usage"]["tokens"] == 50
+
+
+def test_open_endpoint_flag_is_required_without_credentials(tmp_path: Path, monkeypatch):
+    monkeypatch.setattr(
+        "qa_pipeline.reviewing.service.teacher_credentials_configured",
+        lambda: {"configured": False, "env_key_present": False, "file_key_present": False, "endpoint_source": "test", "pricing_version": "unknown", "currency": "unknown", "estimated_cost": None},
+    )
+    judge = _judge("model-a", "rev-a", [_accept()])
+    blocked = run_teacher_review(
+        manifest=_subject(tmp_path / "subjects.jsonl"),
+        policy_path=_policy(tmp_path, allow_single=True, require_dual=False),
+        models_path=_models(tmp_path, [judge]),
+        out_dir=tmp_path / "blocked",
+        max_calls=4,
+        max_tokens=100,
+        fake=False,
+    )
+    assert blocked["status"] == "blocked"
+    assert blocked["reason"] == "teacher_credentials_missing"
+    judge["authentication"] = "models_list_no_key"
+    judge["base_url"] = "http://127.0.0.1:9/v1"
+    open_dir = tmp_path / "open"
+    open_dir.mkdir()
+    _shared, factory = _clients([judge])
+    opened = run_teacher_review(
+        manifest=tmp_path / "subjects.jsonl",
+        policy_path=tmp_path / "policy.json",
+        models_path=_models(open_dir, [judge]),
+        out_dir=tmp_path / "opened",
+        max_calls=4,
+        max_tokens=100,
+        fake=False,
+        llm_factory=factory,
+    )
+    assert opened["executed"] is True
+    assert opened["model_called"] is True
+
+
 def test_teacher_only_release_blocks_unreviewed_and_keeps_hash(tmp_path: Path):
     pair = QAPair(question="颜色是什么？", answer="红色", grade="S", chunk_text="物品为红色。")
     bind_validation_hash(pair)

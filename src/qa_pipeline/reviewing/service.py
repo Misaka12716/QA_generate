@@ -35,20 +35,43 @@ LLMFactory = Callable[[dict[str, Any]], Any]
 
 
 class CallLedger:
-    def __init__(self, max_calls: int, max_tokens: int) -> None:
+    def __init__(self, max_calls: int, max_tokens: int, calls: int = 0, tokens: int = 0) -> None:
         self.max_calls = max_calls
         self.max_tokens = max_tokens
-        self.calls = 0
-        self.tokens = 0
+        self.calls = calls
+        self.session_calls = 0
+        self.tokens = tokens
         self._lock = threading.Lock()
 
-    def try_reserve(self, tokens: int) -> bool:
+    @classmethod
+    def from_usage(cls, path: str | Path, max_calls: int, max_tokens: int) -> "CallLedger":
+        calls = 0
+        tokens = 0
+        file = Path(path)
+        if file.is_file():
+            for row in JsonlStore(file).valid_rows():
+                if not row.get("counted_call"):
+                    continue
+                calls += 1
+                prompt = row.get("prompt_tokens")
+                completion = row.get("completion_tokens")
+                if isinstance(prompt, int) and isinstance(completion, int):
+                    tokens += prompt + completion
+        return cls(max_calls, max_tokens, calls, tokens)
+
+    def try_begin(self) -> bool:
         with self._lock:
             if self.calls >= self.max_calls or self.tokens >= self.max_tokens:
                 return False
             self.calls += 1
-            self.tokens += tokens
+            self.session_calls += 1
             return True
+
+    def add_tokens(self, prompt: int | None, completion: int | None) -> None:
+        if not isinstance(prompt, int) or not isinstance(completion, int):
+            return
+        with self._lock:
+            self.tokens += prompt + completion
 
     def snapshot(self) -> dict[str, Any]:
         with self._lock:
@@ -125,6 +148,17 @@ def deterministic_issues(subject: dict[str, Any]) -> list[str]:
     return issues
 
 
+def endpoint_allows_unauthenticated(judges: list[dict[str, Any]]) -> bool:
+    """仅当每个裁判都显式声明列表接口无需密钥、并且自带地址时，才不把缺密钥当成阻塞。"""
+    primary = [item for item in judges if item.get("judge_role") != "arbiter"]
+    if not primary:
+        return False
+    return all(
+        item.get("authentication") == "models_list_no_key" and str(item.get("base_url") or "").startswith("http")
+        for item in primary
+    )
+
+
 def assert_safe_review_out(out_dir: Path) -> None:
     if (out_dir / "review" / "batches.json").is_file() or (out_dir / "review" / "import_result.json").is_file():
         raise FileExistsError("refuse_overwrite_human_review_run")
@@ -181,7 +215,8 @@ def run_teacher_review(
         encoding="utf-8",
     )
     planned_calls = len(subjects) * len([item for item in judges if item.get("judge_role") != "arbiter"])
-    if dry_run or (not fake and not credentials["configured"]):
+    open_endpoint = endpoint_allows_unauthenticated(judges)
+    if dry_run or (not fake and not credentials["configured"] and not open_endpoint):
         status = "dry_run" if dry_run and (fake or credentials["configured"]) else "blocked"
         reason = None if status == "dry_run" else "teacher_credentials_missing"
         if dry_run and not fake and not credentials["configured"]:
@@ -206,7 +241,7 @@ def run_teacher_review(
     reviews = JsonlStore(out / "reviews.jsonl")
     events = JsonlStore(out / "review_events.jsonl")
     usage = JsonlStore(out / "usage.jsonl")
-    ledger = CallLedger(max_calls, max_tokens)
+    ledger = CallLedger.from_usage(out / "usage.jsonl", max_calls, max_tokens)
     infer_digest = inference_config_hash()
     cached = reviews.valid_rows() if resume else []
     workers = max(1, concurrency)
@@ -328,7 +363,7 @@ def run_teacher_review(
     summary = {
         "status": "succeeded",
         "executed": True,
-        "model_called": ledger.calls > 0,
+        "model_called": ledger.session_calls > 0,
         "planned_subjects": len(subjects),
         "record_n": len(flat),
         "aggregate_n": len(aggregates),
@@ -337,7 +372,26 @@ def run_teacher_review(
         "formal_ready_n": sum(1 for row in aggregates if row["ready_for_formal_human_eval"]),
     }
     (out / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    review_file = out / "reviews.jsonl"
+    if review_file.is_file():
+        (out / "review_records.jsonl").write_text(review_file.read_text(encoding="utf-8"), encoding="utf-8")
     return summary
+
+
+def _unauthorized(response: Any) -> bool:
+    text = f"{getattr(response, 'error', '')} {getattr(response, 'status', '')}".lower()
+    return "401" in text or "unauthorized" in text
+
+
+def _usage_payload(response: Any) -> dict[str, Any]:
+    return {
+        "status": getattr(response, "status", ""),
+        "prompt_tokens": getattr(response, "prompt_tokens", None),
+        "completion_tokens": getattr(response, "completion_tokens", None),
+        "token_source": getattr(response, "token_source", "unavailable"),
+        "estimated_cost": None,
+        "currency": "unknown",
+    }
 
 
 def _commit(reviews: JsonlStore, events: JsonlStore, record: ReviewRecord, event_type: str) -> None:
@@ -399,7 +453,7 @@ def _judge_once(
     last_reason = "technical_failed"
     response = None
     while True:
-        if not ledger.try_reserve(1):
+        if not ledger.try_begin():
             record = make_record(
                 subject=subject,
                 policy=policy,
@@ -414,21 +468,56 @@ def _judge_once(
                 cache_key=key,
             )
             _commit(reviews, events, record, "budget_stopped")
-            usage.append({"request_id": record.request_id, "status": "budget_stopped", "estimated_cost": None, "currency": "unknown", "created_at": record.created_at})
+            usage.append(
+                {
+                    "request_id": record.request_id,
+                    "status": "budget_stopped",
+                    "counted_call": False,
+                    "prompt_tokens": None,
+                    "completion_tokens": None,
+                    "token_source": "unavailable",
+                    "estimated_cost": None,
+                    "currency": "unknown",
+                    "created_at": record.created_at,
+                }
+            )
             return record
         response = call_teacher(client, messages, str(judge.get("model_id") or client.default_model))
+        ledger.add_tokens(response.prompt_tokens, response.completion_tokens)
         usage.append(
             {
                 "request_id": response.request_id,
                 "status": response.status,
                 "model_id": judge.get("model_id"),
                 "attempt": attempt + 1,
+                "counted_call": True,
+                "prompt_tokens": response.prompt_tokens,
+                "completion_tokens": response.completion_tokens,
+                "token_source": response.token_source,
                 "estimated_cost": None,
                 "currency": "unknown",
                 "pricing_version": "unknown",
                 "created_at": utc_now(),
             }
         )
+        if _unauthorized(response):
+            record = make_record(
+                subject=subject,
+                policy=policy,
+                judge=judge,
+                review_set_id=review_set_id,
+                prompt_digest=prompt_hash(text),
+                inference_digest=infer_digest,
+                decision="abstain",
+                execution_status="technical_failed",
+                reason_codes=["unauthorized"],
+                attempt=attempt + 1,
+                cache_key=key,
+                request_id=response.request_id,
+                usage=_usage_payload(response),
+            )
+            _commit(reviews, events, record, "technical_failed")
+            return record
         if response.status == "ok":
             parsed, error = parse_teacher_payload(response.data)
             if parsed is not None:
@@ -446,7 +535,7 @@ def _judge_once(
                     attempt=attempt + 1,
                     cache_key=key,
                     request_id=response.request_id,
-                    usage={"status": "ok"},
+                    usage=_usage_payload(response),
                 )
                 _commit(reviews, events, record, "review_committed")
                 return record

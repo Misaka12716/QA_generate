@@ -8,3 +8,7 @@ decision 只能是 accept、revise、reject、abstain。
 accept 时必须给出 claims，并且 supported 的主张要带可见证据位置。
 suggested_patch 只是修订建议，调用方不得把它写回已冻结对象。
 confidence 若填写也只是自报值，不是正确概率。
+只输出一个 JSON 对象，字段为 decision、dimensions、claims、contradictions、reason_codes、evidence_summary、suggested_patch、confidence。
+dimensions 包含 question_clear、semantic_preserved、evidence_adequate、factual_consistency、required_points_complete、behavior_appropriate、no_unsupported_claims，取 true、false 或 null。
+claims 每项包含 claim_id、claim_text、status、visible_evidence_refs、source_evidence_refs。status 只能是 supported、contradicted、insufficient。
+visible_evidence_refs 用学生可见上下文中的字符区间，例如 0:12。

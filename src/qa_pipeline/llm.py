@@ -69,6 +69,9 @@ class LLMResponse:
         finish_reason: str = "",
         raw_summary: str = "",
         error: str = "",
+        prompt_tokens: int | None = None,
+        completion_tokens: int | None = None,
+        token_source: str = "unavailable",
     ) -> None:
         self.status = status
         self.data = data
@@ -77,6 +80,9 @@ class LLMResponse:
         self.finish_reason = finish_reason
         self.raw_summary = raw_summary[:240]
         self.error = error
+        self.prompt_tokens = prompt_tokens
+        self.completion_tokens = completion_tokens
+        self.token_source = token_source
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -218,20 +224,36 @@ class LLMClient:
             )
             raw = resp.choices[0].message.content or ""
             usage = getattr(resp, "usage", None)
-            pin = getattr(usage, "prompt_tokens", None) or sum(approx_tokens(m["content"]) for m in messages)
-            pout = getattr(usage, "completion_tokens", None) or approx_tokens(raw)
+            reported_pin = getattr(usage, "prompt_tokens", None) if usage is not None else None
+            reported_pout = getattr(usage, "completion_tokens", None) if usage is not None else None
+            if reported_pin is None or reported_pout is None:
+                pin = sum(approx_tokens(m["content"]) for m in messages)
+                pout = approx_tokens(raw)
+                token_source = "approximated"
+            else:
+                pin = int(reported_pin)
+                pout = int(reported_pout)
+                token_source = "provider"
             self._charge(model, pin, pout)
             choice = resp.choices[0]
             finish = str(getattr(choice, "finish_reason", "") or "")
         except Exception as exc:
             logger.warning("chat_json failed: %s", exc)
-            result = LLMResponse(status="transport_failed", model=model, error=str(exc))
+            result = LLMResponse(status="transport_failed", model=model, error=str(exc), token_source="unavailable")
             self.call_log.append(result.as_dict())
             return result
         try:
             data = json.loads(raw)
         except json.JSONDecodeError:
-            result = LLMResponse(status="parse_failed", model=model, finish_reason=finish, raw_summary=raw)
+            result = LLMResponse(
+                status="parse_failed",
+                model=model,
+                finish_reason=finish,
+                raw_summary=raw,
+                prompt_tokens=pin,
+                completion_tokens=pout,
+                token_source=token_source,
+            )
             self.call_log.append(result.as_dict())
             return result
         if not isinstance(data, dict):
@@ -241,10 +263,22 @@ class LLMClient:
                 finish_reason=finish,
                 raw_summary=raw,
                 error=type(data).__name__,
+                prompt_tokens=pin,
+                completion_tokens=pout,
+                token_source=token_source,
             )
             self.call_log.append(result.as_dict())
             return result
-        result = LLMResponse(status="ok", data=data, model=model, finish_reason=finish, raw_summary=raw)
+        result = LLMResponse(
+            status="ok",
+            data=data,
+            model=model,
+            finish_reason=finish,
+            raw_summary=raw,
+            prompt_tokens=pin,
+            completion_tokens=pout,
+            token_source=token_source,
+        )
         self.call_log.append(result.as_dict())
         return result
 
@@ -262,6 +296,15 @@ class LLMClient:
             "estimated_cost_usd": round(self.estimated_cost_usd, 6),
             "default_model": self.default_model,
         }
+
+
+def _scripted_usage(item: dict[str, Any]) -> tuple[int, int, str]:
+    """脚本可声明本次用量。未声明时记 1+1，避免假调用把近似长度当成供应商用量。"""
+    if "__prompt_tokens" in item or "__completion_tokens" in item:
+        prompt = int(item.pop("__prompt_tokens", 0) or 0)
+        completion = int(item.pop("__completion_tokens", 0) or 0)
+        return prompt, completion, "provider"
+    return 1, 1, "unspecified"
 
 
 class FakeLLM(LLMClient):
@@ -313,20 +356,33 @@ class FakeLLM(LLMClient):
         if self.script:
             item = self.script.pop(0)
             status = str(item.get("__status") or "")
+            scripted = _scripted_usage(item)
             if status:
                 result = LLMResponse(
                     status=status,
                     model=model_name,
                     error=str(item.get("__error") or status),
                     raw_summary=str(item.get("__raw") or ""),
+                    prompt_tokens=scripted[0],
+                    completion_tokens=scripted[1],
+                    token_source=scripted[2],
                 )
                 self.call_log.append(result.as_dict())
-                self._charge(model_name, 1, 1)
+                self._charge(model_name, scripted[0], scripted[1])
                 return result
             raw = json.dumps(item, ensure_ascii=False)
             pin = sum(approx_tokens(m["content"]) for m in messages)
             self._charge(model_name, pin, approx_tokens(raw))
-            result = LLMResponse(status="ok", data=item, model=model_name, finish_reason="stop", raw_summary=raw)
+            result = LLMResponse(
+                status="ok",
+                data=item,
+                model=model_name,
+                finish_reason="stop",
+                raw_summary=raw,
+                prompt_tokens=scripted[0],
+                completion_tokens=scripted[1],
+                token_source=scripted[2],
+            )
             self.call_log.append(result.as_dict())
             return result
         pin = sum(approx_tokens(m["content"]) for m in messages)

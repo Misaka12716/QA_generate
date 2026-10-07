@@ -1,0 +1,248 @@
+{
+  "budget": {
+    "calls": 97,
+    "call_denominator": 120,
+    "tokens": 107092,
+    "token_denominator": 200000,
+    "estimated_cost": null,
+    "currency": "unknown"
+  },
+  "historical": {
+    "planned_cases": 14,
+    "matched_predictions": 28,
+    "prediction_denominator": 28,
+    "gold": {
+      "denominator": 14,
+      "accepted": 11,
+      "revise": 0,
+      "rejected": 2,
+      "unresolved": 1,
+      "formal_ready": 0
+    },
+    "answers_reviewed": 22,
+    "per_model": {
+      "base": {
+        "scored": 11,
+        "task_complete": 11,
+        "behavior_appropriate": 11
+      },
+      "adapter": {
+        "scored": 10,
+        "task_complete": 10,
+        "behavior_appropriate": 10
+      }
+    },
+    "comparison": {
+      "denominator": 14,
+      "improve": 0,
+      "regress": 0,
+      "tie": 10,
+      "unresolved": 4
+    },
+    "rule_disagreements": [
+      {
+        "case_id": "v23_behavior_missing_reaction",
+        "model_role": "base",
+        "rule_passed": false,
+        "teacher_state": "accept",
+        "behavior_appropriate": true,
+        "task_complete": true,
+        "reason_codes": [],
+        "expected_action": "state_insufficient"
+      },
+      {
+        "case_id": "v23_behavior_missing_reaction",
+        "model_role": "adapter",
+        "rule_passed": false,
+        "teacher_state": "accept",
+        "behavior_appropriate": true,
+        "task_complete": true,
+        "reason_codes": [],
+        "expected_action": "state_insufficient"
+      },
+      {
+        "case_id": "v23_behavior_child_dose_absent",
+        "model_role": "base",
+        "rule_passed": false,
+        "teacher_state": "accept",
+        "behavior_appropriate": true,
+        "task_complete": true,
+        "reason_codes": [],
+        "expected_action": "state_insufficient"
+      },
+      {
+        "case_id": "v23_behavior_contra_not_visible",
+        "model_role": "base",
+        "rule_passed": false,
+        "teacher_state": "accept",
+        "behavior_appropriate": true,
+        "task_complete": true,
+        "reason_codes": [],
+        "expected_action": "state_insufficient"
+      },
+      {
+        "case_id": "v23_behavior_partial_usage",
+        "model_role": "base",
+        "rule_passed": false,
+        "teacher_state": "accept",
+        "behavior_appropriate": true,
+        "task_complete": true,
+        "reason_codes": [],
+        "expected_action": "partial_answer"
+      },
+      {
+        "case_id": "v24_behavior_wrong_object",
+        "model_role": "base",
+        "rule_passed": false,
+        "teacher_state": "accept",
+        "behavior_appropriate": true,
+        "task_complete": true,
+        "reason_codes": [],
+        "expected_action": "state_insufficient"
+      },
+      {
+        "case_id": "v24_behavior_replaced_context",
+        "model_role": "base",
+        "rule_passed": false,
+        "teacher_state": "accept",
+        "behavior_appropriate": true,
+        "task_complete": true,
+        "reason_codes": [],
+        "expected_action": "state_insufficient"
+      },
+      {
+        "case_id": "v24_behavior_missing_reaction",
+        "model_role": "base",
+        "rule_passed": false,
+        "teacher_state": "accept",
+        "behavior_appropriate": true,
+        "task_complete": true,
+        "reason_codes": [],
+        "expected_action": "state_insufficient"
+      },
+      {
+        "case_id": "v24_behavior_contra_not_visible",
+        "model_role": "base",
+        "rule_passed": false,
+        "teacher_state": "accept",
+        "behavior_appropriate": true,
+        "task_complete": true,
+        "reason_codes": [],
+        "expected_action": "state_insufficient"
+      }
+    ],
+    "reason_codes": {
+      "partial_answer": 1,
+      "answered_without_evidence": 1
+    },
+    "single_teacher_is_not_human_accuracy": true
+  },
+  "b_pilot": {
+    "parent_planned_n": 48,
+    "selected_n": 8,
+    "experiment_complete": false,
+    "gold": {
+      "denominator": 8,
+      "accepted": 8,
+      "revise": 0,
+      "rejected": 0,
+      "unresolved": 0,
+      "formal_ready": 0
+    },
+    "generated_n": {
+      "base": 8,
+      "adapter": 8
+    },
+    "failed_n": 0,
+    "generation_status": "exploratory_executed",
+    "generation_executed": true,
+    "per_model": {
+      "base": {
+        "scored": 8,
+        "task_complete": 8,
+        "behavior_appropriate": 8
+      },
+      "adapter": {
+        "scored": 8,
+        "task_complete": 8,
+        "behavior_appropriate": 8
+      }
+    },
+    "comparison": {
+      "denominator": 8,
+      "improve": 0,
+      "regress": 0,
+      "tie": 8,
+      "unresolved": 0
+    },
+    "rule_disagreements": [
+      {
+        "case_id": "v25b_1396_sufficient",
+        "model_role": "base",
+        "rule_passed": false,
+        "teacher_state": "accept",
+        "behavior_appropriate": true,
+        "task_complete": true,
+        "reason_codes": [],
+        "expected_action": "answer"
+      },
+      {
+        "case_id": "v25b_1396_removed_support",
+        "model_role": "base",
+        "rule_passed": false,
+        "teacher_state": "accept",
+        "behavior_appropriate": true,
+        "task_complete": true,
+        "reason_codes": [],
+        "expected_action": "state_insufficient"
+      },
+      {
+        "case_id": "v25b_1396_removed_support",
+        "model_role": "adapter",
+        "rule_passed": false,
+        "teacher_state": "accept",
+        "behavior_appropriate": true,
+        "task_complete": true,
+        "reason_codes": [],
+        "expected_action": "state_insufficient"
+      },
+      {
+        "case_id": "v25b_1396_wrong_object",
+        "model_role": "base",
+        "rule_passed": false,
+        "teacher_state": "accept",
+        "behavior_appropriate": true,
+        "task_complete": true,
+        "reason_codes": [],
+        "expected_action": "state_insufficient"
+      },
+      {
+        "case_id": "v25b_1503_removed_support",
+        "model_role": "base",
+        "rule_passed": false,
+        "teacher_state": "accept",
+        "behavior_appropriate": true,
+        "task_complete": true,
+        "reason_codes": [],
+        "expected_action": "state_insufficient"
+      },
+      {
+        "case_id": "v25b_1503_wrong_object",
+        "model_role": "base",
+        "rule_passed": false,
+        "teacher_state": "accept",
+        "behavior_appropriate": true,
+        "task_complete": true,
+        "reason_codes": [],
+        "expected_action": "state_insufficient"
+      }
+    ],
+    "reason_codes": {}
+  },
+  "example_rule": "先按 case_id 排序。优先各取一条改善、一条退化、一条共同失败、一条规则与教师分歧；某一类没有就记缺失，不另找替代含义。再用 case_id 顺序补满 6 条。",
+  "example_missing": [
+    "improve",
+    "regress",
+    "both_fail"
+  ]
+}

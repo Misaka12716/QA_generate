@@ -42,7 +42,11 @@ qa-pipeline teacher-review \
   --dry-run
 ```
 
-没有可用的 API key 时，真实模式会停在 `teacher_credentials_missing`，不会发起调用。`--fake` 只用于流程检查。费用未知时记录为 `unknown`，不要把内置估价 0 当成已核对账单。教师通过不能打开 `--mode formal` 的人工门禁。
+没有可用的 API key 时，真实模式会停在 `teacher_credentials_missing`，不会发起调用。裁判文件如果显式写 `authentication: models_list_no_key` 并且自带服务地址，才允许在没有密钥时调用；聊天若返回 401，该次记为 `unauthorized` 并不再重试。`--fake` 只用于流程检查。费用未知时记录为 `unknown`，不要把内置估价 0 当成已核对账单。调用账本按运行目录里已落盘的真实 prompt/completion token 累计，达到 `--max-calls` 或 `--max-tokens` 就停止。
+
+`configs/review/teacher_single_exploratory_v1.json` 允许单模型给出 `teacher_single_accepted`。这只表示探索性自动评估，`ready_for_formal_human_eval` 仍为 false。同一模型再评一次不能变成共识。
+
+结果页和方案对照台分开。`qa-pipeline demo --run <含 cases.jsonl 的目录> --host 0.0.0.0 --port 8775` 后打开 `/results`。列表接口是 `GET /api/v1/result-cases`，详情返回完整上下文。教师分还没有时显示「待自动评估」，不填 0。
 
 `run-reviewed-eval` 读取已有协议和 `review_aggregates.jsonl`。未同时给出 `--allow-inference`、`--authorize-inference`、`--device` 和生成预算时，它不加载学生模型。当前命令本身也不附带权重推理实现；缓存未命中时保持未执行。
 

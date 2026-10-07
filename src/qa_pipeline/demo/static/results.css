@@ -1,0 +1,73 @@
+.banner {
+  display: inline-block;
+  margin: 0 0 8px;
+  padding: 2px 8px;
+  background: var(--caution);
+  color: #fff;
+  font-size: 0.85rem;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.filters select {
+  min-width: 12rem;
+  font: inherit;
+  color: var(--ink);
+  background: #fff;
+  border: 1px solid var(--line);
+  padding: 4px 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+}
+
+tbody tr { cursor: pointer; }
+tbody tr:hover, tbody tr[aria-current="true"] { background: var(--diff); }
+
+pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0 0 16px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  font-family: var(--sans);
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+h3 {
+  margin: 16px 0 8px;
+  font-family: var(--serif);
+  font-size: 1.05rem;
+}
+
+@media (max-width: 800px) {
+  .pair { grid-template-columns: 1fr; }
+}

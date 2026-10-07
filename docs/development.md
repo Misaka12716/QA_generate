@@ -93,7 +93,9 @@ python -X utf8 -m pytest -q
 | `test_eval_reliability.py` | 评分可靠性、复核失效、固定分母和错误预测 |
 | `test_demo.py` | 对照台接口与样本对齐 |
 | `test_review_io.py` | 人工审核 CSV 的哈希、机器名和待审核状态 |
-| `test_teacher_review.py` | 教师审核的失败类型、双审、预算、缓存和正式门禁 |
+| `test_teacher_review.py` | 教师审核的失败类型、双审、真实 token 预算、单模型探索接受和正式门禁 |
+| `test_result_view.py` | 结果页按签名对齐；messages 或签名不一致时不并入回答 |
+| `test_result_report.py` | 选例规则缺类时记缺失，再用 case_id 补满 |
 | `test_reviewed_eval.py` | 已审核评测编排、预测身份和未授权不加载模型 |
 | `test_state_audit.py` | 资产缺失、空文件和路径越界 |
 | `test_api_v1.py` | 只读状态、运行列表和审核批次的缺失状态 |

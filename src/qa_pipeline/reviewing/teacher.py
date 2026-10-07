@@ -45,7 +45,6 @@ def teacher_credentials_configured() -> dict[str, Any]:
 def build_messages(subject: dict[str, Any], *, prompt_text: str) -> list[dict[str, str]]:
     payload = {
         "subject_type": subject.get("subject_type"),
-        "subject_id": subject.get("subject_id"),
         "question": subject.get("question") or "",
         "student_context": subject.get("student_context") or "",
         "answer": subject.get("answer") or "",
@@ -62,6 +61,16 @@ def build_messages(subject: dict[str, Any], *, prompt_text: str) -> list[dict[st
     ]
 
 
+def _string_list(value: Any) -> list[str] | None:
+    if value is None:
+        return []
+    if isinstance(value, str):
+        return [value]
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return list(value)
+    return None
+
+
 def parse_teacher_payload(data: Any) -> tuple[dict[str, Any] | None, str | None]:
     if not isinstance(data, dict):
         return None, "schema_invalid"
@@ -70,14 +79,30 @@ def parse_teacher_payload(data: Any) -> tuple[dict[str, Any] | None, str | None]
         return None, "schema_invalid"
     try:
         dimensions = DimensionScores.model_validate(data.get("dimensions") or {})
-        claims = [ClaimRecord.model_validate(item) for item in (data.get("claims") or [])]
+        raw_claims = data.get("claims") or []
+        if not isinstance(raw_claims, list):
+            return None, "schema_invalid"
+        claims = []
+        for item in raw_claims:
+            if not isinstance(item, dict):
+                return None, "schema_invalid"
+            normalized = dict(item)
+            for ref_key in ("visible_evidence_refs", "source_evidence_refs"):
+                refs = _string_list(normalized.get(ref_key))
+                if refs is None:
+                    return None, "schema_invalid"
+                normalized[ref_key] = refs
+            claims.append(ClaimRecord.model_validate(normalized))
     except ValidationError:
         return None, "schema_invalid"
     patch = data.get("suggested_patch")
-    if patch is not None and not isinstance(patch, dict):
+    if isinstance(patch, str):
+        patch = {"note": patch} if patch.strip() else None
+    elif patch is not None and not isinstance(patch, dict):
         return None, "schema_invalid"
-    contradictions = data.get("contradictions") or []
-    if not isinstance(contradictions, list) or not all(isinstance(item, str) for item in contradictions):
+    contradictions = _string_list(data.get("contradictions"))
+    reason_codes = _string_list(data.get("reason_codes"))
+    if contradictions is None or reason_codes is None:
         return None, "schema_invalid"
     return {
         "decision": decision,
@@ -88,7 +113,7 @@ def parse_teacher_payload(data: Any) -> tuple[dict[str, Any] | None, str | None]
         "numeric_bindings": list(data.get("numeric_bindings") or []),
         "required_conditions": [str(item) for item in data.get("required_conditions") or []],
         "contradictions": contradictions,
-        "reason_codes": [str(item) for item in data.get("reason_codes") or []],
+        "reason_codes": reason_codes,
         "evidence_summary": str(data.get("evidence_summary") or ""),
         "suggested_patch": patch,
         "confidence": data.get("confidence") if isinstance(data.get("confidence"), (int, float)) else None,
@@ -101,8 +126,11 @@ def client_for(judge: dict[str, Any], *, fake: bool) -> LLMClient:
         client.script = [dict(item) for item in judge.get("script") or []]
         client.default_model = str(judge.get("model_id") or "fake-teacher")
         return client
+    api_key = judge.get("api_key")
+    if judge.get("authentication") == "models_list_no_key" and not api_key:
+        api_key = "EMPTY"
     return LLMClient(
-        api_key=judge.get("api_key"),
+        api_key=api_key,
         base_url=judge.get("base_url"),
         default_model=str(judge.get("model_id") or ""),
         timeout=float(judge.get("timeout") or 60),

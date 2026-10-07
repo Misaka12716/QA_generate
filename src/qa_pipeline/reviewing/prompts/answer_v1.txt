@@ -5,3 +5,7 @@
 decision 只能是 accept、revise、reject、abstain。
 无法可靠判断时用 abstain。超时、缺字段和截断不属于内容 reject。
 accept 时 supported 主张必须引用学生可见证据位置。
+dimensions 里的 evidence_adequate、factual_consistency、behavior_appropriate、no_unsupported_claims、required_points_complete 必须是 true 或 false，不能省略。
+reason_codes 在出现对应情况时使用：over_refusal、answered_without_evidence、partial_answer、task_incomplete、behavior_mismatch。
+只输出一个 JSON 对象，字段为 decision、dimensions、claims、contradictions、reason_codes、evidence_summary、suggested_patch、confidence。
+claims 每项包含 claim_id、claim_text、status、visible_evidence_refs、source_evidence_refs。status 只能是 supported、contradicted、insufficient。

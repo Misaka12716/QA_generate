@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>历史预测结果</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/results.css">
+</head>
+<body>
+  <main class="bench">
+    <article class="sheet">
+      <header class="mast">
+        <p class="banner" id="banner">历史真实预测</p>
+        <h1>batch1 对照</h1>
+        <p class="lede" id="limitation"></p>
+      </header>
+      <section class="block">
+        <div class="filters">
+          <label>行为条件
+            <select id="pattern"><option value="">全部</option></select>
+          </label>
+          <label>规则分
+            <select id="rule">
+              <option value="">全部</option>
+              <option value="pass">通过</option>
+              <option value="fail">失败</option>
+              <option value="unscored">未评分</option>
+            </select>
+          </label>
+          <label>人工审核
+            <select id="review"><option value="">全部</option></select>
+          </label>
+          <label>区块
+            <select id="block">
+              <option value="">全部</option>
+              <option value="historical">历史预测</option>
+              <option value="b_pilot">实验 B 小试</option>
+            </select>
+          </label>
+        </div>
+        <p class="hint" id="count"></p>
+        <div class="scroller">
+          <table>
+            <thead>
+              <tr>
+                <th>用例</th>
+                <th>行为</th>
+                <th>规则</th>
+                <th>人工</th>
+                <th>自动评估</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+      </section>
+      <section class="block" id="detail" hidden>
+        <h2 id="detail-title"></h2>
+        <p class="hint" id="detail-meta"></p>
+        <h3>题目</h3>
+        <pre id="question"></pre>
+        <h3>学生可见上下文</h3>
+        <pre id="context"></pre>
+        <h3>候选答案与期望行为</h3>
+        <pre id="gold"></pre>
+        <div class="pair">
+          <div>
+            <h3>base</h3>
+            <p class="hint" id="base-meta"></p>
+            <pre id="base-text"></pre>
+          </div>
+          <div>
+            <h3>adapter</h3>
+            <p class="hint" id="adapter-meta"></p>
+            <pre id="adapter-text"></pre>
+          </div>
+        </div>
+      </section>
+    </article>
+  </main>
+  <script src="/static/results.js"></script>
+</body>
+</html>

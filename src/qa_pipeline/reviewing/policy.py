@@ -307,7 +307,7 @@ def build_aggregate(
             human_review_status=human_review_status,
             scope="exploratory_teacher_reviewed",
         )
-    if len(active) == 1 and policy.allow_single and risk != "high":
+    if len(active) == 1 and policy.allow_single:
         return _closed(
             subject_id=subject_id,
             subject_hash_value=expected_hash,
