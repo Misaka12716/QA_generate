@@ -1,0 +1,11 @@
+{
+  "base_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+  "adapter_id": "4f4bdec7b50dab9e",
+  "template_id": "5b5d4f65d0acd3b2",
+  "gpu_candidates": [
+    3,
+    4,
+    6
+  ],
+  "python": "/opt/miniconda/envs/opsd/bin/python"
+}

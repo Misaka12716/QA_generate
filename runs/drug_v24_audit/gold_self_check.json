@@ -1,0 +1,19 @@
+{
+  "scorer": "aux-rules-v3",
+  "candidate_n": 100,
+  "failed_n": 1,
+  "failures": [
+    {
+      "case_id": "v23_behavior_partial_usage",
+      "expected_behavior": "partial_answer",
+      "actual_action": "answer",
+      "passed": false,
+      "reasons": [
+        "critical_errors:numeric"
+      ],
+      "judgment": "auxiliary_rule"
+    }
+  ],
+  "failed_after_visible_point_patch_n": 0,
+  "failed_after_visible_point_patch": []
+}

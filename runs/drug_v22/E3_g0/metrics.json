@@ -1,0 +1,46 @@
+{
+  "recipe": "drug_e3_g0",
+  "chunks": 0,
+  "questions": 0,
+  "distilled": 74,
+  "kept": 74,
+  "rejected": 0,
+  "answerability": null,
+  "answerability_reason": "missing_answerable_label",
+  "nli_mean": null,
+  "hallucination_proxy": null,
+  "knowledge_gain_rate": null,
+  "judge_mean": null,
+  "type_entropy": 0.8074,
+  "type_distribution": {
+    "factual": 0.824,
+    "procedural": 0.135,
+    "conditional": 0.041
+  },
+  "retention": 1.0,
+  "retention_reason": null,
+  "s_ratio": 1.0,
+  "grade_distribution": {
+    "S": 74
+  },
+  "evidence_grounded": 1.0,
+  "evidence_grounded_detail": {
+    "value": 1.0,
+    "numerator": 74,
+    "denominator": 74,
+    "reason": null
+  },
+  "funnel_stages": {
+    "accepted": 74,
+    "selected": 74
+  },
+  "llm_calls": 0,
+  "prompt_tokens": 0,
+  "completion_tokens": 0,
+  "estimated_cost_usd": 0.0,
+  "fallbacks": [],
+  "stage_seconds": {},
+  "rejected_by_filter": {},
+  "funnel": {},
+  "tokens_per_10k_kept": 0
+}

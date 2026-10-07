@@ -1,0 +1,8 @@
+{
+  "prompts": {
+    "protocol_case": "gold_v1.txt"
+  },
+  "hashes": {
+    "protocol_case": "0637d2d7e248c7bab9595096d0f8b4b79fb36f5db0388ad40b00111de564de5a"
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "recipe": "drug_e3_g3",
+  "chunks": 0,
+  "questions": 150,
+  "distilled": 150,
+  "kept": 138,
+  "rejected": 7,
+  "answerability": 0.92,
+  "nli_mean": null,
+  "hallucination_proxy": null,
+  "knowledge_gain_rate": null,
+  "judge_mean": null,
+  "type_entropy": 1.4135,
+  "type_distribution": {
+    "factual": 0.63,
+    "conditional": 0.196,
+    "procedural": 0.152,
+    "comparative": 0.022
+  },
+  "retention": 0.92,
+  "s_ratio": 1.0,
+  "grade_distribution": {
+    "S": 138
+  },
+  "evidence_grounded": 1.0,
+  "llm_calls": 185,
+  "prompt_tokens": 30857,
+  "completion_tokens": 11391,
+  "estimated_cost_usd": 0.0,
+  "fallbacks": [],
+  "stage_seconds": {
+    "teacher_router": 0.0,
+    "distillation": 0.013,
+    "filter:rule_clean": 5.486,
+    "filter:evidence_substring": 0.004,
+    "filter:claim_evidence": 296.921,
+    "filter:student_diagnostic": 78.218,
+    "filter:stable_known_downsample": 0.0,
+    "filter:replay_replace": 0.0,
+    "filter:joint_dedup": 0.001,
+    "grading": 0.004,
+    "total": 380.671
+  },
+  "rejected_by_filter": {
+    "rule_clean": 5
+  },
+  "funnel": {
+    "rule_clean": {
+      "in": 150,
+      "out": 145,
+      "dropped": 5
+    },
+    "evidence_substring": {
+      "in": 145,
+      "out": 145,
+      "dropped": 0
+    },
+    "claim_evidence": {
+      "in": 145,
+      "out": 145,
+      "dropped": 0
+    },
+    "student_diagnostic": {
+      "in": 145,
+      "out": 145,
+      "dropped": 0
+    },
+    "stable_known_downsample": {
+      "in": 145,
+      "out": 145,
+      "dropped": 0
+    },
+    "replay_replace": {
+      "in": 145,
+      "out": 145,
+      "dropped": 0
+    },
+    "joint_dedup": {
+      "in": 145,
+      "out": 145,
+      "dropped": 0
+    }
+  },
+  "tokens_per_10k_kept": 3061449
+}

@@ -1,0 +1,79 @@
+{
+  "anchor": [
+    "llm_extract",
+    "ner_rake_textrank",
+    "ner_tfidf",
+    "none",
+    "tfidf_keyword"
+  ],
+  "chunking": [
+    "fixed_overlap",
+    "heading_window",
+    "semantic_boundary"
+  ],
+  "distillation": [
+    "concise_response",
+    "cot_mixed",
+    "multi_teacher_judge",
+    "reuse_candidate",
+    "routed_teacher"
+  ],
+  "evolution": [
+    "evol_both",
+    "evol_breadth",
+    "evol_depth",
+    "evol_unconstrained",
+    "none",
+    "tag_evol"
+  ],
+  "filter": [
+    "behavior_insufficient",
+    "claim_evidence",
+    "conflict_behavior",
+    "diversity_sample",
+    "evidence_substring",
+    "exact_hash_dedup",
+    "gap_fill",
+    "joint_dedup",
+    "knowledge_ablation",
+    "llm_judge",
+    "llm_supported",
+    "minhash_dedup",
+    "natural_distribution",
+    "nli_fact",
+    "replay_replace",
+    "risk_escalate",
+    "roundtrip",
+    "rule_clean",
+    "selfcheck",
+    "semdedup",
+    "stable_known_downsample",
+    "student_diagnostic"
+  ],
+  "grading": [
+    "binary",
+    "none",
+    "sab",
+    "validity_tier"
+  ],
+  "question_filter": [
+    "difficulty_sample",
+    "none"
+  ],
+  "question_gen": [
+    "anchor_reverse",
+    "answer_aware",
+    "direct_grounded",
+    "direct_qa",
+    "k_joint",
+    "k_sequential",
+    "knowledge_unit",
+    "mixed_route",
+    "self_instruct"
+  ],
+  "teacher_router": [
+    "always_strong",
+    "grade_by_qtype",
+    "single"
+  ]
+}

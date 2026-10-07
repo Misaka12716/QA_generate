@@ -1,0 +1,91 @@
+{
+  "llm_calls": 214,
+  "prompt_tokens": 59308,
+  "completion_tokens": 21024,
+  "estimated_cost_usd": 0.0,
+  "stage_seconds": {
+    "chunking": 0.135,
+    "anchor": 0.0,
+    "question_gen": 318.9,
+    "evolution": 0.0,
+    "question_filter": 0.0,
+    "teacher_router": 0.0,
+    "distillation": 0.005,
+    "filter:rule_clean": 0.001,
+    "filter:evidence_substring": 0.001,
+    "filter:exact_hash_dedup": 0.0,
+    "filter:claim_evidence": 111.065,
+    "filter:risk_escalate": 53.798,
+    "filter:joint_dedup": 0.002,
+    "grading": 0.003,
+    "total": 483.928
+  },
+  "produced": {
+    "chunks": 100,
+    "questions": 89,
+    "distilled": 89,
+    "kept": 74,
+    "rejected": 6
+  },
+  "rejected": {
+    "rule_clean": 9
+  },
+  "funnel": {
+    "rule_clean": {
+      "in": 89,
+      "out": 80,
+      "dropped": 9
+    },
+    "evidence_substring": {
+      "in": 80,
+      "out": 80,
+      "dropped": 0
+    },
+    "exact_hash_dedup": {
+      "in": 80,
+      "out": 80,
+      "dropped": 0
+    },
+    "claim_evidence": {
+      "in": 80,
+      "out": 80,
+      "dropped": 0
+    },
+    "risk_escalate": {
+      "in": 80,
+      "out": 80,
+      "dropped": 0
+    },
+    "joint_dedup": {
+      "in": 80,
+      "out": 80,
+      "dropped": 0
+    }
+  },
+  "fallbacks": [],
+  "budget_stops": [],
+  "ledger": {
+    "spent_settled": 0.0,
+    "reserved_inflight": 0.0,
+    "unbilled_reserve": 0.0,
+    "required_process_reserve": 0.0,
+    "safety_margin": 0.0,
+    "authorized_cap": null,
+    "llm_calls": 214,
+    "prompt_tokens": 59308,
+    "completion_tokens": 21024,
+    "sequence_tokens": 80332,
+    "supervised_tokens": null,
+    "note": "美元、调用数、序列 token 与监督 token 分开记账"
+  },
+  "call_statuses": {
+    "ok": 100
+  },
+  "stage_counts": {
+    "candidate": 89,
+    "format_valid": 89,
+    "semantic_valid": 89,
+    "accepted": 74,
+    "derived": 0
+  }
+}

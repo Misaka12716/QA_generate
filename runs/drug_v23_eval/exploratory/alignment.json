@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "planned_n": 100,
+  "generated_n": {
+    "base": 100,
+    "adapter": 100
+  },
+  "scored_n": 100,
+  "failed_n": 0,
+  "failures": [],
+  "denominator": 100,
+  "silent_shrink": false,
+  "system_rule": "技术失败计为任务未完成。分母是 planned_n，不把失败样本去掉后再计算准确率。"
+}

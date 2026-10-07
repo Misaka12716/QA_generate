@@ -1,0 +1,322 @@
+{
+  "items": [
+    {
+      "case_id": "v23_behavior_insufficient_section",
+      "pattern": "insufficient_section",
+      "expected_action": "state_insufficient",
+      "self_check": {
+        "case_id": "v23_behavior_insufficient_section",
+        "expected_behavior": "state_insufficient",
+        "actual_action": "state_insufficient",
+        "passed": true,
+        "reasons": [],
+        "judgment": "auxiliary_rule"
+      },
+      "visible_support": {
+        "required_not_in_context": [
+          "当前可见资料只有贮藏信息，不能确定用法用量。"
+        ],
+        "unavailable_still_visible": []
+      },
+      "issues": [],
+      "notes": [
+        "题干中的药品名称夹带了抽取残留。这是原输入的一部分，本次不改旧题。"
+      ],
+      "review_status": "pending_review",
+      "adjudication": "",
+      "gold_patch": null,
+      "patched_self_check": null,
+      "new_input_case_id": null,
+      "input_change": null,
+      "disposition": "reuse_predictions_pending_human_review"
+    },
+    {
+      "case_id": "v23_behavior_wrong_object",
+      "pattern": "wrong_object",
+      "expected_action": "state_insufficient",
+      "self_check": {
+        "case_id": "v23_behavior_wrong_object",
+        "expected_behavior": "state_insufficient",
+        "actual_action": "state_insufficient",
+        "passed": true,
+        "reasons": [],
+        "judgment": "auxiliary_rule"
+      },
+      "visible_support": {
+        "required_not_in_context": [
+          "所给资料的药品与问题对象不一致，不能据此回答。"
+        ],
+        "unavailable_still_visible": []
+      },
+      "issues": [
+        "学生可见上下文没有另一药品的身份。"
+      ],
+      "notes": [
+        "题干中的药品名称夹带了抽取残留。这是原输入的一部分，本次不改旧题。"
+      ],
+      "review_status": "pending_review",
+      "adjudication": "",
+      "gold_patch": null,
+      "patched_self_check": null,
+      "new_input_case_id": "v24_behavior_wrong_object",
+      "input_change": "added_visible_object_identity",
+      "disposition": "pending_review"
+    },
+    {
+      "case_id": "v23_behavior_retained_distractor",
+      "pattern": "retained_distractor",
+      "expected_action": "answer",
+      "self_check": {
+        "case_id": "v23_behavior_retained_distractor",
+        "expected_behavior": "answer",
+        "actual_action": "answer",
+        "passed": true,
+        "reasons": [],
+        "judgment": "auxiliary_rule"
+      },
+      "visible_support": {
+        "required_not_in_context": [],
+        "unavailable_still_visible": []
+      },
+      "issues": [
+        "干扰材料没有展示另一对象，不能当成干扰条件下的充分证据。"
+      ],
+      "notes": [
+        "题干中的药品名称夹带了抽取残留。这是原输入的一部分，本次不改旧题。"
+      ],
+      "review_status": "pending_review",
+      "adjudication": "",
+      "gold_patch": null,
+      "patched_self_check": null,
+      "new_input_case_id": null,
+      "input_change": null,
+      "disposition": "pending_review"
+    },
+    {
+      "case_id": "v23_behavior_replaced_context",
+      "pattern": "replaced_context",
+      "expected_action": "state_insufficient",
+      "self_check": {
+        "case_id": "v23_behavior_replaced_context",
+        "expected_behavior": "state_insufficient",
+        "actual_action": "state_insufficient",
+        "passed": true,
+        "reasons": [],
+        "judgment": "auxiliary_rule"
+      },
+      "visible_support": {
+        "required_not_in_context": [
+          "所给资料不能支持该问题，不能改用另一份药品资料里的说法。"
+        ],
+        "unavailable_still_visible": []
+      },
+      "issues": [
+        "上下文过短，看不到被替换资料属于哪一个对象。"
+      ],
+      "notes": [
+        "题干中的药品名称夹带了抽取残留。这是原输入的一部分，本次不改旧题。"
+      ],
+      "review_status": "pending_review",
+      "adjudication": "",
+      "gold_patch": null,
+      "patched_self_check": null,
+      "new_input_case_id": "v24_behavior_replaced_context",
+      "input_change": "added_visible_object_identity",
+      "disposition": "pending_review"
+    },
+    {
+      "case_id": "v23_behavior_clarify_strength",
+      "pattern": "clarify_strength",
+      "expected_action": "clarify",
+      "self_check": {
+        "case_id": "v23_behavior_clarify_strength",
+        "expected_behavior": "clarify",
+        "actual_action": "clarify",
+        "passed": true,
+        "reasons": [],
+        "judgment": "auxiliary_rule"
+      },
+      "visible_support": {
+        "required_not_in_context": [
+          "资料里出现多个规格，需要先说明是哪一个规格。"
+        ],
+        "unavailable_still_visible": []
+      },
+      "issues": [
+        "抽出的数字位于用法用量，不是多个规格。金标前提不能当成已核实。"
+      ],
+      "notes": [],
+      "review_status": "pending_review",
+      "adjudication": "",
+      "gold_patch": null,
+      "patched_self_check": null,
+      "new_input_case_id": null,
+      "input_change": null,
+      "disposition": "pending_review"
+    },
+    {
+      "case_id": "v23_behavior_missing_condition",
+      "pattern": "missing_condition",
+      "expected_action": "state_insufficient",
+      "self_check": {
+        "case_id": "v23_behavior_missing_condition",
+        "expected_behavior": "state_insufficient",
+        "actual_action": "state_insufficient",
+        "passed": true,
+        "reasons": [],
+        "judgment": "auxiliary_rule"
+      },
+      "visible_support": {
+        "required_not_in_context": [
+          "当前资料没有给出该条件对应的处理，不能确定。"
+        ],
+        "unavailable_still_visible": []
+      },
+      "issues": [
+        "题干使用“该条件”，可见上下文没有给出这个指代。被删原句没有保存在候选里，无法确认是否仍有等效表述。"
+      ],
+      "notes": [],
+      "review_status": "pending_review",
+      "adjudication": "",
+      "gold_patch": null,
+      "patched_self_check": null,
+      "new_input_case_id": null,
+      "input_change": null,
+      "disposition": "pending_review"
+    },
+    {
+      "case_id": "v23_behavior_missing_reaction",
+      "pattern": "missing_reaction",
+      "expected_action": "state_insufficient",
+      "self_check": {
+        "case_id": "v23_behavior_missing_reaction",
+        "expected_behavior": "state_insufficient",
+        "actual_action": "state_insufficient",
+        "passed": true,
+        "reasons": [],
+        "judgment": "auxiliary_rule"
+      },
+      "visible_support": {
+        "required_not_in_context": [
+          "当前资料只给出禁忌，没有把不良反应作为可见资料，不能确定。"
+        ],
+        "unavailable_still_visible": []
+      },
+      "issues": [
+        "上下文没有章节标题，学生看不到金标所声称的章节身份。"
+      ],
+      "notes": [
+        "题干中的药品名称夹带了抽取残留。这是原输入的一部分，本次不改旧题。"
+      ],
+      "review_status": "pending_review",
+      "adjudication": "",
+      "gold_patch": null,
+      "patched_self_check": null,
+      "new_input_case_id": "v24_behavior_missing_reaction",
+      "input_change": "added_visible_section_heading",
+      "disposition": "pending_review"
+    },
+    {
+      "case_id": "v23_behavior_child_dose_absent",
+      "pattern": "child_dose_absent",
+      "expected_action": "state_insufficient",
+      "self_check": {
+        "case_id": "v23_behavior_child_dose_absent",
+        "expected_behavior": "state_insufficient",
+        "actual_action": "state_insufficient",
+        "passed": true,
+        "reasons": [],
+        "judgment": "auxiliary_rule"
+      },
+      "visible_support": {
+        "required_not_in_context": [
+          "当前用法用量资料没有给出儿童剂量，不能确定。"
+        ],
+        "unavailable_still_visible": []
+      },
+      "issues": [],
+      "notes": [
+        "题干中的药品名称夹带了抽取残留。这是原输入的一部分，本次不改旧题。"
+      ],
+      "review_status": "pending_review",
+      "adjudication": "",
+      "gold_patch": null,
+      "patched_self_check": null,
+      "new_input_case_id": null,
+      "input_change": null,
+      "disposition": "reuse_predictions_pending_human_review"
+    },
+    {
+      "case_id": "v23_behavior_contra_not_visible",
+      "pattern": "contra_not_visible",
+      "expected_action": "state_insufficient",
+      "self_check": {
+        "case_id": "v23_behavior_contra_not_visible",
+        "expected_behavior": "state_insufficient",
+        "actual_action": "state_insufficient",
+        "passed": true,
+        "reasons": [],
+        "judgment": "auxiliary_rule"
+      },
+      "visible_support": {
+        "required_not_in_context": [
+          "当前可见资料是不良反应，没有给出禁忌，不能确定。"
+        ],
+        "unavailable_still_visible": []
+      },
+      "issues": [
+        "上下文没有章节标题，学生看不到金标所声称的章节身份。"
+      ],
+      "notes": [
+        "题干中的药品名称夹带了抽取残留。这是原输入的一部分，本次不改旧题。"
+      ],
+      "review_status": "pending_review",
+      "adjudication": "",
+      "gold_patch": null,
+      "patched_self_check": null,
+      "new_input_case_id": "v24_behavior_contra_not_visible",
+      "input_change": "added_visible_section_heading",
+      "disposition": "pending_review"
+    },
+    {
+      "case_id": "v23_behavior_partial_usage",
+      "pattern": "partial_usage",
+      "expected_action": "partial_answer",
+      "self_check": {
+        "case_id": "v23_behavior_partial_usage",
+        "expected_behavior": "partial_answer",
+        "actual_action": "answer",
+        "passed": false,
+        "reasons": [
+          "critical_errors:numeric"
+        ],
+        "judgment": "auxiliary_rule"
+      },
+      "visible_support": {
+        "hidden_points": [
+          "2、子宫内膜癌：口服，一次100mg（50片），一日3次，或口服500mg（250片），每日1～2次，作为肌内注射后的维持量"
+        ]
+      },
+      "issues": [
+        "answer_points 含有学生看不见的要点。评分若把这些要点当必答，会把合法部分回答判错。"
+      ],
+      "notes": [],
+      "review_status": "pending_review",
+      "adjudication": "",
+      "gold_patch": "gold_structure_only",
+      "patched_self_check": {
+        "case_id": "v23_behavior_partial_usage",
+        "expected_behavior": "partial_answer",
+        "actual_action": "answer",
+        "passed": true,
+        "reasons": [],
+        "judgment": "auxiliary_rule"
+      },
+      "new_input_case_id": null,
+      "input_change": null,
+      "disposition": "gold_structure_only_reuse_predictions"
+    }
+  ],
+  "new_input_n": 4,
+  "review_status": "pending_review"
+}

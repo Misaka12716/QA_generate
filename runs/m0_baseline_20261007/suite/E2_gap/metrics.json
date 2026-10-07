@@ -1,0 +1,111 @@
+{
+  "recipe": "recommended",
+  "chunks": 3,
+  "questions": 3,
+  "distilled": 3,
+  "kept": 4,
+  "rejected": 0,
+  "answerability": null,
+  "answerability_reason": "missing_answerable_label",
+  "nli_mean": null,
+  "hallucination_proxy": null,
+  "knowledge_gain_rate": null,
+  "judge_mean": null,
+  "type_entropy": 0.0,
+  "type_distribution": {
+    "factual": 1.0
+  },
+  "retention": 1.3333,
+  "retention_reason": null,
+  "s_ratio": 0.75,
+  "grade_distribution": {
+    "S": 3,
+    "A": 1
+  },
+  "evidence_grounded": 1.0,
+  "evidence_grounded_detail": {
+    "value": 1.0,
+    "numerator": 3,
+    "denominator": 3,
+    "reason": null
+  },
+  "funnel_stages": {
+    "candidate": 3,
+    "format_valid": 3,
+    "semantic_valid": 3,
+    "accepted": 4,
+    "derived": 1
+  },
+  "llm_calls": 8,
+  "prompt_tokens": 2168,
+  "completion_tokens": 435,
+  "estimated_cost_usd": 0.0,
+  "fallbacks": [
+    "student_diagnostic:not_executed"
+  ],
+  "stage_seconds": {
+    "chunking": 0.001,
+    "anchor": 0.0,
+    "question_gen": 0.001,
+    "evolution": 0.0,
+    "question_filter": 0.0,
+    "teacher_router": 0.0,
+    "distillation": 0.0,
+    "filter:rule_clean": 0.0,
+    "filter:evidence_substring": 0.0,
+    "filter:exact_hash_dedup": 0.0,
+    "filter:claim_evidence": 0.0,
+    "filter:risk_escalate": 0.0,
+    "filter:behavior_insufficient": 0.0,
+    "filter:student_diagnostic": 0.0,
+    "filter:joint_dedup": 0.0,
+    "grading": 0.0,
+    "total": 0.004
+  },
+  "rejected_by_filter": {
+    "behavior_insufficient": -1
+  },
+  "funnel": {
+    "rule_clean": {
+      "in": 3,
+      "out": 3,
+      "dropped": 0
+    },
+    "evidence_substring": {
+      "in": 3,
+      "out": 3,
+      "dropped": 0
+    },
+    "exact_hash_dedup": {
+      "in": 3,
+      "out": 3,
+      "dropped": 0
+    },
+    "claim_evidence": {
+      "in": 3,
+      "out": 3,
+      "dropped": 0
+    },
+    "risk_escalate": {
+      "in": 3,
+      "out": 3,
+      "dropped": 0
+    },
+    "behavior_insufficient": {
+      "in": 3,
+      "out": 4,
+      "dropped": -1
+    },
+    "student_diagnostic": {
+      "in": 4,
+      "out": 4,
+      "dropped": 0
+    },
+    "joint_dedup": {
+      "in": 4,
+      "out": 4,
+      "dropped": 0
+    }
+  },
+  "tokens_per_10k_kept": 6507500
+}

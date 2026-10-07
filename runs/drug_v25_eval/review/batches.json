@@ -1,0 +1,31 @@
+{
+  "batches": [
+    {
+      "batch_id": "batch1_behavior",
+      "kind": "gold",
+      "csv": "review/batch1_behavior.csv",
+      "protocol": "batch1/protocol.jsonl",
+      "reviewed_protocol": "review/batch1_behavior.reviewed.jsonl"
+    },
+    {
+      "batch_id": "batch_a_gold",
+      "kind": "gold",
+      "csv": "review/batch_a_gold.csv",
+      "protocol": "experiment_a/protocol.jsonl",
+      "reviewed_protocol": "review/batch_a_gold.reviewed.jsonl"
+    },
+    {
+      "batch_id": "batch_b_gold",
+      "kind": "gold",
+      "csv": "review/batch_b_gold.csv",
+      "protocol": "experiment_b/protocol.jsonl",
+      "reviewed_protocol": "review/batch_b_gold.reviewed.jsonl"
+    },
+    {
+      "batch_id": "batch1_behavior_blind",
+      "kind": "blind",
+      "csv": "review/batch1_behavior_blind.csv",
+      "identity_map": "review/batch1_behavior_identity_map.json"
+    }
+  ]
+}

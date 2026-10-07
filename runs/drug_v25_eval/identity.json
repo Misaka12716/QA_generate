@@ -1,0 +1,23 @@
+{
+  "train_jsonl_sha256": "a95a8aa026bff7b06af8c3034a5030c8837e2c4aa51b04071f089aae2ea331dc",
+  "adapter_sha256": "4f4bdec7b50dab9eeacad634bb69518401190df8a0b40997e8c819f24fb8bef2",
+  "base_config_sha256": "7463bb0ea78315365e6c6b74de4e73bbcc8359dfb0c5a737584e077d42c0b03c",
+  "tokenizer_config_sha256": "5b5d4f65d0acd3b2d56a35b56d374a36cbc1c8fa5cf3b3febbbfabf22f359583",
+  "source_index_sha256": "67a4d17ec1281fd20d4b27fcf8ab56ead0892496624b6ad1e6bf21b731f0e07b",
+  "candidate_status_sha256": "bc6e3576e582f4f8608c48a58005a153c57093453c4373498fdd5154dcf8ad0f",
+  "experiment_a_protocol_sha256": "c178646f51e8fe1f6b1304146f08212070502db2f81fae98a474f45ab18777a9",
+  "experiment_b_protocol_sha256": "39e26d8a8effd23ebd11967be725840f1b3e6f70608770cfa0eff7c9a8bb112a",
+  "base_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+  "adapter_id": "4f4bdec7b50dab9e",
+  "template_id": "5b5d4f65d0acd3b2",
+  "infer_config_effective": {
+    "max_new_tokens": 512,
+    "do_sample": false,
+    "dtype": "bfloat16"
+  },
+  "git_commit": "320fce94ee56f347ca9b03284b0afae10c88e9d8",
+  "python": "3.9.21",
+  "platform": "Linux-6.8.0-138-generic-x86_64-with-glibc2.35",
+  "inference": "not_executed",
+  "gpu_seconds": 0
+}

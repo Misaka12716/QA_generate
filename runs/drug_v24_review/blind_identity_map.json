@@ -1,0 +1,2095 @@
+{
+  "seed": 20261006,
+  "n": 348,
+  "rows": [
+    {
+      "blind_id": "blind_0001",
+      "case_id": "qa_5f89df2a0b6e",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0002",
+      "case_id": "qa_4eb3138a417d",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0003",
+      "case_id": "v23_rephrase_qfam_af536f77618a221e6c5c_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0004",
+      "case_id": "v23_rephrase_qfam_af536f77618a221e6c5c_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0005",
+      "case_id": "v23_indep_1171_1",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0006",
+      "case_id": "v23_indep_1055_2",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0007",
+      "case_id": "v23_rephrase_qfam_73264e36deffd34615cb_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0008",
+      "case_id": "qa_3502e454303c",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0009",
+      "case_id": "v23_indep_1195_3",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0010",
+      "case_id": "qa_4a9e25b6669b",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0011",
+      "case_id": "qa_d842d080d1ba",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0012",
+      "case_id": "v23_behavior_contra_not_visible",
+      "model_role": "base",
+      "stratum": "behavior"
+    },
+    {
+      "blind_id": "blind_0013",
+      "case_id": "v23_rephrase_qfam_8b212f7f510fce598a4a_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0014",
+      "case_id": "v23_rephrase_qfam_8b212f7f510fce598a4a_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0015",
+      "case_id": "v23_rephrase_qfam_a583925f36f3e6dbab19_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0016",
+      "case_id": "v23_indep_107_3",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0017",
+      "case_id": "qa_45e541117eef",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0018",
+      "case_id": "qa_bc1f236dc675",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0019",
+      "case_id": "v23_rephrase_qfam_170c384f47a15a5dab24_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0020",
+      "case_id": "qa_f830f22ae4f6",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0021",
+      "case_id": "qa_f813c43b28a3",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0022",
+      "case_id": "v23_rephrase_qfam_4a07d41cc70725c94d35_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0023",
+      "case_id": "v23_behavior_child_dose_absent",
+      "model_role": "adapter",
+      "stratum": "behavior"
+    },
+    {
+      "blind_id": "blind_0024",
+      "case_id": "v23_rephrase_qfam_af536f77618a221e6c5c_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0025",
+      "case_id": "v23_rephrase_qfam_db6eb43eea683e665072_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0026",
+      "case_id": "qa_f250832c5f45",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0027",
+      "case_id": "v23_rephrase_qfam_0940f383386d5a774f22_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0028",
+      "case_id": "v23_rephrase_qfam_8adea35e80915295cf6f_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0029",
+      "case_id": "v23_indep_1087_2",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0030",
+      "case_id": "v23_rephrase_qfam_4ba1a7f4306537c2e009_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0031",
+      "case_id": "v23_rephrase_qfam_83532e640135f10909bc_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0032",
+      "case_id": "qa_a44a2c68ade8",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0033",
+      "case_id": "v23_behavior_insufficient_section",
+      "model_role": "base",
+      "stratum": "behavior"
+    },
+    {
+      "blind_id": "blind_0034",
+      "case_id": "qa_475f11337caa",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0035",
+      "case_id": "v23_rephrase_qfam_343d9bfa5fe239f56bb9_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0036",
+      "case_id": "v23_rephrase_qfam_83532e640135f10909bc_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0037",
+      "case_id": "qa_1e2b12d86dcc",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0038",
+      "case_id": "qa_87402a537e01",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0039",
+      "case_id": "qa_4787c975dfb5",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0040",
+      "case_id": "v23_indep_1117_3",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0041",
+      "case_id": "v23_rephrase_qfam_0940f383386d5a774f22_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0042",
+      "case_id": "v23_indep_1127_3",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0043",
+      "case_id": "v23_rephrase_qfam_11f639fe67ebfcac5d0c_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0044",
+      "case_id": "v23_indep_1108_1",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0045",
+      "case_id": "v23_indep_1127_1",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0046",
+      "case_id": "v23_rephrase_qfam_d1cb1bd3eb9d5a2f83b5_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0047",
+      "case_id": "qa_92cea2c87190",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0048",
+      "case_id": "v23_rephrase_qfam_172279245ea13b6a7d29_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0049",
+      "case_id": "qa_a7a4ed5a2e6e",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0050",
+      "case_id": "v23_rephrase_qfam_1960f19815ff6c491677_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0051",
+      "case_id": "qa_491322ba0c72",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0052",
+      "case_id": "qa_0d19335bbd54",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0053",
+      "case_id": "v23_behavior_clarify_strength",
+      "model_role": "base",
+      "stratum": "behavior"
+    },
+    {
+      "blind_id": "blind_0054",
+      "case_id": "qa_3faf69b29d7c",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0055",
+      "case_id": "qa_f830f22ae4f6",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0056",
+      "case_id": "v23_rephrase_qfam_51588c86e590ebd3a5c8_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0057",
+      "case_id": "qa_928ed5b7bddf",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0058",
+      "case_id": "v23_rephrase_qfam_73264e36deffd34615cb_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0059",
+      "case_id": "v23_indep_1121_3",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0060",
+      "case_id": "v23_rephrase_qfam_8b212f7f510fce598a4a_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0061",
+      "case_id": "qa_a1f4c8712364",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0062",
+      "case_id": "v23_rephrase_qfam_05d2b860495eb4b2498b_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0063",
+      "case_id": "v23_indep_1117_2",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0064",
+      "case_id": "v23_rephrase_qfam_cd8487cdc4abee1282ab_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0065",
+      "case_id": "qa_10db020b2be7",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0066",
+      "case_id": "qa_f250832c5f45",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0067",
+      "case_id": "v23_rephrase_qfam_a33ae357ea7e4b7b878a_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0068",
+      "case_id": "v23_rephrase_qfam_170c384f47a15a5dab24_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0069",
+      "case_id": "v23_indep_107_1",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0070",
+      "case_id": "qa_a44a2c68ade8",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0071",
+      "case_id": "qa_3010425201ae",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0072",
+      "case_id": "v23_rephrase_qfam_05d2b860495eb4b2498b_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0073",
+      "case_id": "qa_4787c975dfb5",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0074",
+      "case_id": "v23_rephrase_qfam_3eb5cf6ccc7447e5c06b_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0075",
+      "case_id": "v23_indep_1195_2",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0076",
+      "case_id": "v23_rephrase_qfam_10ebcff3daa3436ee830_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0077",
+      "case_id": "qa_eb10cf7defca",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0078",
+      "case_id": "v23_indep_1055_1",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0079",
+      "case_id": "v23_rephrase_qfam_06f1d57c827febba8713_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0080",
+      "case_id": "qa_f1182424a870",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0081",
+      "case_id": "v23_rephrase_qfam_1979019076df32c41cd7_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0082",
+      "case_id": "v23_rephrase_qfam_d1cb1bd3eb9d5a2f83b5_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0083",
+      "case_id": "v23_rephrase_qfam_cd8487cdc4abee1282ab_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0084",
+      "case_id": "v23_rephrase_qfam_389c8722eafd45152f67_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0085",
+      "case_id": "v23_rephrase_qfam_51588c86e590ebd3a5c8_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0086",
+      "case_id": "v23_rephrase_qfam_8d68c98425dc06adfb2e_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0087",
+      "case_id": "v23_indep_1121_2",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0088",
+      "case_id": "v23_indep_1055_2",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0089",
+      "case_id": "v23_rephrase_qfam_1979019076df32c41cd7_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0090",
+      "case_id": "qa_1b6612de60b7",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0091",
+      "case_id": "v23_rephrase_qfam_170c384f47a15a5dab24_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0092",
+      "case_id": "v23_indep_1108_1",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0093",
+      "case_id": "v23_rephrase_qfam_06413022d6593d5ec41b_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0094",
+      "case_id": "qa_3502e454303c",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0095",
+      "case_id": "v23_rephrase_qfam_d1cb1bd3eb9d5a2f83b5_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0096",
+      "case_id": "v23_rephrase_qfam_8d68c98425dc06adfb2e_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0097",
+      "case_id": "v23_indep_1048_3",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0098",
+      "case_id": "v23_behavior_clarify_strength",
+      "model_role": "adapter",
+      "stratum": "behavior"
+    },
+    {
+      "blind_id": "blind_0099",
+      "case_id": "v23_indep_1127_2",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0100",
+      "case_id": "v23_rephrase_qfam_11f639fe67ebfcac5d0c_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0101",
+      "case_id": "v23_indep_1108_3",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0102",
+      "case_id": "qa_fefbf062bf11",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0103",
+      "case_id": "qa_0f2bb01637cc",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0104",
+      "case_id": "v23_rephrase_qfam_4c3584eb34de5a4fd850_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0105",
+      "case_id": "v23_rephrase_qfam_1979019076df32c41cd7_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0106",
+      "case_id": "v23_rephrase_qfam_11f639fe67ebfcac5d0c_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0107",
+      "case_id": "qa_8deb52518a53",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0108",
+      "case_id": "qa_4a9e25b6669b",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0109",
+      "case_id": "v23_indep_1127_2",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0110",
+      "case_id": "v23_indep_1117_1",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0111",
+      "case_id": "v23_indep_107_3",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0112",
+      "case_id": "v23_rephrase_qfam_8adea35e80915295cf6f_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0113",
+      "case_id": "qa_b34d3b4a1713",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0114",
+      "case_id": "qa_c50bca4de084",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0115",
+      "case_id": "v23_rephrase_qfam_83532e640135f10909bc_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0116",
+      "case_id": "qa_8c7055e7d2b9",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0117",
+      "case_id": "qa_95d1d7be431c",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0118",
+      "case_id": "v23_behavior_missing_condition",
+      "model_role": "adapter",
+      "stratum": "behavior"
+    },
+    {
+      "blind_id": "blind_0119",
+      "case_id": "qa_2291d24481de",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0120",
+      "case_id": "qa_839229ecb876",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0121",
+      "case_id": "qa_95d1d7be431c",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0122",
+      "case_id": "qa_8aeaee12775b",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0123",
+      "case_id": "v23_indep_1087_1",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0124",
+      "case_id": "v23_rephrase_qfam_a33ae357ea7e4b7b878a_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0125",
+      "case_id": "qa_c82bb4c8cd81",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0126",
+      "case_id": "qa_b34d3b4a1713",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0127",
+      "case_id": "v23_rephrase_qfam_db6eb43eea683e665072_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0128",
+      "case_id": "v23_behavior_missing_reaction",
+      "model_role": "adapter",
+      "stratum": "behavior"
+    },
+    {
+      "blind_id": "blind_0129",
+      "case_id": "qa_06bfcec2a9e4",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0130",
+      "case_id": "v23_rephrase_qfam_51588c86e590ebd3a5c8_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0131",
+      "case_id": "v23_rephrase_qfam_172279245ea13b6a7d29_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0132",
+      "case_id": "qa_6b689a7db91c",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0133",
+      "case_id": "v23_rephrase_qfam_05d2b860495eb4b2498b_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0134",
+      "case_id": "v23_indep_1048_3",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0135",
+      "case_id": "qa_03480ff61456",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0136",
+      "case_id": "v23_rephrase_qfam_4ba1a7f4306537c2e009_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0137",
+      "case_id": "v23_rephrase_qfam_172279245ea13b6a7d29_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0138",
+      "case_id": "v23_rephrase_qfam_343d9bfa5fe239f56bb9_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0139",
+      "case_id": "v23_rephrase_qfam_3eb5cf6ccc7447e5c06b_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0140",
+      "case_id": "v23_rephrase_qfam_8d68c98425dc06adfb2e_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0141",
+      "case_id": "v23_rephrase_qfam_389c8722eafd45152f67_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0142",
+      "case_id": "qa_7fb93e34e729",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0143",
+      "case_id": "v23_behavior_retained_distractor",
+      "model_role": "adapter",
+      "stratum": "behavior"
+    },
+    {
+      "blind_id": "blind_0144",
+      "case_id": "v23_indep_1171_1",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0145",
+      "case_id": "v23_behavior_insufficient_section",
+      "model_role": "adapter",
+      "stratum": "behavior"
+    },
+    {
+      "blind_id": "blind_0146",
+      "case_id": "qa_c82bb4c8cd81",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0147",
+      "case_id": "qa_d82bd1b96600",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0148",
+      "case_id": "v23_rephrase_qfam_a583925f36f3e6dbab19_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0149",
+      "case_id": "v23_indep_1127_1",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0150",
+      "case_id": "v23_indep_1048_1",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0151",
+      "case_id": "v23_rephrase_qfam_cd8487cdc4abee1282ab_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0152",
+      "case_id": "qa_109e545677a1",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0153",
+      "case_id": "qa_e0226e688dc6",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0154",
+      "case_id": "v23_indep_1121_3",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0155",
+      "case_id": "v23_rephrase_qfam_51588c86e590ebd3a5c8_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0156",
+      "case_id": "qa_bc1f236dc675",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0157",
+      "case_id": "v23_indep_1048_2",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0158",
+      "case_id": "qa_a16f1cd1484e",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0159",
+      "case_id": "v23_rephrase_qfam_343d9bfa5fe239f56bb9_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0160",
+      "case_id": "qa_17adb0e5aea5",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0161",
+      "case_id": "qa_b2cb8a9172ec",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0162",
+      "case_id": "qa_4eb3138a417d",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0163",
+      "case_id": "v23_rephrase_qfam_4a07d41cc70725c94d35_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0164",
+      "case_id": "qa_086693f5f4ad",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0165",
+      "case_id": "qa_17adb0e5aea5",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0166",
+      "case_id": "v23_rephrase_qfam_10ebcff3daa3436ee830_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0167",
+      "case_id": "v23_rephrase_qfam_8adea35e80915295cf6f_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0168",
+      "case_id": "v23_rephrase_qfam_8b212f7f510fce598a4a_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0169",
+      "case_id": "v23_rephrase_qfam_73264e36deffd34615cb_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0170",
+      "case_id": "v23_indep_1121_1",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0171",
+      "case_id": "v23_indep_1171_2",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0172",
+      "case_id": "qa_e0226e688dc6",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0173",
+      "case_id": "v23_rephrase_qfam_3eb5cf6ccc7447e5c06b_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0174",
+      "case_id": "v23_rephrase_qfam_4ba1a7f4306537c2e009_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0175",
+      "case_id": "qa_a1f4c8712364",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0176",
+      "case_id": "v23_indep_1087_3",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0177",
+      "case_id": "v23_rephrase_qfam_0940f383386d5a774f22_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0178",
+      "case_id": "v23_indep_1055_1",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0179",
+      "case_id": "qa_3cfb9b13f6e4",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0180",
+      "case_id": "v23_rephrase_qfam_06413022d6593d5ec41b_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0181",
+      "case_id": "qa_03480ff61456",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0182",
+      "case_id": "v23_rephrase_qfam_4a07d41cc70725c94d35_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0183",
+      "case_id": "v23_rephrase_qfam_11f639fe67ebfcac5d0c_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0184",
+      "case_id": "qa_7add2f685a9e",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0185",
+      "case_id": "qa_35a25d411cc6",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0186",
+      "case_id": "qa_d82bd1b96600",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0187",
+      "case_id": "qa_5f89df2a0b6e",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0188",
+      "case_id": "v23_behavior_missing_reaction",
+      "model_role": "base",
+      "stratum": "behavior"
+    },
+    {
+      "blind_id": "blind_0189",
+      "case_id": "qa_16dc6a9da933",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0190",
+      "case_id": "qa_1b6612de60b7",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0191",
+      "case_id": "qa_7cd54080ce4b",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0192",
+      "case_id": "qa_45e541117eef",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0193",
+      "case_id": "qa_928ed5b7bddf",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0194",
+      "case_id": "v23_rephrase_qfam_4ba1a7f4306537c2e009_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0195",
+      "case_id": "v23_indep_107_2",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0196",
+      "case_id": "v23_rephrase_qfam_db6eb43eea683e665072_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0197",
+      "case_id": "qa_765fc3535176",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0198",
+      "case_id": "v23_rephrase_qfam_df01ffd7ec0032507b93_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0199",
+      "case_id": "v23_rephrase_qfam_df01ffd7ec0032507b93_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0200",
+      "case_id": "v23_rephrase_qfam_8adea35e80915295cf6f_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0201",
+      "case_id": "v23_indep_107_2",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0202",
+      "case_id": "qa_c8e2731ba8c2",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0203",
+      "case_id": "v23_indep_1108_3",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0204",
+      "case_id": "qa_0ffd8cfbd025",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0205",
+      "case_id": "qa_4a668d362cc7",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0206",
+      "case_id": "v23_indep_1055_3",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0207",
+      "case_id": "qa_ed03d3355edf",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0208",
+      "case_id": "qa_35a25d411cc6",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0209",
+      "case_id": "qa_d842d080d1ba",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0210",
+      "case_id": "v23_indep_1127_3",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0211",
+      "case_id": "v23_rephrase_qfam_df01ffd7ec0032507b93_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0212",
+      "case_id": "v23_rephrase_qfam_3eb5cf6ccc7447e5c06b_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0213",
+      "case_id": "qa_1e2b12d86dcc",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0214",
+      "case_id": "v23_rephrase_qfam_a33ae357ea7e4b7b878a_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0215",
+      "case_id": "qa_0d19335bbd54",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0216",
+      "case_id": "qa_8e80f39b4ae3",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0217",
+      "case_id": "v23_rephrase_qfam_05d2b860495eb4b2498b_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0218",
+      "case_id": "v23_rephrase_qfam_4a07d41cc70725c94d35_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0219",
+      "case_id": "v23_indep_1117_2",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0220",
+      "case_id": "qa_7fb93e34e729",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0221",
+      "case_id": "qa_0ffd8cfbd025",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0222",
+      "case_id": "v23_rephrase_qfam_4c3584eb34de5a4fd850_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0223",
+      "case_id": "qa_59d1fd12789c",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0224",
+      "case_id": "qa_10db020b2be7",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0225",
+      "case_id": "v23_indep_1121_1",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0226",
+      "case_id": "v23_rephrase_qfam_10ebcff3daa3436ee830_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0227",
+      "case_id": "qa_4a668d362cc7",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0228",
+      "case_id": "v23_rephrase_qfam_d1cb1bd3eb9d5a2f83b5_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0229",
+      "case_id": "v23_indep_1108_2",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0230",
+      "case_id": "v23_rephrase_qfam_a583925f36f3e6dbab19_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0231",
+      "case_id": "qa_176b8cf386ae",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0232",
+      "case_id": "v23_indep_1171_3",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0233",
+      "case_id": "qa_958976c5cf47",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0234",
+      "case_id": "v23_rephrase_qfam_06413022d6593d5ec41b_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0235",
+      "case_id": "v23_behavior_replaced_context",
+      "model_role": "base",
+      "stratum": "behavior"
+    },
+    {
+      "blind_id": "blind_0236",
+      "case_id": "v23_rephrase_qfam_06f1d57c827febba8713_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0237",
+      "case_id": "v23_behavior_wrong_object",
+      "model_role": "adapter",
+      "stratum": "behavior"
+    },
+    {
+      "blind_id": "blind_0238",
+      "case_id": "qa_b2cb8a9172ec",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0239",
+      "case_id": "qa_60370f3ccb3a",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0240",
+      "case_id": "qa_29724c334a37",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0241",
+      "case_id": "v23_rephrase_qfam_df01ffd7ec0032507b93_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0242",
+      "case_id": "v23_indep_1195_1",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0243",
+      "case_id": "qa_a16f1cd1484e",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0244",
+      "case_id": "v23_rephrase_qfam_10ebcff3daa3436ee830_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0245",
+      "case_id": "v23_behavior_retained_distractor",
+      "model_role": "base",
+      "stratum": "behavior"
+    },
+    {
+      "blind_id": "blind_0246",
+      "case_id": "qa_491322ba0c72",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0247",
+      "case_id": "v23_rephrase_qfam_389c8722eafd45152f67_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0248",
+      "case_id": "qa_1170d7e9d871",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0249",
+      "case_id": "v23_indep_107_1",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0250",
+      "case_id": "v23_indep_1195_3",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0251",
+      "case_id": "v23_rephrase_qfam_4c3584eb34de5a4fd850_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0252",
+      "case_id": "v23_indep_1171_2",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0253",
+      "case_id": "v23_rephrase_qfam_83532e640135f10909bc_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0254",
+      "case_id": "v23_rephrase_qfam_06f1d57c827febba8713_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0255",
+      "case_id": "qa_29724c334a37",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0256",
+      "case_id": "qa_d3373d127c31",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0257",
+      "case_id": "v23_indep_1195_1",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0258",
+      "case_id": "qa_8e80f39b4ae3",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0259",
+      "case_id": "v23_rephrase_qfam_1960f19815ff6c491677_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0260",
+      "case_id": "qa_e928fbef9d74",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0261",
+      "case_id": "v23_rephrase_qfam_172279245ea13b6a7d29_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0262",
+      "case_id": "qa_89549cc2feac",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0263",
+      "case_id": "qa_e671bbefa8b1",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0264",
+      "case_id": "qa_e671bbefa8b1",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0265",
+      "case_id": "qa_c50bca4de084",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0266",
+      "case_id": "v23_rephrase_qfam_af536f77618a221e6c5c_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0267",
+      "case_id": "v23_behavior_replaced_context",
+      "model_role": "adapter",
+      "stratum": "behavior"
+    },
+    {
+      "blind_id": "blind_0268",
+      "case_id": "qa_6c8069e0ae54",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0269",
+      "case_id": "v23_rephrase_qfam_1d348122735cf5b827fd_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0270",
+      "case_id": "qa_71f9ef497e9c",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0271",
+      "case_id": "qa_000adeec0933",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0272",
+      "case_id": "v23_rephrase_qfam_1960f19815ff6c491677_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0273",
+      "case_id": "qa_f1182424a870",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0274",
+      "case_id": "qa_06bfcec2a9e4",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0275",
+      "case_id": "qa_ed03d3355edf",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0276",
+      "case_id": "qa_6b689a7db91c",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0277",
+      "case_id": "v23_indep_1087_2",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0278",
+      "case_id": "qa_60370f3ccb3a",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0279",
+      "case_id": "v23_rephrase_qfam_1979019076df32c41cd7_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0280",
+      "case_id": "v23_rephrase_qfam_4c3584eb34de5a4fd850_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0281",
+      "case_id": "v23_rephrase_qfam_06f1d57c827febba8713_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0282",
+      "case_id": "v23_indep_1117_1",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0283",
+      "case_id": "v23_rephrase_qfam_170c384f47a15a5dab24_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0284",
+      "case_id": "v23_indep_1048_2",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0285",
+      "case_id": "v23_behavior_wrong_object",
+      "model_role": "base",
+      "stratum": "behavior"
+    },
+    {
+      "blind_id": "blind_0286",
+      "case_id": "v23_rephrase_qfam_06413022d6593d5ec41b_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0287",
+      "case_id": "v23_indep_1195_2",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0288",
+      "case_id": "v23_indep_1087_3",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0289",
+      "case_id": "qa_475f11337caa",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0290",
+      "case_id": "v23_rephrase_qfam_1d348122735cf5b827fd_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0291",
+      "case_id": "v23_rephrase_qfam_a583925f36f3e6dbab19_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0292",
+      "case_id": "qa_c8e2731ba8c2",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0293",
+      "case_id": "v23_indep_1121_2",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0294",
+      "case_id": "qa_eb10cf7defca",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0295",
+      "case_id": "qa_1170d7e9d871",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0296",
+      "case_id": "qa_59d1fd12789c",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0297",
+      "case_id": "qa_16dc6a9da933",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0298",
+      "case_id": "v23_behavior_partial_usage",
+      "model_role": "adapter",
+      "stratum": "behavior"
+    },
+    {
+      "blind_id": "blind_0299",
+      "case_id": "v23_behavior_child_dose_absent",
+      "model_role": "base",
+      "stratum": "behavior"
+    },
+    {
+      "blind_id": "blind_0300",
+      "case_id": "qa_2291d24481de",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0301",
+      "case_id": "v23_indep_1117_3",
+      "model_role": "adapter",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0302",
+      "case_id": "v23_rephrase_qfam_389c8722eafd45152f67_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0303",
+      "case_id": "qa_f813c43b28a3",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0304",
+      "case_id": "qa_6c8069e0ae54",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0305",
+      "case_id": "v23_rephrase_qfam_8d68c98425dc06adfb2e_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0306",
+      "case_id": "v23_rephrase_qfam_a33ae357ea7e4b7b878a_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0307",
+      "case_id": "qa_086693f5f4ad",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0308",
+      "case_id": "qa_8aeaee12775b",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0309",
+      "case_id": "qa_3faf69b29d7c",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0310",
+      "case_id": "qa_89549cc2feac",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0311",
+      "case_id": "v23_rephrase_qfam_cd8487cdc4abee1282ab_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0312",
+      "case_id": "qa_0f2bb01637cc",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0313",
+      "case_id": "qa_fefbf062bf11",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0314",
+      "case_id": "qa_8deb52518a53",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0315",
+      "case_id": "v23_rephrase_qfam_db6eb43eea683e665072_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0316",
+      "case_id": "qa_a7a4ed5a2e6e",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0317",
+      "case_id": "qa_839229ecb876",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0318",
+      "case_id": "qa_7add2f685a9e",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0319",
+      "case_id": "qa_109e545677a1",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0320",
+      "case_id": "v23_rephrase_qfam_1d348122735cf5b827fd_2",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0321",
+      "case_id": "qa_176b8cf386ae",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0322",
+      "case_id": "qa_87402a537e01",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0323",
+      "case_id": "qa_7cd54080ce4b",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0324",
+      "case_id": "qa_958976c5cf47",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0325",
+      "case_id": "v23_rephrase_qfam_0940f383386d5a774f22_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0326",
+      "case_id": "v23_rephrase_qfam_73264e36deffd34615cb_2",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0327",
+      "case_id": "v23_indep_1108_2",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0328",
+      "case_id": "v23_rephrase_qfam_1960f19815ff6c491677_1",
+      "model_role": "base",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0329",
+      "case_id": "qa_d3373d127c31",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0330",
+      "case_id": "v23_behavior_partial_usage",
+      "model_role": "base",
+      "stratum": "behavior"
+    },
+    {
+      "blind_id": "blind_0331",
+      "case_id": "qa_e928fbef9d74",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0332",
+      "case_id": "qa_765fc3535176",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0333",
+      "case_id": "qa_3010425201ae",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0334",
+      "case_id": "qa_71f9ef497e9c",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0335",
+      "case_id": "qa_000adeec0933",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0336",
+      "case_id": "v23_indep_1055_3",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0337",
+      "case_id": "v23_behavior_missing_condition",
+      "model_role": "base",
+      "stratum": "behavior"
+    },
+    {
+      "blind_id": "blind_0338",
+      "case_id": "v23_indep_1171_3",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0339",
+      "case_id": "v23_indep_1048_1",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0340",
+      "case_id": "qa_8c7055e7d2b9",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0341",
+      "case_id": "v23_indep_1087_1",
+      "model_role": "base",
+      "stratum": "independent"
+    },
+    {
+      "blind_id": "blind_0342",
+      "case_id": "qa_92cea2c87190",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0343",
+      "case_id": "v23_rephrase_qfam_343d9bfa5fe239f56bb9_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    },
+    {
+      "blind_id": "blind_0344",
+      "case_id": "qa_c49d7de63346",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0345",
+      "case_id": "qa_c49d7de63346",
+      "model_role": "base",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0346",
+      "case_id": "v23_behavior_contra_not_visible",
+      "model_role": "adapter",
+      "stratum": "behavior"
+    },
+    {
+      "blind_id": "blind_0347",
+      "case_id": "qa_3cfb9b13f6e4",
+      "model_role": "adapter",
+      "stratum": "train_seen"
+    },
+    {
+      "blind_id": "blind_0348",
+      "case_id": "v23_rephrase_qfam_1d348122735cf5b827fd_1",
+      "model_role": "adapter",
+      "stratum": "seen_rephrase"
+    }
+  ],
+  "note": "身份映射与盲评包分开。审核界面不应读取此文件。"
+}

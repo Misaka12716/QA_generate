@@ -1,0 +1,19 @@
+{
+  "status": "succeeded",
+  "executed": true,
+  "model_called": true,
+  "planned_subjects": 16,
+  "record_n": 16,
+  "aggregate_n": 16,
+  "accepted_n": 16,
+  "usage": {
+    "calls": 97,
+    "tokens": 107092,
+    "max_calls": 120,
+    "max_tokens": 200000,
+    "estimated_cost": null,
+    "currency": "unknown",
+    "pricing_version": "unknown"
+  },
+  "formal_ready_n": 0
+}

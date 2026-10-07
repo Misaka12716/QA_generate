@@ -1,0 +1,27 @@
+{
+  "train_samples": 141,
+  "heldout": 16,
+  "train_jsonl": "runs/drug_v21/E3_g1/sft/train.jsonl",
+  "train": {
+    "skipped": false,
+    "train_loss": 0.08924073592923512,
+    "train_samples": 141,
+    "epochs": 3,
+    "base_model": "/data1/pjw/models/Qwen2.5-7B-Instruct",
+    "adapter": "runs/drug_v21/E3_g1/sft/lora/adapter"
+  },
+  "base": {
+    "em": 0.0,
+    "f1": 0.1688,
+    "n": 16
+  },
+  "tuned": {
+    "em": 0.0,
+    "f1": 0.2112,
+    "n": 16
+  },
+  "delta_f1": 0.0424,
+  "delta_em": 0.0,
+  "answer_sheet": "runs/drug_v21/E3_g1/sft/answers.md",
+  "effect_note": "微调后 token F1 更高"
+}

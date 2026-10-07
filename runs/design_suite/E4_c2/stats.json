@@ -1,0 +1,46 @@
+{
+  "llm_calls": 0,
+  "prompt_tokens": 0,
+  "completion_tokens": 0,
+  "estimated_cost_usd": 0.0,
+  "stage_seconds": {
+    "chunking": 0.0,
+    "anchor": 0.549,
+    "question_gen": 240.238,
+    "evolution": 0.0,
+    "question_filter": 0.0,
+    "teacher_router": 0.0,
+    "distillation": 0.0,
+    "filter:rule_clean": 0.0,
+    "filter:evidence_substring": 0.0,
+    "filter:nli_fact": 5.456,
+    "grading": 0.0,
+    "total": 246.244
+  },
+  "produced": {
+    "chunks": 4,
+    "questions": 0,
+    "distilled": 0,
+    "kept": 0,
+    "rejected": 0
+  },
+  "rejected": {},
+  "funnel": {
+    "rule_clean": {
+      "in": 0,
+      "out": 0,
+      "dropped": 0
+    },
+    "evidence_substring": {
+      "in": 0,
+      "out": 0,
+      "dropped": 0
+    },
+    "nli_fact": {
+      "in": 0,
+      "out": 0,
+      "dropped": 0
+    }
+  },
+  "fallbacks": []
+}

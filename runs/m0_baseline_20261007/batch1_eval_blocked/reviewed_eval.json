@@ -1,0 +1,125 @@
+{
+  "planned_n": 14,
+  "case_n": 14,
+  "executed": false,
+  "model_loaded": false,
+  "formal_main_metric": "not_executed",
+  "result_class": "not_executed",
+  "dropped_case_ids": [],
+  "status": "blocked",
+  "reason": "pending_review",
+  "failures": [
+    {
+      "case_id": "v23_behavior_insufficient_section",
+      "reasons": [
+        "legacy_unreviewed",
+        "stale_hash",
+        "teacher_review_not_ready"
+      ]
+    },
+    {
+      "case_id": "v23_behavior_wrong_object",
+      "reasons": [
+        "legacy_unreviewed",
+        "stale_hash",
+        "teacher_review_not_ready"
+      ]
+    },
+    {
+      "case_id": "v23_behavior_retained_distractor",
+      "reasons": [
+        "legacy_unreviewed",
+        "stale_hash",
+        "teacher_review_not_ready"
+      ]
+    },
+    {
+      "case_id": "v23_behavior_replaced_context",
+      "reasons": [
+        "legacy_unreviewed",
+        "stale_hash",
+        "teacher_review_not_ready"
+      ]
+    },
+    {
+      "case_id": "v23_behavior_clarify_strength",
+      "reasons": [
+        "legacy_unreviewed",
+        "stale_hash",
+        "teacher_review_not_ready"
+      ]
+    },
+    {
+      "case_id": "v23_behavior_missing_condition",
+      "reasons": [
+        "legacy_unreviewed",
+        "stale_hash",
+        "teacher_review_not_ready"
+      ]
+    },
+    {
+      "case_id": "v23_behavior_missing_reaction",
+      "reasons": [
+        "legacy_unreviewed",
+        "stale_hash",
+        "teacher_review_not_ready"
+      ]
+    },
+    {
+      "case_id": "v23_behavior_child_dose_absent",
+      "reasons": [
+        "legacy_unreviewed",
+        "stale_hash",
+        "teacher_review_not_ready"
+      ]
+    },
+    {
+      "case_id": "v23_behavior_contra_not_visible",
+      "reasons": [
+        "legacy_unreviewed",
+        "stale_hash",
+        "teacher_review_not_ready"
+      ]
+    },
+    {
+      "case_id": "v23_behavior_partial_usage",
+      "reasons": [
+        "legacy_unreviewed",
+        "stale_hash",
+        "teacher_review_not_ready"
+      ]
+    },
+    {
+      "case_id": "v24_behavior_wrong_object",
+      "reasons": [
+        "legacy_unreviewed",
+        "stale_hash",
+        "teacher_review_not_ready"
+      ]
+    },
+    {
+      "case_id": "v24_behavior_replaced_context",
+      "reasons": [
+        "legacy_unreviewed",
+        "stale_hash",
+        "teacher_review_not_ready"
+      ]
+    },
+    {
+      "case_id": "v24_behavior_missing_reaction",
+      "reasons": [
+        "legacy_unreviewed",
+        "stale_hash",
+        "teacher_review_not_ready"
+      ]
+    },
+    {
+      "case_id": "v24_behavior_contra_not_visible",
+      "reasons": [
+        "legacy_unreviewed",
+        "stale_hash",
+        "teacher_review_not_ready"
+      ]
+    }
+  ]
+}

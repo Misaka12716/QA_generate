@@ -1,0 +1,54 @@
+{
+  "recipe": "e3_b1_cheap",
+  "chunks": 0,
+  "questions": 5,
+  "distilled": 5,
+  "kept": 4,
+  "rejected": 0,
+  "answerability": 0.8,
+  "nli_mean": null,
+  "hallucination_proxy": null,
+  "knowledge_gain_rate": null,
+  "judge_mean": 5.0,
+  "type_entropy": 1.5,
+  "type_distribution": {
+    "factual": 0.25,
+    "conditional": 0.25,
+    "procedural": 0.5
+  },
+  "retention": 0.8,
+  "s_ratio": 0.0,
+  "grade_distribution": {
+    "none": 4
+  },
+  "evidence_grounded": 1.0,
+  "llm_calls": 9,
+  "prompt_tokens": 1955,
+  "completion_tokens": 1770,
+  "estimated_cost_usd": 0.000769,
+  "fallbacks": [],
+  "stage_seconds": {
+    "teacher_router": 0.0,
+    "distillation": 19.211,
+    "filter:rule_clean": 0.393,
+    "filter:llm_judge": 29.06,
+    "grading": 0.0,
+    "total": 48.665
+  },
+  "rejected_by_filter": {
+    "rule_clean": 1
+  },
+  "funnel": {
+    "rule_clean": {
+      "in": 5,
+      "out": 4,
+      "dropped": 1
+    },
+    "llm_judge": {
+      "in": 4,
+      "out": 4,
+      "dropped": 0
+    }
+  },
+  "tokens_per_10k_kept": 9312500
+}

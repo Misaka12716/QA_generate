@@ -1,0 +1,7 @@
+{
+  "recipe": "drug_e2_gap",
+  "kept": 147,
+  "rejected": 8,
+  "chunks": 100,
+  "questions": 150
+}

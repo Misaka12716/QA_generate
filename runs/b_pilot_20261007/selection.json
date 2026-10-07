@@ -1,0 +1,33 @@
+{
+  "rule": "将 core_question_id 按字符串排序，取前 2 个四个条件都齐全的核心问题。条件为 sufficient、removed_support、wrong_object、distractor。选题时不看模型输出。",
+  "parent_protocol": "runs/drug_v25_eval/experiment_b/protocol.jsonl",
+  "parent_planned_n": 48,
+  "parent_core_n": 12,
+  "selected_core_ids": [
+    "v25b_1396",
+    "v25b_1503"
+  ],
+  "selected_case_ids": [
+    "v25b_1396_sufficient",
+    "v25b_1396_removed_support",
+    "v25b_1396_wrong_object",
+    "v25b_1396_distractor",
+    "v25b_1503_sufficient",
+    "v25b_1503_removed_support",
+    "v25b_1503_wrong_object",
+    "v25b_1503_distractor"
+  ],
+  "selected_n": 8,
+  "protocol_id": "b_pilot_20261007",
+  "run_id": "b_pilot_20261007",
+  "conditions": [
+    "sufficient",
+    "removed_support",
+    "wrong_object",
+    "distractor",
+    "sufficient",
+    "removed_support",
+    "wrong_object",
+    "distractor"
+  ]
+}

@@ -1,0 +1,806 @@
+{
+  "scope": "只读复核。没有重跑 drug_v22，没有改写其文件。",
+  "base_model_confirmed": "/data1/pjw/models/Qwen2.5-7B-Instruct",
+  "base_model_matches_run_meta": true,
+  "alternate_base_not_used": true,
+  "adapter_path": "/data1/pjw/QA_generate-main/runs/drug_v22/E3_g0/sft/lora/adapter",
+  "historical_gpu_schedule": [
+    3,
+    4,
+    6
+  ],
+  "historical_gpu_note": "这是当时的调度记录，不是三个训练 seed，也不是下一轮必须使用的卡。",
+  "sft_seed": 42,
+  "alignment": {
+    "train_n": 74,
+    "kept_n": 74,
+    "g0_kept_n": 74,
+    "train_ids_unique": true,
+    "id_set_equal": true,
+    "order_train_equals_e1_kept": true,
+    "content_diffs": [],
+    "seen_n": 74,
+    "seen_ids_equal_train_order": true,
+    "seen_content_diffs": [],
+    "consumed_ids_n": 74,
+    "consumed_ids_equal_train_ids": true,
+    "skipped_rows": [],
+    "e1_vs_g0_kept_field_diffs": [
+      {
+        "id": "qa_16dc6a9da933",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_7cd54080ce4b",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_3010425201ae",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_e0226e688dc6",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_a1f4c8712364",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_3502e454303c",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_0d19335bbd54",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_fefbf062bf11",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_000adeec0933",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_2291d24481de",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_c8e2731ba8c2",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_ed03d3355edf",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_03480ff61456",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_29724c334a37",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_b2cb8a9172ec",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_8deb52518a53",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_89549cc2feac",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_928ed5b7bddf",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_e671bbefa8b1",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_5f89df2a0b6e",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_3cfb9b13f6e4",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_87402a537e01",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_bc1f236dc675",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_491322ba0c72",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_0f2bb01637cc",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_eb10cf7defca",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_d842d080d1ba",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_71f9ef497e9c",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_f1182424a870",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_e928fbef9d74",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_4a9e25b6669b",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_086693f5f4ad",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_839229ecb876",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_06bfcec2a9e4",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_109e545677a1",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_f250832c5f45",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_c50bca4de084",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_1e2b12d86dcc",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_f830f22ae4f6",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_6b689a7db91c",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_f813c43b28a3",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_176b8cf386ae",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_a7a4ed5a2e6e",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_475f11337caa",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_c82bb4c8cd81",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_8e80f39b4ae3",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_3faf69b29d7c",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_60370f3ccb3a",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_4787c975dfb5",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_a44a2c68ade8",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_92cea2c87190",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_a16f1cd1484e",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_10db020b2be7",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_1170d7e9d871",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_7add2f685a9e",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_958976c5cf47",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_35a25d411cc6",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_95d1d7be431c",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_6c8069e0ae54",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_8c7055e7d2b9",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_765fc3535176",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_45e541117eef",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_59d1fd12789c",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_1b6612de60b7",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_0ffd8cfbd025",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_d3373d127c31",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_b34d3b4a1713",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_17adb0e5aea5",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_7fb93e34e729",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_8aeaee12775b",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_4a668d362cc7",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_d82bd1b96600",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_4eb3138a417d",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      },
+      {
+        "id": "qa_c49d7de63346",
+        "fields": [
+          "audit",
+          "data_stage",
+          "included_in_this_run"
+        ]
+      }
+    ],
+    "empty_source_family_id": 74,
+    "empty_family_id": 15,
+    "family_id_nonempty_unique": 59,
+    "source_values_unique": 29,
+    "expected_action": {
+      "answer": 74
+    },
+    "evidence_state": {
+      "sufficient": 74
+    }
+  },
+  "auxiliary_transition": {
+    "scorer": "aux-rules-v1",
+    "source": "train_seen.jsonl before.passed / after.passed",
+    "pass_pass": 52,
+    "fail_pass": 22,
+    "pass_fail": 0,
+    "fail_fail": 0,
+    "label_mismatch": [],
+    "rescore_pass_mismatch_ids": [],
+    "enters_generalization_score": false,
+    "note": "这是旧辅助通过率的复核，不是语义正确率。"
+  },
+  "funnel": {
+    "subset_txt_files": 60,
+    "documents_read_counter": null,
+    "documents_read_note": "stats 没有单独的正文字段。输入目录现有 txt 数如上。chunks.jsonl 的来源数见 chunk_source_n。",
+    "chunk_rows": 100,
+    "chunk_source_n": 59,
+    "questions": 89,
+    "raw_answers": 89,
+    "stats_produced": {
+      "chunks": 100,
+      "questions": 89,
+      "distilled": 89,
+      "kept": 74,
+      "rejected": 6
+    },
+    "funnel": {
+      "rule_clean": {
+        "in": 89,
+        "out": 80,
+        "dropped": 9
+      },
+      "evidence_substring": {
+        "in": 80,
+        "out": 80,
+        "dropped": 0
+      },
+      "exact_hash_dedup": {
+        "in": 80,
+        "out": 80,
+        "dropped": 0
+      },
+      "claim_evidence": {
+        "in": 80,
+        "out": 80,
+        "dropped": 0
+      },
+      "risk_escalate": {
+        "in": 80,
+        "out": 80,
+        "dropped": 0
+      },
+      "joint_dedup": {
+        "in": 80,
+        "out": 80,
+        "dropped": 0
+      }
+    },
+    "rejected_by_filter": {
+      "rule_clean": 9
+    },
+    "rejected_file_rows": 6,
+    "rejected_grades": {
+      "quarantine": 6
+    },
+    "raw_ids_absent_from_kept_and_rejected": 9,
+    "absent_id_sample": [
+      "qa_2aa8cbeebe6a",
+      "qa_3459d76f9f8a",
+      "qa_51ac1ee7988e",
+      "qa_7d24e66480bc",
+      "qa_829b4ef85d28",
+      "qa_859783b2fbd4",
+      "qa_a04be3bc3226",
+      "qa_dbdcd9ccafc3",
+      "qa_f4430ece71cd"
+    ],
+    "stage_counts": {
+      "candidate": 89,
+      "format_valid": 89,
+      "semantic_valid": 89,
+      "accepted": 74,
+      "derived": 0
+    },
+    "interpretation": "rule_clean 的 dropped 计数来自 stats.funnel。被该阶段移除的样本没有写入 qa.rejected.jsonl。qa.rejected.jsonl 是过滤后未发布的隔离样本。"
+  },
+  "metrics": {
+    "retention": {
+      "value": 0.8315,
+      "numerator": 74,
+      "denominator": 89,
+      "meaning": "样本保留率 kept/distilled，不是模型准确率，也不是防遗忘率。"
+    },
+    "evidence_grounded": {
+      "value": 1.0,
+      "detail": {
+        "value": 1.0,
+        "numerator": 74,
+        "denominator": 74,
+        "reason": null
+      },
+      "meaning": "sufficient 样本的证据片段是否出现在可见上下文中，不证明答案语义正确。"
+    },
+    "s_ratio": {
+      "value": 1.0,
+      "grade_distribution": {
+        "S": 74
+      },
+      "meaning": "当前规则把保留样本判为 S 的比例，不是人工正确率。"
+    },
+    "type_entropy": {
+      "value": 0.8074,
+      "counts": {
+        "factual": 61,
+        "procedural": 10,
+        "conditional": 3
+      },
+      "recomputed": 0.8074,
+      "meaning": "保留样本 q_type 的 log2 香农熵。口径是生成时写入的 q_type，不是人工题型。"
+    },
+    "answerability": {
+      "value": null,
+      "reason": "missing_answerable_label"
+    },
+    "nli_mean": {
+      "value": null,
+      "reason": "配方 filters 没有 NLI 阶段，74 条 metadata.nli_score 均为空。空值不是 0，也不是已经通过。"
+    },
+    "judge_mean": {
+      "value": null,
+      "reason": "配方没有教师裁判阶段，74 条 judge_overall 均为空。空值不是 0。"
+    },
+    "delta_f1": {
+      "value": null,
+      "reason": "heldout_protocol.jsonl 为 0 字节。eval.json 的 main_eval=model_not_loaded，主指标未执行。空值不是提升为零。"
+    },
+    "tokens": {
+      "prompt_tokens": 59308,
+      "completion_tokens": 21024,
+      "sum": 80332,
+      "tokens_per_10k_kept": 10855676,
+      "tokens_per_kept": 1085.5676,
+      "reported_tokens_per_10k_kept": 10855676,
+      "g0_teacher_tokens": 0,
+      "g0_teacher_token_note": "G0 从已有合格池选样，没有新的教师生成。0 不包含 LoRA 训练或原题推理成本。",
+      "supervised_tokens": 5100,
+      "llm_calls": 214,
+      "call_statuses": {
+        "ok": 100
+      },
+      "call_status_note": "call_statuses 只统计部分 JSON 调用的终态，不是 llm_calls 的失败拆分。"
+    },
+    "optimizer_steps": {
+      "global_step": 57,
+      "epochs": 3,
+      "batch_size": 1,
+      "gradient_accumulation_steps": 4,
+      "expected_steps": 57,
+      "formula": "ceil(74/4)*3=57。consumed_ids 是进入 Dataset 的 74 个 ID，不是逐批消费日志。",
+      "exposure_count": 3
+    }
+  },
+  "human_review": {
+    "train_seen_review_status": "没有可追溯的双人审核记录。",
+    "heldout_protocol_bytes": 0
+  },
+  "reuse_g0": {
+    "adapter_matches_recorded_base": true,
+    "train_export_matches_kept_ids_and_targets": true,
+    "blocking_issue": null,
+    "note": "可以复用这对基座和 adapter 做新输入推理。source_family_id 在训练记录中为空，来源族要靠外置映射，不影响权重本身。"
+  }
+}

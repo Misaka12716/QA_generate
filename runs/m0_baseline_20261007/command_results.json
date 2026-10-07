@@ -1,0 +1,10 @@
+{
+  "pytest_before_code_changes": {"passed": 92, "failed": 0, "skipped": 0, "command": "python -X utf8 -m pytest -q -ra", "note": "改动前的基线。历史文件存在，test_v24_historical 没有跳过。"},
+  "pytest_after_code_changes": {"passed": 109, "failed": 0, "skipped": 0, "command": "python -X utf8 -m pytest -q -ra", "note": "包含新增审核、盘点和 API 测试。0 skipped 不是把跳过当成通过。"},
+  "list_strategies": {"out": "runs/m0_baseline_20261007/list_strategies.json", "fake": false},
+  "smoke": {"out": "runs/m0_baseline_20261007/smoke", "kept": 2, "rejected": 0, "fake": true, "note": "FakeLLM，不是教师效果"},
+  "suite": {"out": "runs/m0_baseline_20261007/suite", "n": 14, "exit_code": 0, "fake": true, "note": "FakeLLM 套件，不是训练或评测效果"},
+  "batch1_teacher_dry_run": {"out": "runs/m0_baseline_20261007/batch1_teacher_dry_run", "status": "blocked", "reason": "teacher_credentials_missing", "planned_subjects": 14, "planned_calls": 28, "model_called": false, "estimated_cost": null, "currency": "unknown"},
+  "batch1_eval": {"out": "runs/m0_baseline_20261007/batch1_eval_blocked", "status": "blocked", "reason": "pending_review", "planned_n": 14, "executed": false, "model_loaded": false},
+  "smoke_events": {"out": "runs/m0_baseline_20261007/smoke_events", "fake": true, "events": true, "note": "新运行写出 events.jsonl；历史运行仍是 historical_partial"}
+}

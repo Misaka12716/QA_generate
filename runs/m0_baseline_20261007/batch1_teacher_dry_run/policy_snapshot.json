@@ -1,0 +1,29 @@
+{
+  "policy": {
+    "review_policy_id": "teacher_only_v1",
+    "policy_version": "1",
+    "review_mode": "teacher_only",
+    "require_dual": true,
+    "allow_single": false,
+    "rubric_version": "rubric-v1",
+    "prompt_version": "gold-v1",
+    "max_technical_retries": 1,
+    "max_auto_revisions": 1
+  },
+  "frozen_at": "2026-10-07T08:10:08.197920+00:00",
+  "credentials": {
+    "configured": false,
+    "env_key_present": false,
+    "file_key_present": false,
+    "endpoint_source": "builtin_default_not_verified",
+    "pricing_version": "unknown",
+    "currency": "unknown",
+    "estimated_cost": null
+  },
+  "concurrency": 2,
+  "max_calls": 120,
+  "max_tokens": 200000,
+  "pricing_version": "unknown",
+  "currency": "unknown",
+  "estimated_cost": null
+}

@@ -1,0 +1,5 @@
+{"balance_ok":true,"count_unit":"qa","created_n":0,"duration_sec":null,"event_id":"evt_0001","event_type":"stage_count","input_n":2,"itemized_reasons":false,"output_n":2,"removed_n":0,"seq":1,"stage_key":"rule_clean"}
+{"balance_ok":true,"count_unit":"qa","created_n":0,"duration_sec":null,"event_id":"evt_0002","event_type":"stage_count","input_n":2,"itemized_reasons":false,"output_n":2,"removed_n":0,"seq":2,"stage_key":"exact_hash_dedup"}
+{"balance_ok":true,"count_unit":"qa","created_n":0,"duration_sec":null,"event_id":"evt_0003","event_type":"stage_count","input_n":2,"itemized_reasons":false,"output_n":2,"removed_n":0,"seq":3,"stage_key":"evidence_substring"}
+{"entity_id":"qa_770a5ac22b29","event_id":"evt_0004","event_type":"sample_disposition","reason_codes":[],"reason_source":"filter_trace","seq":4,"terminal_disposition":"kept"}
+{"entity_id":"qa_95e478c15150","event_id":"evt_0005","event_type":"sample_disposition","reason_codes":[],"reason_source":"filter_trace","seq":5,"terminal_disposition":"kept"}

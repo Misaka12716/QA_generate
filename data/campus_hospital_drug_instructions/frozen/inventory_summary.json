@@ -1,0 +1,13 @@
+{
+  "counts": {
+    "train": 2051,
+    "locked_test": 257,
+    "dev": 244
+  },
+  "subset_docs": 60,
+  "confirmed_conflicts": 0,
+  "subset": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/frozen/subset",
+  "catalog": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/frozen/coverage_catalog.jsonl",
+  "heldout": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/frozen/heldout.jsonl",
+  "heldout_n": 16
+}

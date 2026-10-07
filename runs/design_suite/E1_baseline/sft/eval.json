@@ -1,0 +1,28 @@
+{
+  "train_samples": 6,
+  "heldout": 10,
+  "train_jsonl": "runs/design_suite/E1_baseline/sft/train.jsonl",
+  "train": {
+    "skipped": false,
+    "train_loss": 2.6873913208643594,
+    "train_samples": 6,
+    "epochs": 3,
+    "base_model": "/data1/pjw/models/Qwen2.5-7B-Instruct",
+    "adapter": "runs/design_suite/E1_baseline/sft/lora/adapter"
+  },
+  "base": {
+    "em": 0.0,
+    "f1": 0.0975,
+    "n": 10
+  },
+  "tuned": {
+    "em": 0.0,
+    "f1": 0.2294,
+    "n": 10
+  },
+  "delta_f1": 0.1319,
+  "delta_em": 0.0,
+  "judge_base": 0.0,
+  "judge_tuned": 0.0,
+  "delta_judge": 0.0
+}

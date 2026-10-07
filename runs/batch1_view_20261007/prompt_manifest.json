@@ -1,0 +1,8 @@
+{
+  "prompts": {
+    "prediction": "answer_v1.txt"
+  },
+  "hashes": {
+    "prediction": "62c26c951fe9a80454bbc99873dccf6c61b3b00afc975dd0dcc82b6afad9a7dd"
+  }
+}

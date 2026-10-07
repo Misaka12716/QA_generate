@@ -1,0 +1,63 @@
+{
+  "gpu_candidates": [
+    3,
+    4,
+    6
+  ],
+  "gpu_error": "",
+  "runs": [
+    {
+      "name": "train_seen",
+      "status": "exploratory_executed",
+      "executed": true,
+      "reason": null,
+      "planned_n": 74,
+      "scored_n": 74,
+      "failed_n": 0,
+      "device": [
+        3
+      ],
+      "prompt_tokens": 25302,
+      "completion_tokens": 5219,
+      "elapsed_sec": 190.821,
+      "infer_config_effective": {
+        "max_new_tokens": 512,
+        "do_sample": false,
+        "dtype": "bfloat16"
+      },
+      "prediction_run_id": "d13a5e20ec4ed907",
+      "out": "/data1/pjw/QA_generate-main/runs/drug_v24_rescore/train_seen_confirmed",
+      "auxiliary_n": 74,
+      "auxiliary_before_pass_n": 52,
+      "auxiliary_after_pass_n": 74,
+      "enters_formal_metric": false
+    },
+    {
+      "name": "new_behavior_inputs",
+      "status": "exploratory_executed",
+      "executed": true,
+      "reason": null,
+      "planned_n": 4,
+      "scored_n": 4,
+      "failed_n": 0,
+      "device": [
+        3
+      ],
+      "prompt_tokens": 504,
+      "completion_tokens": 354,
+      "elapsed_sec": 9.045,
+      "infer_config_effective": {
+        "max_new_tokens": 512,
+        "do_sample": false,
+        "dtype": "bfloat16"
+      },
+      "prediction_run_id": "4e07f24b6e37bcf8",
+      "out": "/data1/pjw/QA_generate-main/runs/drug_v24_rescore/new_inputs",
+      "auxiliary_n": 4,
+      "auxiliary_before_pass_n": 0,
+      "auxiliary_after_pass_n": 4,
+      "enters_formal_metric": false
+    }
+  ],
+  "status": "executed"
+}

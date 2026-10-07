@@ -1,0 +1,28 @@
+{
+  "status": "blocked",
+  "reason": "teacher_credentials_missing",
+  "executed": false,
+  "model_called": false,
+  "planned_subjects": 14,
+  "planned_calls": 28,
+  "input_sha256": "c06fbbc2944db1bb66247c484ac280d0bf0bd052f99d49b3861ec039a06cd001",
+  "budget": {
+    "max_calls": 120,
+    "max_tokens": 200000,
+    "concurrency": 2
+  },
+  "pricing": {
+    "currency": "unknown",
+    "estimated_cost": null,
+    "pricing_version": "unknown"
+  },
+  "credentials": {
+    "configured": false,
+    "env_key_present": false,
+    "file_key_present": false,
+    "endpoint_source": "builtin_default_not_verified",
+    "pricing_version": "unknown",
+    "currency": "unknown",
+    "estimated_cost": null
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "recipe": "drug_e2_gap",
+  "chunks": 100,
+  "questions": 150,
+  "distilled": 150,
+  "kept": 147,
+  "rejected": 8,
+  "answerability": 0.98,
+  "nli_mean": null,
+  "hallucination_proxy": null,
+  "knowledge_gain_rate": null,
+  "judge_mean": null,
+  "type_entropy": 1.3751,
+  "type_distribution": {
+    "factual": 0.646,
+    "conditional": 0.197,
+    "procedural": 0.136,
+    "comparative": 0.02
+  },
+  "retention": 0.98,
+  "s_ratio": 0.9456,
+  "grade_distribution": {
+    "S": 139,
+    "A": 8
+  },
+  "evidence_grounded": 1.0,
+  "llm_calls": 264,
+  "prompt_tokens": 76296,
+  "completion_tokens": 82091,
+  "estimated_cost_usd": 0.0,
+  "fallbacks": [],
+  "stage_seconds": {
+    "chunking": 0.107,
+    "anchor": 0.0,
+    "question_gen": 1819.598,
+    "evolution": 0.0,
+    "question_filter": 0.0,
+    "teacher_router": 0.0,
+    "distillation": 0.009,
+    "filter:rule_clean": 4.378,
+    "filter:evidence_substring": 0.003,
+    "filter:exact_hash_dedup": 0.0,
+    "filter:claim_evidence": 250.252,
+    "filter:risk_escalate": 0.002,
+    "filter:behavior_insufficient": 0.006,
+    "filter:student_diagnostic": 27.099,
+    "filter:joint_dedup": 0.001,
+    "grading": 0.005,
+    "total": 2101.475
+  },
+  "rejected_by_filter": {
+    "rule_clean": 3,
+    "behavior_insufficient": -8
+  },
+  "funnel": {
+    "rule_clean": {
+      "in": 150,
+      "out": 147,
+      "dropped": 3
+    },
+    "evidence_substring": {
+      "in": 147,
+      "out": 147,
+      "dropped": 0
+    },
+    "exact_hash_dedup": {
+      "in": 147,
+      "out": 147,
+      "dropped": 0
+    },
+    "claim_evidence": {
+      "in": 147,
+      "out": 147,
+      "dropped": 0
+    },
+    "risk_escalate": {
+      "in": 147,
+      "out": 147,
+      "dropped": 0
+    },
+    "behavior_insufficient": {
+      "in": 147,
+      "out": 155,
+      "dropped": -8
+    },
+    "student_diagnostic": {
+      "in": 155,
+      "out": 155,
+      "dropped": 0
+    },
+    "joint_dedup": {
+      "in": 155,
+      "out": 155,
+      "dropped": 0
+    }
+  },
+  "tokens_per_10k_kept": 10774626,
+  "api_cost_usd": 0.0,
+  "cost_note": "教师 qwen3.8-27b 为内网接口，API 费用按 0 计，tokens_per_10k_kept 为等价 token。"
+}

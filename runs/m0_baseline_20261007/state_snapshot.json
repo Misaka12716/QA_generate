@@ -1,0 +1,683 @@
+{
+  "schema_version": "state-snapshot-v1",
+  "repo": "/data1/pjw/QA_generate-main",
+  "git": {
+    "git_commit": "cf06d453fe2314f1931889335849f1b2f09d124f",
+    "git_dirty": true,
+    "git_status_sha256": "e39c2ad3102884b794cc3de59f2d771085590667428fdafac885e44d3ca801f1",
+    "git_diff_sha256": "874e42a80a4f1c330a83958ae99e908bf5302006716a23fe37b8d59cfcc14027",
+    "untracked_content_sha256": "f45653eacec9ab47712df387032effcf132134d5c5899602bc2077abfbe8455d",
+    "reproducible_baseline": null,
+    "note": "脏工作区不能当作可复现实验基线"
+  },
+  "assets": [
+    {
+      "asset_id": "v22_train_jsonl",
+      "role": "train_jsonl",
+      "relative_path": "runs/drug_v22/E3_g0/sft/train.jsonl",
+      "exists": true,
+      "sha256": "a95a8aa026bff7b06af8c3034a5030c8837e2c4aa51b04071f089aae2ea331dc",
+      "schema_version": "zhixun_messages_v1",
+      "record_count": 74,
+      "producing_run": "drug_v22",
+      "git_commit": null,
+      "integrity_status": "artifact_verified",
+      "missing_reason": null,
+      "size_bytes": 260278
+    },
+    {
+      "asset_id": "v22_metrics",
+      "role": "consumed_ids",
+      "relative_path": "runs/drug_v22/metrics.json",
+      "exists": true,
+      "sha256": "df5b2295f6d737603db7d53dc566947a5a7aee3a4cb4effe17674dce396366ef",
+      "schema_version": "metrics_json_v1",
+      "record_count": 74,
+      "producing_run": "drug_v22",
+      "git_commit": null,
+      "integrity_status": "artifact_verified",
+      "missing_reason": null,
+      "size_bytes": 14756,
+      "container": "metrics.json",
+      "note": "consumed_ids 嵌在 metrics.json，不是独立文件"
+    },
+    {
+      "asset_id": "v22_run_meta",
+      "role": "run_meta",
+      "relative_path": "runs/drug_v22/run_meta.json",
+      "exists": true,
+      "sha256": "6e0b1fdd57ac70f4f7484844db11ea98be729cb6a2ae7df5a537b20b21d756ff",
+      "schema_version": "run_meta_v1",
+      "record_count": 1,
+      "producing_run": "drug_v22",
+      "git_commit": null,
+      "integrity_status": "artifact_verified",
+      "missing_reason": null,
+      "size_bytes": 1113
+    },
+    {
+      "asset_id": "v22_adapter_config",
+      "role": "adapter_config",
+      "relative_path": "runs/drug_v22/E3_g0/sft/lora/adapter/adapter_config.json",
+      "exists": true,
+      "sha256": "81857a455e686e40eaef4773ac34f0df683e1a2ee84473c1fee563f84146950e",
+      "schema_version": "peft_adapter_config",
+      "record_count": 1,
+      "producing_run": "drug_v22",
+      "git_commit": null,
+      "integrity_status": "artifact_verified",
+      "missing_reason": null,
+      "size_bytes": 900
+    },
+    {
+      "asset_id": "v22_adapter_weights",
+      "role": "adapter_weights",
+      "relative_path": "runs/drug_v22/E3_g0/sft/lora/adapter/adapter_model.safetensors",
+      "exists": true,
+      "sha256": "4f4bdec7b50dab9eeacad634bb69518401190df8a0b40997e8c819f24fb8bef2",
+      "schema_version": "safetensors",
+      "record_count": null,
+      "producing_run": "drug_v22",
+      "git_commit": null,
+      "integrity_status": "artifact_verified",
+      "missing_reason": null,
+      "size_bytes": 40400200,
+      "note": "文件哈希只证明字节未变，不证明实验已在当前代码上复现"
+    },
+    {
+      "asset_id": "frozen_inventory",
+      "role": "source_inventory",
+      "relative_path": "data/campus_hospital_drug_instructions/frozen/inventory.jsonl",
+      "exists": true,
+      "sha256": "f17e2b1f3aeeb58192bda3ba1651ece5325f905db70ea6c8c7f4e474a10fe203",
+      "schema_version": "inventory_jsonl_v1",
+      "record_count": 2552,
+      "producing_run": "frozen_corpus",
+      "git_commit": null,
+      "integrity_status": "artifact_verified",
+      "missing_reason": null,
+      "size_bytes": 421915
+    },
+    {
+      "asset_id": "frozen_subset_manifest",
+      "role": "subset_manifest",
+      "relative_path": "data/campus_hospital_drug_instructions/frozen/subset_manifest.json",
+      "exists": true,
+      "sha256": "05eef69b0c8abe6d2a927ed7e55f6a431be67d18ee595685d35af35f930b8733",
+      "schema_version": "subset_manifest_v1",
+      "record_count": 1,
+      "producing_run": "frozen_corpus",
+      "git_commit": null,
+      "integrity_status": "artifact_verified",
+      "missing_reason": null,
+      "size_bytes": 9595
+    },
+    {
+      "asset_id": "frozen_chunk_freeze",
+      "role": "chunk_freeze",
+      "relative_path": "data/campus_hospital_drug_instructions/frozen/chunk_freeze.json",
+      "exists": true,
+      "sha256": "e31d67bb70a7668f42b255316c83f6d88e4914da8863a9b1371d6b318b3d47de",
+      "schema_version": "chunk_freeze_v1",
+      "record_count": 1,
+      "producing_run": "frozen_corpus",
+      "git_commit": null,
+      "integrity_status": "artifact_verified",
+      "missing_reason": null,
+      "size_bytes": 2774
+    },
+    {
+      "asset_id": "frozen_subset_dir",
+      "role": "frozen_subset",
+      "relative_path": "data/campus_hospital_drug_instructions/frozen/subset",
+      "exists": true,
+      "sha256": null,
+      "schema_version": "directory",
+      "record_count": null,
+      "producing_run": "frozen_corpus",
+      "git_commit": null,
+      "integrity_status": "partial",
+      "missing_reason": null,
+      "child_file_n": 60,
+      "note": "目录存在只说明有文件，不是已验证样本数"
+    },
+    {
+      "asset_id": "frozen_heldout_legacy",
+      "role": "heldout_legacy",
+      "relative_path": "data/campus_hospital_drug_instructions/frozen/heldout.jsonl",
+      "exists": true,
+      "sha256": "dbcbd2766300984d0136cec4b96114acbb94b5964765dbd874dadd1a41457d3e",
+      "schema_version": "heldout_jsonl_v1",
+      "record_count": 16,
+      "producing_run": "frozen_corpus",
+      "git_commit": null,
+      "integrity_status": "artifact_verified",
+      "missing_reason": null,
+      "size_bytes": 69774
+    },
+    {
+      "asset_id": "frozen_heldout_protocol",
+      "role": "heldout_protocol",
+      "relative_path": "data/campus_hospital_drug_instructions/frozen/heldout_protocol.jsonl",
+      "exists": true,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "schema_version": "heldout_protocol_v1",
+      "record_count": null,
+      "producing_run": "frozen_corpus",
+      "git_commit": null,
+      "integrity_status": "blocked",
+      "missing_reason": "empty_file",
+      "size_bytes": 0
+    },
+    {
+      "asset_id": "frozen_train_families",
+      "role": "frozen_train_families",
+      "relative_path": "data/campus_hospital_drug_instructions/frozen/frozen_train_families.json",
+      "exists": false,
+      "sha256": null,
+      "schema_version": "frozen_train_families_v1",
+      "record_count": null,
+      "producing_run": "frozen_corpus",
+      "git_commit": null,
+      "integrity_status": "blocked",
+      "missing_reason": "missing"
+    },
+    {
+      "asset_id": "source_universe",
+      "role": "source_universe",
+      "relative_path": "data/campus_hospital_drug_instructions/frozen/source_universe.json",
+      "exists": false,
+      "sha256": null,
+      "schema_version": "source_universe_v1",
+      "record_count": null,
+      "producing_run": "frozen_corpus",
+      "git_commit": null,
+      "integrity_status": "blocked",
+      "missing_reason": "missing"
+    },
+    {
+      "asset_id": "v23_predictions",
+      "role": "predictions",
+      "relative_path": "runs/drug_v23_eval/exploratory/predictions.jsonl",
+      "exists": true,
+      "sha256": "3930f3416bee8b8f4820a98182618b09a18fc72fc5f92ceb88faa955b6bdb7d2",
+      "schema_version": "prediction_jsonl_v1",
+      "record_count": 200,
+      "producing_run": "drug_v23_eval",
+      "git_commit": null,
+      "integrity_status": "artifact_verified",
+      "missing_reason": null,
+      "size_bytes": 2055280
+    },
+    {
+      "asset_id": "v23_report",
+      "role": "report",
+      "relative_path": "runs/drug_v23_eval/report.md",
+      "exists": true,
+      "sha256": "e0764d9b0323b87d43a7b1995bdea853b858886da78343eb4f77ca6b9f74424e",
+      "schema_version": "markdown_report",
+      "record_count": null,
+      "producing_run": "drug_v23_eval",
+      "git_commit": null,
+      "integrity_status": "artifact_verified",
+      "missing_reason": null,
+      "size_bytes": 8440,
+      "note": "文件哈希只证明字节未变，不证明实验已在当前代码上复现"
+    },
+    {
+      "asset_id": "v24_report",
+      "role": "report",
+      "relative_path": "runs/drug_v24_audit/report.md",
+      "exists": true,
+      "sha256": "e55bd48bbb8ea878f993324927b94960636969601741000d4dbb3fbd63205a0a",
+      "schema_version": "markdown_report",
+      "record_count": null,
+      "producing_run": "drug_v24_audit",
+      "git_commit": null,
+      "integrity_status": "artifact_verified",
+      "missing_reason": null,
+      "size_bytes": 8494,
+      "note": "文件哈希只证明字节未变，不证明实验已在当前代码上复现"
+    },
+    {
+      "asset_id": "v24_train_seen_predictions",
+      "role": "predictions",
+      "relative_path": "runs/drug_v24_rescore/train_seen_confirmed/predictions.jsonl",
+      "exists": true,
+      "sha256": "022d2ea7b7b733de47dbe49a54505189b63bd083081e90def1354c7b01e8e714",
+      "schema_version": "prediction_jsonl_v1",
+      "record_count": 148,
+      "producing_run": "drug_v24_rescore",
+      "git_commit": null,
+      "integrity_status": "artifact_verified",
+      "missing_reason": null,
+      "size_bytes": 213090
+    },
+    {
+      "asset_id": "v24_new_input_predictions",
+      "role": "predictions",
+      "relative_path": "runs/drug_v24_rescore/new_inputs/predictions.jsonl",
+      "exists": true,
+      "sha256": "62582904e640ffcf2a2178f910f6c62a9e05193cb70e3821c2b24fb9bbd03960",
+      "schema_version": "prediction_jsonl_v1",
+      "record_count": 8,
+      "producing_run": "drug_v24_rescore",
+      "git_commit": null,
+      "integrity_status": "artifact_verified",
+      "missing_reason": null,
+      "size_bytes": 11285
+    },
+    {
+      "asset_id": "v25_batches",
+      "role": "review_manifest",
+      "relative_path": "runs/drug_v25_eval/review/batches.json",
+      "exists": true,
+      "sha256": "76d8fb2e9147f4b92ac81f42b5334de5f6e661f02ba8e8cd9ae6032f1a05f793",
+      "schema_version": "review_batches_v1",
+      "record_count": 1,
+      "producing_run": "drug_v25_eval",
+      "git_commit": null,
+      "integrity_status": "artifact_verified",
+      "missing_reason": null,
+      "size_bytes": 883
+    },
+    {
+      "asset_id": "v25_import_result",
+      "role": "human_import_result",
+      "relative_path": "runs/drug_v25_eval/review/import_result.json",
+      "exists": true,
+      "sha256": "70184785915ddce301a49bcb26984dc7802284fc973c693dab098f6253aed8e6",
+      "schema_version": "import_result_v1",
+      "record_count": 1,
+      "producing_run": "drug_v25_eval",
+      "git_commit": null,
+      "integrity_status": "artifact_verified",
+      "missing_reason": null,
+      "size_bytes": 109454
+    },
+    {
+      "asset_id": "v25_batch1_protocol",
+      "role": "protocol",
+      "relative_path": "runs/drug_v25_eval/batch1/protocol.jsonl",
+      "exists": true,
+      "sha256": "c06fbbc2944db1bb66247c484ac280d0bf0bd052f99d49b3861ec039a06cd001",
+      "schema_version": "protocol_jsonl_v1",
+      "record_count": 14,
+      "producing_run": "drug_v25_eval",
+      "git_commit": null,
+      "integrity_status": "artifact_verified",
+      "missing_reason": null,
+      "size_bytes": 24619
+    },
+    {
+      "asset_id": "v25_experiment_a_protocol",
+      "role": "protocol",
+      "relative_path": "runs/drug_v25_eval/experiment_a/protocol.jsonl",
+      "exists": true,
+      "sha256": "c178646f51e8fe1f6b1304146f08212070502db2f81fae98a474f45ab18777a9",
+      "schema_version": "protocol_jsonl_v1",
+      "record_count": 90,
+      "producing_run": "drug_v25_eval",
+      "git_commit": null,
+      "integrity_status": "artifact_verified",
+      "missing_reason": null,
+      "size_bytes": 224565
+    },
+    {
+      "asset_id": "v25_experiment_b_protocol",
+      "role": "protocol",
+      "relative_path": "runs/drug_v25_eval/experiment_b/protocol.jsonl",
+      "exists": true,
+      "sha256": "39e26d8a8effd23ebd11967be725840f1b3e6f70608770cfa0eff7c9a8bb112a",
+      "schema_version": "protocol_jsonl_v1",
+      "record_count": 48,
+      "producing_run": "drug_v25_eval",
+      "git_commit": null,
+      "integrity_status": "artifact_verified",
+      "missing_reason": null,
+      "size_bytes": 397718
+    },
+    {
+      "asset_id": "v25_report",
+      "role": "report",
+      "relative_path": "runs/drug_v25_eval/report.md",
+      "exists": true,
+      "sha256": "f24b647966e6c0143d3b342c7a640af6a0d1cb4595f56b5360b9945b4d76431f",
+      "schema_version": "markdown_report",
+      "record_count": null,
+      "producing_run": "drug_v25_eval",
+      "git_commit": null,
+      "integrity_status": "artifact_verified",
+      "missing_reason": null,
+      "size_bytes": 4607,
+      "note": "文件哈希只证明字节未变，不证明实验已在当前代码上复现"
+    },
+    {
+      "asset_id": "qwen25_7b_registered",
+      "role": "base_model",
+      "relative_path": "/data1/pjw/models/Qwen2.5-7B-Instruct",
+      "exists": true,
+      "sha256": null,
+      "schema_version": "model_summary_v1",
+      "record_count": null,
+      "producing_run": null,
+      "git_commit": null,
+      "copied": false,
+      "weights_hashed": false,
+      "note": "v2.3 报告与 adapter 配置登记的基座",
+      "config_sha256": "7463bb0ea78315365e6c6b74de4e73bbcc8359dfb0c5a737584e077d42c0b03c",
+      "tokenizer_sha256": "5b5d4f65d0acd3b2d56a35b56d374a36cbc1c8fa5cf3b3febbbfabf22f359583",
+      "weight_files": [
+        "model-00001-of-00004.safetensors",
+        "model-00002-of-00004.safetensors",
+        "model-00003-of-00004.safetensors",
+        "model-00004-of-00004.safetensors"
+      ],
+      "weight_bytes": 15231271888,
+      "integrity_status": "summary_verified",
+      "missing_reason": null
+    },
+    {
+      "asset_id": "sft_default_base",
+      "role": "base_model_default",
+      "relative_path": "/data/pjw/data/models/Qwen2.5-7B-Instruct",
+      "exists": false,
+      "sha256": null,
+      "schema_version": "model_summary_v1",
+      "record_count": null,
+      "producing_run": null,
+      "git_commit": null,
+      "copied": false,
+      "weights_hashed": false,
+      "note": "sft.py DEFAULT_BASE 的环境变量回退后路径",
+      "integrity_status": "blocked",
+      "missing_reason": "missing"
+    }
+  ],
+  "stages": [
+    {
+      "stage_id": "pipeline",
+      "status": "implemented",
+      "scope": "只表示源码文件存在，不表示真实实验已执行",
+      "evidence": [
+        "src/qa_pipeline/pipeline.py"
+      ]
+    },
+    {
+      "stage_id": "import_review",
+      "status": "implemented",
+      "scope": "只表示源码文件存在，不表示真实实验已执行",
+      "evidence": [
+        "src/qa_pipeline/experiments/review_io.py"
+      ]
+    },
+    {
+      "stage_id": "eval_adapter",
+      "status": "implemented",
+      "scope": "只表示源码文件存在，不表示真实实验已执行",
+      "evidence": [
+        "src/qa_pipeline/experiments/adapter_eval.py"
+      ]
+    },
+    {
+      "stage_id": "v25_prepare",
+      "status": "implemented",
+      "scope": "只表示源码文件存在，不表示真实实验已执行",
+      "evidence": [
+        "src/qa_pipeline/experiments/v25_prepare.py"
+      ]
+    },
+    {
+      "stage_id": "teacher_review",
+      "status": "implemented",
+      "scope": "只表示源码文件存在，不表示真实实验已执行",
+      "evidence": [
+        "src/qa_pipeline/reviewing/service.py"
+      ]
+    },
+    {
+      "stage_id": "reviewed_eval",
+      "status": "implemented",
+      "scope": "只表示源码文件存在，不表示真实实验已执行",
+      "evidence": [
+        "src/qa_pipeline/experiments/reviewed_eval.py"
+      ]
+    },
+    {
+      "stage_id": "demo",
+      "status": "implemented",
+      "scope": "只表示源码文件存在，不表示真实实验已执行",
+      "evidence": [
+        "src/qa_pipeline/demo/app.py"
+      ]
+    },
+    {
+      "stage_id": "fake_smoke",
+      "status": "reproduced",
+      "scope": "FakeLLM 流程复现，不是教师或学生模型效果",
+      "evidence": [
+        "runs/m0_baseline_20261007/smoke/stats.json"
+      ]
+    },
+    {
+      "stage_id": "fake_suite",
+      "status": "reproduced",
+      "scope": "FakeLLM 套件复现，不是真实训练或评测",
+      "evidence": [
+        "runs/m0_baseline_20261007/suite/report.md"
+      ]
+    },
+    {
+      "stage_id": "v22_g0_training",
+      "status": "artifact_verified",
+      "scope": "历史单 seed 训练产物。run_meta 记载当时工作区为脏状态。本环境没有重新训练，不能标 reproduced",
+      "evidence": [
+        "runs/drug_v22/E3_g0/sft/train.jsonl",
+        "runs/drug_v22/run_meta.json"
+      ],
+      "report_claim": "reported_executed"
+    },
+    {
+      "stage_id": "v23_predictions",
+      "status": "artifact_verified",
+      "scope": "本地预测文件可核对字节和行数。没有在本环境重跑推理",
+      "evidence": [
+        "runs/drug_v23_eval/exploratory/predictions.jsonl",
+        "runs/drug_v23_eval/report.md"
+      ],
+      "report_claim": "reported_executed"
+    },
+    {
+      "stage_id": "v24_rescore",
+      "status": "artifact_verified",
+      "scope": "v2.4 重评分与补推理文件在 drug_v24_rescore。人工裁定不因这些文件存在而完成",
+      "evidence": [
+        "runs/drug_v24_rescore/train_seen_confirmed/predictions.jsonl",
+        "runs/drug_v24_audit/report.md"
+      ],
+      "report_claim": "reported_executed"
+    },
+    {
+      "stage_id": "v25_materials",
+      "status": "artifact_verified",
+      "scope": "协议和审核包已准备。ready_for_inference 仍取决于人工导入结果，不能把文件存在当成已审核",
+      "evidence": [
+        "runs/drug_v25_eval/review/batches.json",
+        "runs/drug_v25_eval/report.md"
+      ],
+      "report_claim": "reported_executed"
+    },
+    {
+      "stage_id": "human_gold",
+      "status": "blocked",
+      "scope": "人工金标未完成。教师审核不能改写为 agreed 或 dual_agreed",
+      "evidence": [
+        "runs/drug_v25_eval/review/import_result.json"
+      ],
+      "report_claim": "reported_executed",
+      "missing_reason": "adjudicated_zero_or_unverified"
+    },
+    {
+      "stage_id": "formal_eval",
+      "status": "blocked",
+      "scope": "正式评测仍要求人工金标、非空冻结来源清单和来源宇宙。空协议不能当成零样本成功",
+      "evidence": [
+        "data/campus_hospital_drug_instructions/frozen/heldout_protocol.jsonl"
+      ],
+      "missing_reason": "frozen_source_list_missing"
+    },
+    {
+      "stage_id": "teacher_review_execution",
+      "status": "not_started",
+      "scope": "代码可实现后，真实教师调用仍要凭据和预算。dry-run 不是审核结论",
+      "evidence": []
+    },
+    {
+      "stage_id": "reviewed_inference",
+      "status": "not_started",
+      "scope": "A/B 执行器未获生成预算前不加载学生模型",
+      "evidence": []
+    },
+    {
+      "stage_id": "new_g0_training",
+      "status": "not_started",
+      "scope": "没有诊断结论和训练预算，不启动新的 G0",
+      "evidence": []
+    },
+    {
+      "stage_id": "g1_g3",
+      "status": "not_started",
+      "scope": "缺少真实学生探测器、有效选样和冻结回放池，保持未执行",
+      "evidence": []
+    }
+  ],
+  "observability": [
+    {
+      "run": "runs/drug_v22",
+      "exists": true,
+      "observability": "historical_partial",
+      "missing_fields": [
+        "events.jsonl"
+      ],
+      "duration_sec": null
+    },
+    {
+      "run": "runs/drug_v23_eval",
+      "exists": true,
+      "observability": "historical_partial",
+      "missing_fields": [
+        "events.jsonl"
+      ],
+      "duration_sec": null
+    },
+    {
+      "run": "runs/drug_v24_audit",
+      "exists": true,
+      "observability": "historical_partial",
+      "missing_fields": [
+        "events.jsonl"
+      ],
+      "duration_sec": null
+    },
+    {
+      "run": "runs/drug_v25_eval",
+      "exists": true,
+      "observability": "historical_partial",
+      "missing_fields": [
+        "events.jsonl"
+      ],
+      "duration_sec": null
+    }
+  ],
+  "command_results": {
+    "pytest_before_code_changes": {
+      "passed": 92,
+      "failed": 0,
+      "skipped": 0,
+      "command": "python -X utf8 -m pytest -q -ra",
+      "note": "改动前的基线。历史文件存在，test_v24_historical 没有跳过。"
+    },
+    "pytest_after_code_changes": {
+      "passed": 109,
+      "failed": 0,
+      "skipped": 0,
+      "command": "python -X utf8 -m pytest -q -ra",
+      "note": "包含新增审核、盘点和 API 测试。0 skipped 不是把跳过当成通过。"
+    },
+    "list_strategies": {
+      "out": "runs/m0_baseline_20261007/list_strategies.json",
+      "fake": false
+    },
+    "smoke": {
+      "out": "runs/m0_baseline_20261007/smoke",
+      "kept": 2,
+      "rejected": 0,
+      "fake": true,
+      "note": "FakeLLM，不是教师效果"
+    },
+    "suite": {
+      "out": "runs/m0_baseline_20261007/suite",
+      "n": 14,
+      "exit_code": 0,
+      "fake": true,
+      "note": "FakeLLM 套件，不是训练或评测效果"
+    },
+    "batch1_teacher_dry_run": {
+      "out": "runs/m0_baseline_20261007/batch1_teacher_dry_run",
+      "status": "blocked",
+      "reason": "teacher_credentials_missing",
+      "planned_subjects": 14,
+      "planned_calls": 28,
+      "model_called": false,
+      "estimated_cost": null,
+      "currency": "unknown"
+    },
+    "batch1_eval": {
+      "out": "runs/m0_baseline_20261007/batch1_eval_blocked",
+      "status": "blocked",
+      "reason": "pending_review",
+      "planned_n": 14,
+      "executed": false,
+      "model_loaded": false
+    },
+    "smoke_events": {
+      "out": "runs/m0_baseline_20261007/smoke_events",
+      "fake": true,
+      "events": true,
+      "note": "新运行写出 events.jsonl；历史运行仍是 historical_partial"
+    }
+  },
+  "blockers": [
+    {
+      "asset_id": "frozen_heldout_protocol",
+      "reason": "empty_file",
+      "path": "data/campus_hospital_drug_instructions/frozen/heldout_protocol.jsonl"
+    },
+    {
+      "asset_id": "frozen_train_families",
+      "reason": "missing",
+      "path": "data/campus_hospital_drug_instructions/frozen/frozen_train_families.json"
+    },
+    {
+      "asset_id": "source_universe",
+      "reason": "missing",
+      "path": "data/campus_hospital_drug_instructions/frozen/source_universe.json"
+    },
+    {
+      "asset_id": "sft_default_base",
+      "reason": "missing",
+      "path": "/data/pjw/data/models/Qwen2.5-7B-Instruct"
+    },
+    {
+      "asset_id": "teacher_api",
+      "reason": "credentials_not_assumed",
+      "path": ""
+    },
+    {
+      "asset_id": "gpu_training",
+      "reason": "no_training_budget",
+      "path": ""
+    }
+  ],
+  "historical_hashes_unchanged": true
+}

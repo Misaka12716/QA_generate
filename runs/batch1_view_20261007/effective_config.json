@@ -1,0 +1,14 @@
+{
+  "service_id": "teacher-openai-compatible",
+  "endpoint_fingerprint": "2f37bc3390ecb89ee54b5855126e99f75703f446b1b3f7609bb6271e152f60dd",
+  "model_id": "qwen3.8-27b",
+  "model_revision": "unknown",
+  "authentication": "models 列表无需密钥；聊天以小试为准",
+  "max_calls": 120,
+  "max_total_tokens": 200000,
+  "concurrency": 2,
+  "max_technical_retries": 1,
+  "estimated_cost": null,
+  "currency": "unknown",
+  "pricing_version": "unknown"
+}

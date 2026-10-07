@@ -1,0 +1,36 @@
+{
+  "llm_calls": 9,
+  "prompt_tokens": 2182,
+  "completion_tokens": 2564,
+  "estimated_cost_usd": 0.001023,
+  "stage_seconds": {
+    "teacher_router": 0.0,
+    "distillation": 40.31,
+    "filter:rule_clean": 0.387,
+    "filter:llm_judge": 27.381,
+    "grading": 0.0,
+    "total": 68.079
+  },
+  "produced": {
+    "questions": 5,
+    "distilled": 5,
+    "kept": 4,
+    "rejected": 0
+  },
+  "rejected": {
+    "rule_clean": 1
+  },
+  "funnel": {
+    "rule_clean": {
+      "in": 5,
+      "out": 4,
+      "dropped": 1
+    },
+    "llm_judge": {
+      "in": 4,
+      "out": 4,
+      "dropped": 0
+    }
+  },
+  "fallbacks": []
+}

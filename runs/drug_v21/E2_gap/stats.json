@@ -1,0 +1,88 @@
+{
+  "llm_calls": 264,
+  "prompt_tokens": 76296,
+  "completion_tokens": 82091,
+  "estimated_cost_usd": 0.0,
+  "stage_seconds": {
+    "chunking": 0.107,
+    "anchor": 0.0,
+    "question_gen": 1819.598,
+    "evolution": 0.0,
+    "question_filter": 0.0,
+    "teacher_router": 0.0,
+    "distillation": 0.009,
+    "filter:rule_clean": 4.378,
+    "filter:evidence_substring": 0.003,
+    "filter:exact_hash_dedup": 0.0,
+    "filter:claim_evidence": 250.252,
+    "filter:risk_escalate": 0.002,
+    "filter:behavior_insufficient": 0.006,
+    "filter:student_diagnostic": 27.099,
+    "filter:joint_dedup": 0.001,
+    "grading": 0.005,
+    "total": 2101.475
+  },
+  "produced": {
+    "chunks": 100,
+    "questions": 150,
+    "distilled": 150,
+    "kept": 147,
+    "rejected": 8
+  },
+  "rejected": {
+    "rule_clean": 3,
+    "behavior_insufficient": -8
+  },
+  "funnel": {
+    "rule_clean": {
+      "in": 150,
+      "out": 147,
+      "dropped": 3
+    },
+    "evidence_substring": {
+      "in": 147,
+      "out": 147,
+      "dropped": 0
+    },
+    "exact_hash_dedup": {
+      "in": 147,
+      "out": 147,
+      "dropped": 0
+    },
+    "claim_evidence": {
+      "in": 147,
+      "out": 147,
+      "dropped": 0
+    },
+    "risk_escalate": {
+      "in": 147,
+      "out": 147,
+      "dropped": 0
+    },
+    "behavior_insufficient": {
+      "in": 147,
+      "out": 155,
+      "dropped": -8
+    },
+    "student_diagnostic": {
+      "in": 155,
+      "out": 155,
+      "dropped": 0
+    },
+    "joint_dedup": {
+      "in": 155,
+      "out": 155,
+      "dropped": 0
+    }
+  },
+  "fallbacks": [],
+  "budget_stops": [],
+  "ledger": {
+    "spent_settled": 0.0,
+    "reserved_inflight": 0.0,
+    "unbilled_reserve": 0.0,
+    "required_process_reserve": 0.0,
+    "safety_margin": 0.0,
+    "authorized_cap": null
+  }
+}

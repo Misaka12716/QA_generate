@@ -1,0 +1,30 @@
+{
+  "runs/drug_v22/E3_g0/sft/train.jsonl": {
+    "sha256": "a95a8aa026bff7b06af8c3034a5030c8837e2c4aa51b04071f089aae2ea331dc",
+    "size": 260278
+  },
+  "runs/drug_v22/E3_g0/sft/lora/adapter/adapter_model.safetensors": {
+    "sha256": "4f4bdec7b50dab9eeacad634bb69518401190df8a0b40997e8c819f24fb8bef2",
+    "size": 40400200
+  },
+  "runs/drug_v23_eval/exploratory/predictions.jsonl": {
+    "sha256": "3930f3416bee8b8f4820a98182618b09a18fc72fc5f92ceb88faa955b6bdb7d2",
+    "size": 2055280
+  },
+  "runs/drug_v25_eval/review/import_result.json": {
+    "sha256": "70184785915ddce301a49bcb26984dc7802284fc973c693dab098f6253aed8e6",
+    "size": 109454
+  },
+  "runs/drug_v25_eval/review/batch1_behavior.csv": {
+    "sha256": "6d550badc0407edef27fb008d4d3d0f2dd8b861866f9448a6f0e95f1dd03ab23",
+    "size": 4111
+  },
+  "runs/drug_v25_eval/batch1/protocol.jsonl": {
+    "sha256": "c06fbbc2944db1bb66247c484ac280d0bf0bd052f99d49b3861ec039a06cd001",
+    "size": 24619
+  },
+  "data/campus_hospital_drug_instructions/frozen/heldout_protocol.jsonl": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "size": 0
+  }
+}

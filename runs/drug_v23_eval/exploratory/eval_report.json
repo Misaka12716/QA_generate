@@ -1,0 +1,65 @@
+{
+  "status": "exploratory_executed",
+  "executed": true,
+  "reason": null,
+  "mode": "exploratory",
+  "result_class": "exploratory_auxiliary",
+  "disclaimer": "未完成人工审核，仅供探索",
+  "enters_formal_metric": false,
+  "formal_main_metric": "not_executed",
+  "formal_gold": false,
+  "semantic_accuracy_verified": false,
+  "scorer_version": "aux-rules-v2",
+  "base_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+  "adapter_id": "4f4bdec7b50dab9e",
+  "template_id": "5b5d4f65d0acd3b2",
+  "infer_config": {
+    "max_new_tokens": 512,
+    "do_sample": false,
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "dtype": "bfloat16"
+  },
+  "planned_n": 100,
+  "generated_n": {
+    "base": 100,
+    "adapter": 100
+  },
+  "scored_n": 100,
+  "failed_n": 0,
+  "cache_hits": 4,
+  "protocol_failures": [],
+  "content_error_n": 40,
+  "technical_failure_n": 0,
+  "layered": {
+    "ordinary": {
+      "family_count": 60,
+      "source_family_count": 28,
+      "task_accuracy": 0.9196,
+      "reason": null,
+      "weighting": "equal_source_family",
+      "row_count": 90
+    },
+    "behavior": {
+      "family_count": 10,
+      "source_family_count": 7,
+      "task_accuracy": 0.2857,
+      "reason": null,
+      "weighting": "equal_source_family",
+      "row_count": 10
+    },
+    "row_count": 100,
+    "core_question_count": 60,
+    "source_family_count": 28,
+    "behavior_row_count": 10,
+    "combined_generalization_score": null,
+    "note": "行为证据变体单独分层，不与普通改写合成一个泛化总分。"
+  },
+  "combined_generalization_score": null,
+  "delta_f1": null,
+  "judge": {
+    "mean": null,
+    "reason": "not_called",
+    "note": "本轮不为填空值调用模型评委，评委结果也不是人工金标。"
+  }
+}

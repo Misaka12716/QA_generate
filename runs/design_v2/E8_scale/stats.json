@@ -1,0 +1,16 @@
+{
+  "llm_calls": 0,
+  "prompt_tokens": 0,
+  "completion_tokens": 0,
+  "estimated_cost_usd": 0.0,
+  "stage_seconds": {},
+  "produced": {
+    "distilled": 71,
+    "kept": 71,
+    "questions": 71
+  },
+  "rejected": {},
+  "funnel": {},
+  "fallbacks": [],
+  "budget_stops": []
+}

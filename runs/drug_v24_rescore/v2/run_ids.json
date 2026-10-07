@@ -1,0 +1,8 @@
+{
+  "prediction_run_id": "b094d63c23c87a35",
+  "score_run_id": "9bbd11b50cbf6475",
+  "base_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+  "adapter_id": "4f4bdec7b50dab9e",
+  "template_id": "5b5d4f65d0acd3b2",
+  "scorer_version": "aux-rules-v2"
+}

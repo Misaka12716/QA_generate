@@ -1,0 +1,21 @@
+{
+  "ok": true,
+  "planned_n": 8,
+  "generated_n": {
+    "base": 8,
+    "adapter": 8
+  },
+  "scored_n": 8,
+  "failed_n": 0,
+  "failures": [],
+  "affected_ids": [],
+  "denominator": 8,
+  "silent_shrink": false,
+  "count_units": {
+    "planned_n": "questions",
+    "generated_n": "model_answers",
+    "scored_n": "questions",
+    "failed_n": "questions"
+  },
+  "system_rule": "技术失败计为任务未完成。分母是 planned_n，不把失败样本去掉后再计算准确率。"
+}

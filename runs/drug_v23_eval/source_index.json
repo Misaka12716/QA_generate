@@ -1,0 +1,542 @@
+[
+  {
+    "filename": "000_1082",
+    "stem": "1082",
+    "source_family_id": "src_b069ebcbafeb7e61005e",
+    "generic_family_id": "gen_e58acfc7ce00de17eccf",
+    "generic_name": "",
+    "split": "train",
+    "content_sha256": "c155bf9dbecc12a9d71cdf66a4780127895c6a93eb4222c87886b93f62a0f6d4"
+  },
+  {
+    "filename": "001_2072",
+    "stem": "2072",
+    "source_family_id": "src_96437653ce00b51f550b",
+    "generic_family_id": "gen_7144a78fb86a5fd9c174",
+    "generic_name": "中文名：清半夏",
+    "split": "train",
+    "content_sha256": "730109c86cbdacd4c61c2f8b0128b11aa24ed0f78ae62bc34d562df0799c8222"
+  },
+  {
+    "filename": "002_1978",
+    "stem": "1978",
+    "source_family_id": "src_d9432d2400c26607b1af",
+    "generic_family_id": "gen_844dba5d10ba78ce7d66",
+    "generic_name": "消炎利胆胶囊",
+    "split": "train",
+    "content_sha256": "e16f3b2bdac62b210c1cfd83082c0a3091bb3c54a8784cb0c4b0a69f1d1b59ed"
+  },
+  {
+    "filename": "003_1914",
+    "stem": "1914",
+    "source_family_id": "src_16ea9091b5f49219f4fd",
+    "generic_family_id": "gen_86fb1009498c084d8c05",
+    "generic_name": "中文名：密蒙花",
+    "split": "train",
+    "content_sha256": "9d27e658de5d14475d700b29b5aaa0f724aaeec8c1a0992fecd827019e681f2d"
+  },
+  {
+    "filename": "004_2096",
+    "stem": "2096",
+    "source_family_id": "src_6a1ac89101e56aff12fb",
+    "generic_family_id": "gen_2ff8d775971e619a1cf9",
+    "generic_name": "中文名：茺蔚子",
+    "split": "train",
+    "content_sha256": "1d08d144b6191655603063b142798d65b11e11d765d7c2f71ffb6ae0e16c4f13"
+  },
+  {
+    "filename": "005_1822",
+    "stem": "1822",
+    "source_family_id": "src_b43275c23b303451c1a3",
+    "generic_family_id": "gen_49ae89de11d9dd201754",
+    "generic_name": "中文名：番泻叶",
+    "split": "train",
+    "content_sha256": "b042942eeb9f9837aa78fa34fdc21ab9ecf3e3f5e951e0661b3f2b3d7d196a66"
+  },
+  {
+    "filename": "006_1088",
+    "stem": "1088",
+    "source_family_id": "src_b6fa94d6ad0af8ed4bde",
+    "generic_family_id": "gen_a261a78cb625159c88a8",
+    "generic_name": "中文名：香附",
+    "split": "train",
+    "content_sha256": "89349c30f4a1d4c363616473ecb750ba7ac8090ac8f2b16bcab40ec48fe58efe"
+  },
+  {
+    "filename": "007_901",
+    "stem": "901",
+    "source_family_id": "src_d44ea7f760a6a0fde593",
+    "generic_family_id": "gen_d77afa1542798dc232f4",
+    "generic_name": "中文名：赤石脂",
+    "split": "train",
+    "content_sha256": "6332321221efaf7c1ceee82b4566d1ec5af5e624ef6c39b51c783084d0915ae8"
+  },
+  {
+    "filename": "008_2290",
+    "stem": "2290",
+    "source_family_id": "src_09d1f8333a3eb0774030",
+    "generic_family_id": "gen_b27e3e5e179f5308811c",
+    "generic_name": "牛黄解毒片汉语拼音：NiuhuangJieduPian",
+    "split": "train",
+    "content_sha256": "f0c59ac34b3df276694147fd68ca22857d0eafdf034cff804b96cc7293d94ae0"
+  },
+  {
+    "filename": "009_436",
+    "stem": "436",
+    "source_family_id": "src_995cc287bfa29288120a",
+    "generic_family_id": "gen_679221e8dd3344fc9f00",
+    "generic_name": "中文名：土鳖虫（蟅虫）",
+    "split": "train",
+    "content_sha256": "f0ad16e4b2993b2d01522b779b72f870b0a0eb7ee81e3a089463a27f7c7fbd27"
+  },
+  {
+    "filename": "010_426",
+    "stem": "426",
+    "source_family_id": "src_0df8e284948d899114f1",
+    "generic_family_id": "gen_97e4e729d54dc666f83d",
+    "generic_name": "养心定悸胶囊汉语拼音：YangxinDingjiJiaonang",
+    "split": "train",
+    "content_sha256": "88c6e93b58ad50b43227d7c97ba94ce0848d807ca8fcc5d6bc9d9cd0064780af"
+  },
+  {
+    "filename": "011_2148",
+    "stem": "2148",
+    "source_family_id": "src_b33ad42edd172f7879e9",
+    "generic_family_id": "gen_ea16bac8d3954440bad0",
+    "generic_name": "通便灵胶囊",
+    "split": "train",
+    "content_sha256": "c9bed9f145a7f533ce54abf4e717fb7334c632ac1a671ce64d66e57a7a508997"
+  },
+  {
+    "filename": "012_940",
+    "stem": "940",
+    "source_family_id": "src_8385f122d5c50cccee4a",
+    "generic_family_id": "gen_71a58e5ec208c91212d7",
+    "generic_name": "藿胆丸",
+    "split": "train",
+    "content_sha256": "dfcdb3384b350a1d07f576eda349eb09e22ac16c3ee0c5269d2efe170c871619"
+  },
+  {
+    "filename": "013_712",
+    "stem": "712",
+    "source_family_id": "src_7e44b77fa50ef2a6bcec",
+    "generic_family_id": "gen_5e7749961c2608c17476",
+    "generic_name": "中文名：麦芽",
+    "split": "train",
+    "content_sha256": "d0316f55e830ba973bd903618530ab8a3df6796d19ed731206bd4b05ce6c4c32"
+  },
+  {
+    "filename": "014_182",
+    "stem": "182",
+    "source_family_id": "src_30b2a61e3f36ce5fd679",
+    "generic_family_id": "gen_77b273e357615b543b3e",
+    "generic_name": "前列欣胶囊汉语拼音：Qianliexin",
+    "split": "train",
+    "content_sha256": "a50edc3d6e2c98dbb469bc6753876b0446fae7f4ab22ba6f964b4f184c72c014"
+  },
+  {
+    "filename": "015_1366",
+    "stem": "1366",
+    "source_family_id": "src_f0c3ca84896bb8e48563",
+    "generic_family_id": "gen_d8027a7f862224c7b6b5",
+    "generic_name": "骨通贴膏（聚异丁烯型）汉语拼音：Gutong",
+    "split": "train",
+    "content_sha256": "53472a7622323971705e9d915701da3ac3230a3bcfc6899dcaa4a9e6573fcdcf"
+  },
+  {
+    "filename": "016_2368",
+    "stem": "2368",
+    "source_family_id": "src_22a42486d4a615c08436",
+    "generic_family_id": "gen_be3f6adbdc432a6811c6",
+    "generic_name": "辛芳鼻炎胶囊汉语拼音：XinfangBiyan",
+    "split": "train",
+    "content_sha256": "f90ad39ab2e0cdf22e4ad37ba451ee2b342777cfa10afbd3095784393be12d5b"
+  },
+  {
+    "filename": "017_1975",
+    "stem": "1975",
+    "source_family_id": "src_ccf741099e2d50abd5ce",
+    "generic_family_id": "gen_5600d42db2b3a47e8dee",
+    "generic_name": "通用名：尿素乳膏英文名：UreaCream",
+    "split": "locked_test",
+    "content_sha256": "3b909dc54d80bdbcc2a7921e6372f307fd5317ce2ad34e1ee994bc0ae1350c09"
+  },
+  {
+    "filename": "018_362",
+    "stem": "362",
+    "source_family_id": "src_9c6226aa593210de748b",
+    "generic_family_id": "gen_d19a350f43862c743b40",
+    "generic_name": "鼻窦炎口服液汉语拼音：BidouyanKoufuye",
+    "split": "train",
+    "content_sha256": "df2e80584b2573501cb6fe3b57235f494e96cb6709177343fc0f039d862096cf"
+  },
+  {
+    "filename": "019_1057",
+    "stem": "1057",
+    "source_family_id": "src_44720e6650cb16b4db65",
+    "generic_family_id": "gen_d6e8e4b7e613f34a728a",
+    "generic_name": "维生素B1片汉语拼音：WeishengsuB1pian英文名称：Vitami",
+    "split": "train",
+    "content_sha256": "8a874e3c01ac69e6aeccf6418544fd3f574690b09c587a00e0395a3d746ae3d1"
+  },
+  {
+    "filename": "020_381",
+    "stem": "381",
+    "source_family_id": "src_de8dded37c91a6cb0ba4",
+    "generic_family_id": "gen_d8ffd643467986d2ea5a",
+    "generic_name": "血脂康胶囊汉语拼音：XuezhikangJiaonang",
+    "split": "train",
+    "content_sha256": "c1cb702124ddb1df112ba783edb966572a82f53a9cb8dece0f60c68d4ae6e824"
+  },
+  {
+    "filename": "021_779",
+    "stem": "779",
+    "source_family_id": "src_a131fcd99342457092b4",
+    "generic_family_id": "gen_494d66574cce4e919fbb",
+    "generic_name": "碳酸钙片",
+    "split": "train",
+    "content_sha256": "a615db07c92163f5d786e6131ab6ad3faad0fbeb1b8c36996ce7ef6d9dfbccdd"
+  },
+  {
+    "filename": "022_1397",
+    "stem": "1397",
+    "source_family_id": "src_d7c59656b3fa365ffccf",
+    "generic_family_id": "gen_4ec0fa6e68caa346cd21",
+    "generic_name": "醋酸甲羟孕酮片",
+    "split": "train",
+    "content_sha256": "29d757519902e253d0e7b15fcb46f6f0f8465dba0924c9132042ec391c0f531a"
+  },
+  {
+    "filename": "023_2481",
+    "stem": "2481",
+    "source_family_id": "src_45674074a61679b2dd83",
+    "generic_family_id": "gen_90f20f030a5c079a3eb2",
+    "generic_name": "聚磺苯乙烯钠散汉语拼音：Juhuangbenyixina",
+    "split": "train",
+    "content_sha256": "f73cfaac7e0fee40cd8803614b84b717cf2d27e67dc4246602f0344a3c1698de"
+  },
+  {
+    "filename": "024_2329",
+    "stem": "2329",
+    "source_family_id": "src_45db033a5dedd594a68d",
+    "generic_family_id": "gen_e5d8fcd3dee085374279",
+    "generic_name": "糠酸莫米松乳膏商品名称：芙美松英文名称：MometasoneFuroateC",
+    "split": "train",
+    "content_sha256": "4d793ee4d8716058e9e65f41acde1f477f065af704bf6b2e743f653d30ca9c4f"
+  },
+  {
+    "filename": "025_1937",
+    "stem": "1937",
+    "source_family_id": "src_d6f9cfa02c0bbd31021c",
+    "generic_family_id": "gen_3278fa28363ca0482c41",
+    "generic_name": "中文名：附子",
+    "split": "train",
+    "content_sha256": "f3aee991b34a3869b0b042344a7c10dd67f23b7e5478de988f83b73383a5a348"
+  },
+  {
+    "filename": "026_1262",
+    "stem": "1262",
+    "source_family_id": "src_42a3f4a5ac4722a33220",
+    "generic_family_id": "gen_b108326affe164357abf",
+    "generic_name": "去痛片",
+    "split": "train",
+    "content_sha256": "1f164008c0633392c5f37dd3fc442abd353bbb983c0884adc45337e7175b4087"
+  },
+  {
+    "filename": "027_1973",
+    "stem": "1973",
+    "source_family_id": "src_9d8d531cfac7e83f7568",
+    "generic_family_id": "gen_950d03c250b829e9a32e",
+    "generic_name": "多索茶碱葡萄糖注射液",
+    "split": "dev",
+    "content_sha256": "83f747fc7debcf5fb750d1ca8a25094bff28bc6c679e7add284aa96a285a5fcc"
+  },
+  {
+    "filename": "028_1157",
+    "stem": "1157",
+    "source_family_id": "src_1aa65dc256aa58ad8427",
+    "generic_family_id": "gen_a7b2c8a6278e7af9b0de",
+    "generic_name": "注射用胸腺五肽",
+    "split": "train",
+    "content_sha256": "e29f0fea153e4e2953688e18e4e343687adce736495e973002cc1e2fe40f642a"
+  },
+  {
+    "filename": "029_322",
+    "stem": "322",
+    "source_family_id": "src_885b095e5fcc6fc9f249",
+    "generic_family_id": "gen_f1dfcd3c9d5381dbc3ef",
+    "generic_name": "氯雷他定糖浆商品名称：开瑞坦®/CLARITYNE®英文名称：Loratadin",
+    "split": "train",
+    "content_sha256": "c8144467396c09303971c584f527f8b926396fd72bc23f35f5b10d510d260519"
+  },
+  {
+    "filename": "030_2160",
+    "stem": "2160",
+    "source_family_id": "src_512d67cfc86b94b02ef3",
+    "generic_family_id": "gen_7cfb8c172f0324173b81",
+    "generic_name": "盐酸消旋山莨菪碱注射液英文名称：Raceanisodamine",
+    "split": "train",
+    "content_sha256": "352e76acf7862f1a1d05ea0791453b0bbbf0e3db4f017cd60efbeb2ba33fe80a"
+  },
+  {
+    "filename": "031_2441",
+    "stem": "2441",
+    "source_family_id": "src_73dd91db1b4249d41776",
+    "generic_family_id": "gen_a7b2c8a6278e7af9b0de",
+    "generic_name": "注射用胸腺五肽",
+    "split": "train",
+    "content_sha256": "390984622595c685e6c552996c802b14c263027bc6388204de71f15d1245b549"
+  },
+  {
+    "filename": "032_1335",
+    "stem": "1335",
+    "source_family_id": "src_8eac03191ddfc4707065",
+    "generic_family_id": "gen_b5583c1081edbf6e212c",
+    "generic_name": "维生素K1注射液英文名称：VitaminK1Injection汉语拼音：Wei",
+    "split": "train",
+    "content_sha256": "fcd2205372e2558cf4964a0167c2bdc9a5f7f5948def28ef5e97ff10b96ed2d1"
+  },
+  {
+    "filename": "033_444",
+    "stem": "444",
+    "source_family_id": "src_5ccad8a52b63f11fbe8f",
+    "generic_family_id": "gen_a28b0065570d471814af",
+    "generic_name": "维生素B6注射液英文名称：VitaminB6Injection汉语拼音：Wei",
+    "split": "dev",
+    "content_sha256": "fedf3fff50da2bdfc9c0c2e0e41cba40d275f68a7e4d6b2b1bc12f28f212c4be"
+  },
+  {
+    "filename": "034_1855",
+    "stem": "1855",
+    "source_family_id": "src_9591289c7618427fe7e9",
+    "generic_family_id": "gen_339c8ef1a8270e732b25",
+    "generic_name": "甲硝唑片",
+    "split": "train",
+    "content_sha256": "2fbc7c7f0723fd3cc9af15721ed73e459231d45568663aa2caa2d964b561ea44"
+  },
+  {
+    "filename": "035_2132",
+    "stem": "2132",
+    "source_family_id": "src_df22b8399c89d604afe4",
+    "generic_family_id": "gen_ea1d0f703a4a0dc98db6",
+    "generic_name": "盐酸氯丙嗪注射液英文名称：Chlorpromazine",
+    "split": "train",
+    "content_sha256": "2a4dbcae7e9c725dfc8b72fc76232f08e0ead582b94cdc083c7587846afae8bd"
+  },
+  {
+    "filename": "036_1146",
+    "stem": "1146",
+    "source_family_id": "src_f37f210b9d1665a50a74",
+    "generic_family_id": "gen_08bfa7ed72abfed2853f",
+    "generic_name": "氨甲环酸注射液英文名称：TranexamicAcidInjection汉语拼",
+    "split": "train",
+    "content_sha256": "86114ecb75d32cd0838eb2a650162532968429cf9b50d3103a1a7cd8c213584f"
+  },
+  {
+    "filename": "037_933",
+    "stem": "933",
+    "source_family_id": "src_c19ce36a7f9094ff8602",
+    "generic_family_id": "gen_c2fe2027f3046b12d95d",
+    "generic_name": "泛昔洛韦片英文名称：FamciclovirTablets汉语拼音：Fanxil",
+    "split": "train",
+    "content_sha256": "4e915380b61371de01dc1d919ee3a181bddce650183c94d6138fb749a3d842e1"
+  },
+  {
+    "filename": "038_1773",
+    "stem": "1773",
+    "source_family_id": "src_a317714e3ecf65fb973f",
+    "generic_family_id": "gen_4fea4589070ff807cf69",
+    "generic_name": "盐酸奥布卡因滴眼液商品名称：倍诺喜®（Benoxil）英文名称：Oxybupro",
+    "split": "dev",
+    "content_sha256": "b08815ba014036e468982abab613df8d80c7bab1fa9c129d463ad2428ce22ed9"
+  },
+  {
+    "filename": "039_1036",
+    "stem": "1036",
+    "source_family_id": "src_0e053dec34c2b079cb5b",
+    "generic_family_id": "gen_fb5654c3aee064875d2f",
+    "generic_name": "盐酸哌替啶注射液英文名称：Pethidine",
+    "split": "train",
+    "content_sha256": "c328c504404e08247492176fe889943600d17f27e5d4d4d14c16cdca8f42a7a2"
+  },
+  {
+    "filename": "040_1307",
+    "stem": "1307",
+    "source_family_id": "src_3ca2db2a75ae008e9b60",
+    "generic_family_id": "gen_0d93f1651ff22b33bd40",
+    "generic_name": "阿卡波糖片汉语拼音：AKaBoTangPian英文名称：Acarbose",
+    "split": "train",
+    "content_sha256": "25bb58300d396e3461eb1ab74b7b61963d41ccfb5a3e6077931138416a270cf6"
+  },
+  {
+    "filename": "041_1081",
+    "stem": "1081",
+    "source_family_id": "src_e9618577461bd69fd66b",
+    "generic_family_id": "gen_41bfe934372bc86a5d0e",
+    "generic_name": "硫酸依替米星注射液商品名称：创成英文名称：EtimicinSulfateIn",
+    "split": "dev",
+    "content_sha256": "c0187379eea217eac7827bdb7f44582af2616065a8c68528b6519e335b4227c9"
+  },
+  {
+    "filename": "042_185",
+    "stem": "185",
+    "source_family_id": "src_462fddfc27ae15d0df39",
+    "generic_family_id": "gen_5329c1d3792311170dfa",
+    "generic_name": "西咪替丁注射液英文名称：Cimetidine",
+    "split": "train",
+    "content_sha256": "48e873540e2c21cdfa913f01bddd14af8a127f1bba0c44670d26b33ff9765623"
+  },
+  {
+    "filename": "043_597",
+    "stem": "597",
+    "source_family_id": "src_bede4cd7c47cdf67bdc5",
+    "generic_family_id": "gen_6826fa10cbaf49f978ec",
+    "generic_name": "地塞米松磷酸钠注射液英文名称：Dexamethasone",
+    "split": "dev",
+    "content_sha256": "a3c44c94d501dcfa23a60f155eb5c8670a52e78979eb5149fbe6d2b26635fb29"
+  },
+  {
+    "filename": "044_711",
+    "stem": "711",
+    "source_family_id": "src_805e1f5f70cae5bd8073",
+    "generic_family_id": "gen_6d5c25e9753601245299",
+    "generic_name": "伊曲康唑分散片",
+    "split": "dev",
+    "content_sha256": "e3e6734707afdbe5a6243426a47e34b68961f8276b4dc2e4d8d27b8ddb2942e0"
+  },
+  {
+    "filename": "045_594",
+    "stem": "594",
+    "source_family_id": "src_8d65c3bd199590ebfb78",
+    "generic_family_id": "gen_f427059a65dab3c26021",
+    "generic_name": "联磺甲氧苄啶片",
+    "split": "train",
+    "content_sha256": "8682e17901530fa5e76009288edd042a9552425593f7ac0bb2908569cc7b405c"
+  },
+  {
+    "filename": "046_2379",
+    "stem": "2379",
+    "source_family_id": "src_48fe6f16d5265eeab4c7",
+    "generic_family_id": "gen_f6b351e31d8d2db156ae",
+    "generic_name": "注射用氢化可的松琥珀酸钠汉语拼音：Zhusheyong",
+    "split": "train",
+    "content_sha256": "06032a161b5d08adc502c8f1a1880ae1db5c73e4fd57024af2dc75e65a53840d"
+  },
+  {
+    "filename": "047_2418",
+    "stem": "2418",
+    "source_family_id": "src_fc05e45e3036bf815b76",
+    "generic_family_id": "gen_95daddf1af8709482fcd",
+    "generic_name": "通用名称；头孢克洛胶囊",
+    "split": "locked_test",
+    "content_sha256": "a66b7a645dcdac71d2a07e089abfc95e475e00d2955434694c1656adb4e55c13"
+  },
+  {
+    "filename": "048_421",
+    "stem": "421",
+    "source_family_id": "src_a427263b238642413fc8",
+    "generic_family_id": "gen_6664adf9d6e13a593709",
+    "generic_name": "注射用头孢西丁钠英文名称：CefoxitinSodiumforInject",
+    "split": "train",
+    "content_sha256": "f98a44da7b1cf15c240c98cad522181d3bf8d140f29c6667ce62f8f4b6ebd227"
+  },
+  {
+    "filename": "049_2422",
+    "stem": "2422",
+    "source_family_id": "src_611f008809ed33e27e6a",
+    "generic_family_id": "gen_bb04a733bb7c9810cb39",
+    "generic_name": "酒石酸美托洛尔片商品名称：倍他乐克英文名称：MetoprololTartrat",
+    "split": "train",
+    "content_sha256": "c3c0946357de7ebe356bbd5f0a25433b0ae95facbf0a33d679633728b9f0ee90"
+  },
+  {
+    "filename": "050_1314",
+    "stem": "1314",
+    "source_family_id": "src_c9d3738aa40759a34289",
+    "generic_family_id": "gen_9304eeacc58973e0841f",
+    "generic_name": "匹伐他汀钙片",
+    "split": "train",
+    "content_sha256": "56f8d81d3ee3d3a5c6675ba653c998156f0eea87e3da766ea19cbed1690bfa28"
+  },
+  {
+    "filename": "051_2064",
+    "stem": "2064",
+    "source_family_id": "src_6dbcb2a266da6766f19d",
+    "generic_family_id": "gen_ac022d52cd52eec396d9",
+    "generic_name": "克林霉素磷酸酯注射液商品名称：力派英文名称：ClindamycinPhosph",
+    "split": "train",
+    "content_sha256": "94ef043484e691dca93762cf25a82a68cc71153ace72ad898b6f7e9eea148db5"
+  },
+  {
+    "filename": "052_485",
+    "stem": "485",
+    "source_family_id": "src_aa1f50410fe1c36e3356",
+    "generic_family_id": "gen_60b60ddfa9cf684fe7e6",
+    "generic_name": "艾拉莫德片商品名称：艾得辛®英文名称：Iguratimod",
+    "split": "train",
+    "content_sha256": "49e43f8d4150c5b92a6d8ef40920b974419a1d0d2399b799d4213c3620dbac1c"
+  },
+  {
+    "filename": "053_783",
+    "stem": "783",
+    "source_family_id": "src_14ec78451eac3fe04f67",
+    "generic_family_id": "gen_c2d35e0800103af4c809",
+    "generic_name": "磷酸奥司他韦胶囊英文名称：OseltamivirPhosphateCapsu",
+    "split": "train",
+    "content_sha256": "56724ea70a6590803569abd6c3ab60ef80ce91e6cb654c4411a98c267f3a4636"
+  },
+  {
+    "filename": "054_2075",
+    "stem": "2075",
+    "source_family_id": "src_07cd7b0c0d2e7451774c",
+    "generic_family_id": "gen_6b32a19d46d0be72fedc",
+    "generic_name": "地高辛片商品名称：可力®英文名称：DigoxinTablets汉语拼音：Dig",
+    "split": "locked_test",
+    "content_sha256": "2f7f84eef062617e8e665cc908c0eb9e49d3854d6b1be7a832f50fb1360c5677"
+  },
+  {
+    "filename": "055_270",
+    "stem": "270",
+    "source_family_id": "src_b4dfd91ab54650cc0411",
+    "generic_family_id": "gen_ea4d98a5d31768690ed8",
+    "generic_name": "酒石酸唑吡坦片商品名称：思诺思®Stilnox®英文名称：ZolpidemTa",
+    "split": "train",
+    "content_sha256": "5af53b86fb8d02c9b76b61aebd508181a9c5b17676f050bfa8ceae5c251dcd3d"
+  },
+  {
+    "filename": "056_1473",
+    "stem": "1473",
+    "source_family_id": "src_9641bef9de21fae8c137",
+    "generic_family_id": "gen_1cce60bb034c40755727",
+    "generic_name": "注射用甲泼尼龙琥珀酸钠英文名称：MethylprednisoloneSodiu",
+    "split": "train",
+    "content_sha256": "2a582156dad604ba0c71fb9bcb506bf0647015e7fc90bf0d551ceb3ab99269ce"
+  },
+  {
+    "filename": "057_123",
+    "stem": "123",
+    "source_family_id": "src_92b1dd259440cde999b1",
+    "generic_family_id": "gen_d4af67741aa9a1152f09",
+    "generic_name": "卡马西平片商品名称：得理多英文名称：CarbamazepineTablets汉",
+    "split": "train",
+    "content_sha256": "79564221e31fd0fcb4b812ed04ffbed539d5c89b60b7607e31a547abf7c1155b"
+  },
+  {
+    "filename": "058_1882",
+    "stem": "1882",
+    "source_family_id": "src_51828b5f8dca067691cb",
+    "generic_family_id": "gen_5579831834d2c7e233ab",
+    "generic_name": "利格列汀二甲双胍片（Ⅱ）商品名称：欧双宁®/TrajentaDuo®英文名称：",
+    "split": "dev",
+    "content_sha256": "4adeca0f522ebf91956630018059263622bc4e4fc9aa1c288a42bcdf779618c0"
+  },
+  {
+    "filename": "059_1991",
+    "stem": "1991",
+    "source_family_id": "src_1bbce7515029cb0d6206",
+    "generic_family_id": "gen_8379c6e09a9348866f8b",
+    "generic_name": "利培酮片商品名称：维思通®英文名称：Risperidone",
+    "split": "train",
+    "content_sha256": "922e293e365ad459ee205aee7192533220412b0705fcbd2395292bf276163aa7"
+  }
+]

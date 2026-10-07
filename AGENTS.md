@@ -48,7 +48,7 @@ qa-pipeline run --recipe configs/recipes/smoke.yaml --input fixtures/sample_manu
 ## 文件与结果保护
 
 - 新运行使用新的 `runs/` 子目录或测试临时目录，不覆盖已提交报告、冻结语料、协议、manifest、训练 JSONL、adapter 和历史预测。
-- 尊重 `.gitignore`；不要提交 API key、`gpt_api` 凭据、私有语料、模型权重或批量中间结果。
+- 尊重 `.gitignore`；不要提交 API key、`gpt_api` 凭据、语料原文（`data/**/raw/` 等）、模型权重（含 `runs/**/sft/lora` 与 `*.safetensors`）或 `runs/**/_cache`。可提交冻结协议、问答 jsonl、评测账本与报告；见 [runs/README.md](runs/README.md)。
 - 教师默认地址来自原实验内网。检查真实配置时不打印密钥；切换教师需核对 `teacher_models`，不能假设 `--model` 覆盖它。
 - 不为跑通领域套件伪造缺失数据或替换正式 heldout。缺失条件应如实记录。
 

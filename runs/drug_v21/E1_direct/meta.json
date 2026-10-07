@@ -1,0 +1,7 @@
+{
+  "recipe": "drug_e1_direct",
+  "kept": 142,
+  "rejected": 3,
+  "chunks": 100,
+  "questions": 150
+}

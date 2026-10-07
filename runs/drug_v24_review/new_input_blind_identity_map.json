@@ -1,0 +1,55 @@
+{
+  "seed": 20261006,
+  "n": 8,
+  "rows": [
+    {
+      "blind_id": "new_blind_0001",
+      "case_id": "v24_behavior_wrong_object",
+      "model_role": "adapter",
+      "stratum": "behavior_new_input"
+    },
+    {
+      "blind_id": "new_blind_0002",
+      "case_id": "v24_behavior_contra_not_visible",
+      "model_role": "base",
+      "stratum": "behavior_new_input"
+    },
+    {
+      "blind_id": "new_blind_0003",
+      "case_id": "v24_behavior_replaced_context",
+      "model_role": "adapter",
+      "stratum": "behavior_new_input"
+    },
+    {
+      "blind_id": "new_blind_0004",
+      "case_id": "v24_behavior_missing_reaction",
+      "model_role": "base",
+      "stratum": "behavior_new_input"
+    },
+    {
+      "blind_id": "new_blind_0005",
+      "case_id": "v24_behavior_replaced_context",
+      "model_role": "base",
+      "stratum": "behavior_new_input"
+    },
+    {
+      "blind_id": "new_blind_0006",
+      "case_id": "v24_behavior_missing_reaction",
+      "model_role": "adapter",
+      "stratum": "behavior_new_input"
+    },
+    {
+      "blind_id": "new_blind_0007",
+      "case_id": "v24_behavior_wrong_object",
+      "model_role": "base",
+      "stratum": "behavior_new_input"
+    },
+    {
+      "blind_id": "new_blind_0008",
+      "case_id": "v24_behavior_contra_not_visible",
+      "model_role": "adapter",
+      "stratum": "behavior_new_input"
+    }
+  ],
+  "note": "与 348 份盲评分开。审核界面不应读取此文件。"
+}

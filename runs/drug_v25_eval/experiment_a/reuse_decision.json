@@ -1,0 +1,608 @@
+{
+  "checked_n": 60,
+  "reused_n": 60,
+  "rejected_n": 0,
+  "v22_train_seen_answers": "not_reused_missing_prediction_identity",
+  "decisions": [
+    {
+      "case_id": "qa_3cfb9b13f6e4",
+      "core_question_id": "qfam_4c3584eb34de5a4fd850",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_3cfb9b13f6e4",
+      "core_question_id": "qfam_4c3584eb34de5a4fd850",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_086693f5f4ad",
+      "core_question_id": "qfam_af536f77618a221e6c5c",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_086693f5f4ad",
+      "core_question_id": "qfam_af536f77618a221e6c5c",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_839229ecb876",
+      "core_question_id": "qfam_06f1d57c827febba8713",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_839229ecb876",
+      "core_question_id": "qfam_06f1d57c827febba8713",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_71f9ef497e9c",
+      "core_question_id": "qfam_4a07d41cc70725c94d35",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_71f9ef497e9c",
+      "core_question_id": "qfam_4a07d41cc70725c94d35",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_7add2f685a9e",
+      "core_question_id": "qfam_05d2b860495eb4b2498b",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_7add2f685a9e",
+      "core_question_id": "qfam_05d2b860495eb4b2498b",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_ed03d3355edf",
+      "core_question_id": "qfam_170c384f47a15a5dab24",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_ed03d3355edf",
+      "core_question_id": "qfam_170c384f47a15a5dab24",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_4a668d362cc7",
+      "core_question_id": "qfam_51588c86e590ebd3a5c8",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_4a668d362cc7",
+      "core_question_id": "qfam_51588c86e590ebd3a5c8",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_35a25d411cc6",
+      "core_question_id": "qfam_06413022d6593d5ec41b",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_35a25d411cc6",
+      "core_question_id": "qfam_06413022d6593d5ec41b",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_17adb0e5aea5",
+      "core_question_id": "qfam_389c8722eafd45152f67",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_17adb0e5aea5",
+      "core_question_id": "qfam_389c8722eafd45152f67",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_e671bbefa8b1",
+      "core_question_id": "qfam_8b212f7f510fce598a4a",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_e671bbefa8b1",
+      "core_question_id": "qfam_8b212f7f510fce598a4a",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_3502e454303c",
+      "core_question_id": "qfam_0940f383386d5a774f22",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_3502e454303c",
+      "core_question_id": "qfam_0940f383386d5a774f22",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_4a9e25b6669b",
+      "core_question_id": "qfam_3eb5cf6ccc7447e5c06b",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_4a9e25b6669b",
+      "core_question_id": "qfam_3eb5cf6ccc7447e5c06b",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_f1182424a870",
+      "core_question_id": "qfam_a33ae357ea7e4b7b878a",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_f1182424a870",
+      "core_question_id": "qfam_a33ae357ea7e4b7b878a",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_f830f22ae4f6",
+      "core_question_id": "qfam_10ebcff3daa3436ee830",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_f830f22ae4f6",
+      "core_question_id": "qfam_10ebcff3daa3436ee830",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_b34d3b4a1713",
+      "core_question_id": "qfam_4ba1a7f4306537c2e009",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_b34d3b4a1713",
+      "core_question_id": "qfam_4ba1a7f4306537c2e009",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_7fb93e34e729",
+      "core_question_id": "qfam_a583925f36f3e6dbab19",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_7fb93e34e729",
+      "core_question_id": "qfam_a583925f36f3e6dbab19",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_59d1fd12789c",
+      "core_question_id": "qfam_11f639fe67ebfcac5d0c",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_59d1fd12789c",
+      "core_question_id": "qfam_11f639fe67ebfcac5d0c",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_c50bca4de084",
+      "core_question_id": "qfam_73264e36deffd34615cb",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_c50bca4de084",
+      "core_question_id": "qfam_73264e36deffd34615cb",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_0d19335bbd54",
+      "core_question_id": "qfam_cd8487cdc4abee1282ab",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_0d19335bbd54",
+      "core_question_id": "qfam_cd8487cdc4abee1282ab",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_1170d7e9d871",
+      "core_question_id": "qfam_172279245ea13b6a7d29",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_1170d7e9d871",
+      "core_question_id": "qfam_172279245ea13b6a7d29",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_8e80f39b4ae3",
+      "core_question_id": "qfam_83532e640135f10909bc",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_8e80f39b4ae3",
+      "core_question_id": "qfam_83532e640135f10909bc",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_8aeaee12775b",
+      "core_question_id": "qfam_db6eb43eea683e665072",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_8aeaee12775b",
+      "core_question_id": "qfam_db6eb43eea683e665072",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_b2cb8a9172ec",
+      "core_question_id": "qfam_1960f19815ff6c491677",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_b2cb8a9172ec",
+      "core_question_id": "qfam_1960f19815ff6c491677",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_000adeec0933",
+      "core_question_id": "qfam_8adea35e80915295cf6f",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_000adeec0933",
+      "core_question_id": "qfam_8adea35e80915295cf6f",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_c8e2731ba8c2",
+      "core_question_id": "qfam_1979019076df32c41cd7",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_c8e2731ba8c2",
+      "core_question_id": "qfam_1979019076df32c41cd7",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_c82bb4c8cd81",
+      "core_question_id": "qfam_8d68c98425dc06adfb2e",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_c82bb4c8cd81",
+      "core_question_id": "qfam_8d68c98425dc06adfb2e",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_e0226e688dc6",
+      "core_question_id": "qfam_1d348122735cf5b827fd",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_e0226e688dc6",
+      "core_question_id": "qfam_1d348122735cf5b827fd",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_5f89df2a0b6e",
+      "core_question_id": "qfam_d1cb1bd3eb9d5a2f83b5",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_5f89df2a0b6e",
+      "core_question_id": "qfam_d1cb1bd3eb9d5a2f83b5",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_176b8cf386ae",
+      "core_question_id": "qfam_343d9bfa5fe239f56bb9",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_176b8cf386ae",
+      "core_question_id": "qfam_343d9bfa5fe239f56bb9",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_765fc3535176",
+      "core_question_id": "qfam_df01ffd7ec0032507b93",
+      "model_role": "base",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    },
+    {
+      "case_id": "qa_765fc3535176",
+      "core_question_id": "qfam_df01ffd7ec0032507b93",
+      "model_role": "adapter",
+      "reused": true,
+      "reasons": [
+        "reused"
+      ],
+      "source": "drug_v24_rescore/train_seen_confirmed"
+    }
+  ]
+}

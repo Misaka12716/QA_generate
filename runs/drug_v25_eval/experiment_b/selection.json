@@ -1,0 +1,30 @@
+{
+  "planned_n": 48,
+  "built_n": 48,
+  "core_n": 12,
+  "source_family_n": 12,
+  "min_families": 8,
+  "shortfall_cases": 0,
+  "shortfall_cores": 0,
+  "rejected_n": 14,
+  "skipped_pairs": [
+    {
+      "stem": "1277",
+      "reason": "equivalent_support_remains"
+    },
+    {
+      "stem": "452",
+      "reason": "equivalent_support_remains"
+    },
+    {
+      "stem": "1702",
+      "reason": "equivalent_support_remains"
+    },
+    {
+      "stem": "2402",
+      "reason": "equivalent_support_remains"
+    }
+  ],
+  "selection_seed": 20261007,
+  "locked_test_used": false
+}

@@ -1,0 +1,72 @@
+{
+  "recipe": "e7_rationale",
+  "chunks": 2,
+  "questions": 2,
+  "distilled": 2,
+  "kept": 0,
+  "rejected": 2,
+  "answerability": null,
+  "answerability_reason": "missing_answerable_label",
+  "nli_mean": null,
+  "hallucination_proxy": null,
+  "knowledge_gain_rate": null,
+  "judge_mean": null,
+  "type_entropy": 0.0,
+  "type_distribution": {},
+  "retention": 0.0,
+  "retention_reason": null,
+  "s_ratio": 0.0,
+  "grade_distribution": {},
+  "evidence_grounded": null,
+  "evidence_grounded_detail": {
+    "value": null,
+    "numerator": 0,
+    "denominator": 0,
+    "reason": "zero_denominator"
+  },
+  "funnel_stages": {
+    "candidate": 2,
+    "format_valid": 2,
+    "semantic_valid": 2,
+    "accepted": 0,
+    "derived": 0
+  },
+  "llm_calls": 6,
+  "prompt_tokens": 1953,
+  "completion_tokens": 410,
+  "estimated_cost_usd": 0.0,
+  "fallbacks": [],
+  "stage_seconds": {
+    "chunking": 0.001,
+    "anchor": 0.0,
+    "question_gen": 0.001,
+    "evolution": 0.0,
+    "question_filter": 0.0,
+    "teacher_router": 0.0,
+    "distillation": 0.0,
+    "filter:rule_clean": 0.0,
+    "filter:evidence_substring": 0.0,
+    "filter:claim_evidence": 0.0,
+    "grading": 0.0,
+    "total": 0.003
+  },
+  "rejected_by_filter": {},
+  "funnel": {
+    "rule_clean": {
+      "in": 2,
+      "out": 2,
+      "dropped": 0
+    },
+    "evidence_substring": {
+      "in": 2,
+      "out": 2,
+      "dropped": 0
+    },
+    "claim_evidence": {
+      "in": 2,
+      "out": 2,
+      "dropped": 0
+    }
+  },
+  "tokens_per_10k_kept": null
+}

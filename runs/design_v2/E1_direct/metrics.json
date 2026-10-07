@@ -1,0 +1,84 @@
+{
+  "recipe": "e1_direct",
+  "chunks": 30,
+  "questions": 75,
+  "distilled": 75,
+  "kept": 72,
+  "rejected": 2,
+  "answerability": 0.96,
+  "nli_mean": null,
+  "hallucination_proxy": null,
+  "knowledge_gain_rate": null,
+  "judge_mean": null,
+  "type_entropy": 0.8451,
+  "type_distribution": {
+    "factual": 0.847,
+    "comparative": 0.069,
+    "conditional": 0.028,
+    "procedural": 0.056
+  },
+  "retention": 0.96,
+  "s_ratio": 1.0,
+  "grade_distribution": {
+    "S": 72
+  },
+  "evidence_grounded": 1.0,
+  "llm_calls": 104,
+  "prompt_tokens": 21814,
+  "completion_tokens": 17426,
+  "estimated_cost_usd": 0.007933,
+  "fallbacks": [],
+  "stage_seconds": {
+    "chunking": 0.111,
+    "anchor": 0.0,
+    "question_gen": 288.042,
+    "evolution": 0.0,
+    "question_filter": 0.0,
+    "teacher_router": 0.0,
+    "distillation": 0.004,
+    "filter:rule_clean": 4.586,
+    "filter:evidence_substring": 0.001,
+    "filter:exact_hash_dedup": 0.0,
+    "filter:claim_evidence": 115.131,
+    "filter:risk_escalate": 0.001,
+    "filter:joint_dedup": 0.001,
+    "grading": 0.005,
+    "total": 407.894
+  },
+  "rejected_by_filter": {
+    "rule_clean": 1
+  },
+  "funnel": {
+    "rule_clean": {
+      "in": 75,
+      "out": 74,
+      "dropped": 1
+    },
+    "evidence_substring": {
+      "in": 74,
+      "out": 74,
+      "dropped": 0
+    },
+    "exact_hash_dedup": {
+      "in": 74,
+      "out": 74,
+      "dropped": 0
+    },
+    "claim_evidence": {
+      "in": 74,
+      "out": 74,
+      "dropped": 0
+    },
+    "risk_escalate": {
+      "in": 74,
+      "out": 74,
+      "dropped": 0
+    },
+    "joint_dedup": {
+      "in": 74,
+      "out": 74,
+      "dropped": 0
+    }
+  },
+  "tokens_per_10k_kept": 5450000
+}

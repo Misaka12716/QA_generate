@@ -1,0 +1,73 @@
+{
+  "recipe": "e2_a3_tag_evol",
+  "chunks": 4,
+  "questions": 5,
+  "distilled": 5,
+  "kept": 5,
+  "rejected": 0,
+  "answerability": 1.0,
+  "nli_mean": null,
+  "hallucination_proxy": null,
+  "knowledge_gain_rate": null,
+  "judge_mean": null,
+  "type_entropy": 2.3219,
+  "type_distribution": {
+    "factual": 0.2,
+    "procedural": 0.2,
+    "conditional": 0.2,
+    "multihop": 0.2,
+    "comparative": 0.2
+  },
+  "retention": 1.0,
+  "s_ratio": 0.0,
+  "grade_distribution": {
+    "none": 5
+  },
+  "evidence_grounded": 1.0,
+  "llm_calls": 21,
+  "prompt_tokens": 5689,
+  "completion_tokens": 5279,
+  "estimated_cost_usd": 0.002275,
+  "fallbacks": [
+    "anchor.ner_rake_textrank:backend=heuristic"
+  ],
+  "stage_seconds": {
+    "chunking": 0.0,
+    "anchor": 1.619,
+    "question_gen": 240.027,
+    "evolution": 0.0,
+    "question_filter": 0.0,
+    "teacher_router": 0.0,
+    "distillation": 22.219,
+    "filter:rule_clean": 0.515,
+    "filter:evidence_substring": 0.0,
+    "filter:roundtrip": 44.35,
+    "filter:exact_hash_dedup": 0.0,
+    "grading": 0.0,
+    "total": 308.734
+  },
+  "rejected_by_filter": {},
+  "funnel": {
+    "rule_clean": {
+      "in": 5,
+      "out": 5,
+      "dropped": 0
+    },
+    "evidence_substring": {
+      "in": 5,
+      "out": 5,
+      "dropped": 0
+    },
+    "roundtrip": {
+      "in": 5,
+      "out": 5,
+      "dropped": 0
+    },
+    "exact_hash_dedup": {
+      "in": 5,
+      "out": 5,
+      "dropped": 0
+    }
+  },
+  "tokens_per_10k_kept": 21936000
+}

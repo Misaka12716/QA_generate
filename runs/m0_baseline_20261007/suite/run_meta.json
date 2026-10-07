@@ -1,0 +1,11 @@
+{
+  "run_id": "suite",
+  "suite": "design_v2",
+  "git_commit": "cf06d453fe2314f1931889335849f1b2f09d124f",
+  "heldout_protocol_sha256": "55fdc1d058f2fd13a651c8a4921fa4f8fb6f2f201405299a7c9b54e0392bcf08",
+  "train_jsonl_sha256": null,
+  "base_model": "/data/pjw/data/models/Qwen2.5-7B-Instruct",
+  "model_version": {
+    "path": "/data/pjw/data/models/Qwen2.5-7B-Instruct"
+  }
+}

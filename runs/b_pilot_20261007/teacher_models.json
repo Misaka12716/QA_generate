@@ -1,0 +1,14 @@
+{
+  "judges": [
+    {
+      "judge_role": "gold_reviewer",
+      "provider_id": "teacher-openai-compatible",
+      "model_id": "qwen3.8-27b",
+      "model_revision": "unknown",
+      "authentication": "models_list_no_key",
+      "base_url": "http://192.168.4.110:4000/v1",
+      "timeout": 180,
+      "independence_level": "unverified_names"
+    }
+  ]
+}

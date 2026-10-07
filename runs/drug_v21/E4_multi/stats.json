@@ -1,0 +1,36 @@
+{
+  "llm_calls": 0,
+  "prompt_tokens": 0,
+  "completion_tokens": 0,
+  "estimated_cost_usd": 0.0,
+  "stage_seconds": {
+    "filter:rule_clean": 5.905,
+    "filter:evidence_substring": 0.003,
+    "filter:roundtrip": 388.22
+  },
+  "produced": {},
+  "rejected": {
+    "rule_clean": 5,
+    "roundtrip": 2
+  },
+  "funnel": {
+    "rule_clean": {
+      "in": 150,
+      "out": 145,
+      "dropped": 5
+    },
+    "evidence_substring": {
+      "in": 145,
+      "out": 145,
+      "dropped": 0
+    },
+    "roundtrip": {
+      "in": 145,
+      "out": 143,
+      "dropped": 2
+    }
+  },
+  "fallbacks": [],
+  "budget_stops": [],
+  "ledger": {}
+}

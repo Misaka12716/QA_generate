@@ -1,12 +1,31 @@
-# 实验产物默认不进仓库；人类可读的报告除外（见下方 ! 规则）
+# runs：默认忽略，放行问答对与小型结果；权重与缓存仍忽略
 runs/**
 !runs/**/
-!runs/**/report.md
-!runs/**/answers.md
-!runs/*/metrics.json
-!runs/*/run_meta.json
+!runs/**/*.md
+!runs/**/*.jsonl
+!runs/**/*.json
 
-data/
+runs/**/_cache/**
+runs/**/*.log
+runs/**/*.lock
+runs/qwen_download.*
+runs/launch_*.sh
+runs/**/sft/lora/**
+runs/**/sft/adapter/**
+runs/**/*.safetensors
+runs/**/*.bin
+runs/**/tokenizer.json
+runs/**/vocab.json
+runs/**/merges.txt
+
+# 语料原文与缓存（不进仓库）
+data/**/_cache/
+data/**/*.zip
+data/**/raw/
+data/**/train/
+data/**/heldout/
+data/**/frozen/subset/
+
 .cursor/
 .vscode/
 .pytest_cache/

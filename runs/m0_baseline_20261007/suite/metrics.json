@@ -1,0 +1,1640 @@
+{
+  "suite": "design_v2",
+  "input": "/data1/pjw/QA_generate-main/fixtures/sample_manual.md",
+  "llm": "fake",
+  "teacher_model": "fake-teacher",
+  "base_model": "/data/pjw/data/models/Qwen2.5-7B-Instruct",
+  "limitations": [
+    "语料仅为 fixtures/sample_manual.md，规模小于设计稿的 500 chunk / 1 万条。",
+    "教师为 192.168.4.110:4000 的 qwen3.8-27b，API 费用记 0 美元，并报告等价 token。学生基座为本地 Qwen2.5-7B-Instruct。",
+    "E5 无人工标签，不计算 Cohen's Kappa。事实遵循使用 NLI 与证据子串，未接入 RAGAS。"
+  ],
+  "experiments": [
+    {
+      "id": "E1_baseline",
+      "purpose": "强基线。同样给定材料，一次生成问题、答案和证据，并做基本验证",
+      "recipe": "baseline_platform",
+      "recipe_snapshot": {
+        "name": "baseline_platform",
+        "description": "复现智训平台现状——字符窗切分 + 一次生成 Q/A + 证据子串 + LLM supported。",
+        "chunking": {
+          "name": "fixed_overlap",
+          "split": 600,
+          "overlap": 80
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "direct_qa"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "concise_response"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean"
+          },
+          {
+            "name": "exact_hash_dedup"
+          },
+          {
+            "name": "evidence_substring"
+          },
+          {
+            "name": "llm_supported"
+          }
+        ],
+        "grading": "binary"
+      },
+      "metrics": {
+        "recipe": "baseline_platform",
+        "chunks": 3,
+        "questions": 2,
+        "distilled": 2,
+        "kept": 0,
+        "rejected": 0,
+        "answerability": null,
+        "answerability_reason": "missing_answerable_label",
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {},
+        "retention": 0.0,
+        "retention_reason": null,
+        "s_ratio": 0.0,
+        "grade_distribution": {},
+        "evidence_grounded": null,
+        "evidence_grounded_detail": {
+          "value": null,
+          "numerator": 0,
+          "denominator": 0,
+          "reason": "zero_denominator"
+        },
+        "funnel_stages": {
+          "candidate": 2,
+          "format_valid": 2,
+          "semantic_valid": 2,
+          "accepted": 0,
+          "derived": 0
+        },
+        "llm_calls": 3,
+        "prompt_tokens": 1285,
+        "completion_tokens": 618,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {
+          "chunking": 0.002,
+          "anchor": 0.0,
+          "question_gen": 0.002,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 0.0,
+          "filter:rule_clean": 0.0,
+          "filter:exact_hash_dedup": 0.0,
+          "filter:evidence_substring": 0.0,
+          "filter:llm_supported": 0.0,
+          "grading": 0.0,
+          "total": 0.005
+        },
+        "rejected_by_filter": {
+          "evidence_substring": 2
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          },
+          "exact_hash_dedup": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          },
+          "evidence_substring": {
+            "in": 2,
+            "out": 0,
+            "dropped": 2
+          },
+          "llm_supported": {
+            "in": 0,
+            "out": 0,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": null
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "skip_sft"
+      },
+      "note": ""
+    },
+    {
+      "id": "E1_direct",
+      "purpose": "路线 D，直接证据约束生成",
+      "recipe": "e1_direct",
+      "recipe_snapshot": {
+        "name": "e1_direct",
+        "description": "路线 D。与锚点、知识单元路径共用后续验证。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 512,
+          "overlap": 0.1
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "direct_grounded"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "reuse_candidate"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring",
+            "on_fail": "quarantine"
+          },
+          {
+            "name": "exact_hash_dedup"
+          },
+          {
+            "name": "claim_evidence"
+          },
+          {
+            "name": "risk_escalate"
+          },
+          {
+            "name": "joint_dedup"
+          }
+        ],
+        "grading": "validity_tier"
+      },
+      "metrics": {
+        "recipe": "e1_direct",
+        "chunks": 3,
+        "questions": 3,
+        "distilled": 3,
+        "kept": 3,
+        "rejected": 0,
+        "answerability": null,
+        "answerability_reason": "missing_answerable_label",
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {
+          "factual": 1.0
+        },
+        "retention": 1.0,
+        "retention_reason": null,
+        "s_ratio": 1.0,
+        "grade_distribution": {
+          "S": 3
+        },
+        "evidence_grounded": 1.0,
+        "evidence_grounded_detail": {
+          "value": 1.0,
+          "numerator": 3,
+          "denominator": 3,
+          "reason": null
+        },
+        "funnel_stages": {
+          "candidate": 3,
+          "format_valid": 3,
+          "semantic_valid": 3,
+          "accepted": 3,
+          "derived": 0
+        },
+        "llm_calls": 8,
+        "prompt_tokens": 2168,
+        "completion_tokens": 435,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {
+          "chunking": 0.001,
+          "anchor": 0.0,
+          "question_gen": 0.001,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 0.0,
+          "filter:rule_clean": 0.0,
+          "filter:evidence_substring": 0.0,
+          "filter:exact_hash_dedup": 0.0,
+          "filter:claim_evidence": 0.0,
+          "filter:risk_escalate": 0.0,
+          "filter:joint_dedup": 0.0,
+          "grading": 0.0,
+          "total": 0.004
+        },
+        "rejected_by_filter": {},
+        "funnel": {
+          "rule_clean": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          },
+          "evidence_substring": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          },
+          "exact_hash_dedup": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          },
+          "claim_evidence": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          },
+          "risk_escalate": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          },
+          "joint_dedup": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 8676667
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "skip_sft"
+      },
+      "note": ""
+    },
+    {
+      "id": "E1_anchor",
+      "purpose": "传统锚点路径，后续验证与直接路径相同",
+      "recipe": "e1_anchor",
+      "recipe_snapshot": {
+        "name": "e1_anchor",
+        "description": "传统锚点路径。后续验证与直接生成相同。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 512,
+          "overlap": 0.1
+        },
+        "anchor": {
+          "name": "ner_rake_textrank",
+          "top_k": 3
+        },
+        "question_gen": {
+          "name": "anchor_reverse",
+          "per_anchor": 1
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "reuse_candidate"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring",
+            "on_fail": "quarantine"
+          },
+          {
+            "name": "exact_hash_dedup"
+          },
+          {
+            "name": "claim_evidence"
+          },
+          {
+            "name": "joint_dedup"
+          }
+        ],
+        "grading": "validity_tier"
+      },
+      "metrics": {
+        "recipe": "e1_anchor",
+        "chunks": 2,
+        "questions": 4,
+        "distilled": 2,
+        "kept": 0,
+        "rejected": 2,
+        "answerability": null,
+        "answerability_reason": "missing_answerable_label",
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {},
+        "retention": 0.0,
+        "retention_reason": null,
+        "s_ratio": 0.0,
+        "grade_distribution": {},
+        "evidence_grounded": null,
+        "evidence_grounded_detail": {
+          "value": null,
+          "numerator": 0,
+          "denominator": 0,
+          "reason": "zero_denominator"
+        },
+        "funnel_stages": {
+          "candidate": 4,
+          "format_valid": 4,
+          "semantic_valid": 4,
+          "accepted": 0,
+          "derived": 0
+        },
+        "llm_calls": 8,
+        "prompt_tokens": 2379,
+        "completion_tokens": 1113,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [
+          "anchor.ner_rake_textrank:backend=heuristic"
+        ],
+        "stage_seconds": {
+          "chunking": 0.001,
+          "anchor": 0.002,
+          "question_gen": 0.003,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 0.002,
+          "filter:rule_clean": 0.0,
+          "filter:evidence_substring": 0.0,
+          "filter:exact_hash_dedup": 0.0,
+          "filter:claim_evidence": 0.0,
+          "filter:joint_dedup": 0.0,
+          "grading": 0.0,
+          "total": 0.009
+        },
+        "rejected_by_filter": {},
+        "funnel": {
+          "rule_clean": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          },
+          "evidence_substring": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          },
+          "exact_hash_dedup": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          },
+          "claim_evidence": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          },
+          "joint_dedup": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": null
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "skip_sft"
+      },
+      "note": ""
+    },
+    {
+      "id": "E1_ku",
+      "purpose": "知识单元路径，单元经原文核验后才出题",
+      "recipe": "e1_ku",
+      "recipe_snapshot": {
+        "name": "e1_ku",
+        "description": "路线 K。知识单元经原文核验后才出题。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 512,
+          "overlap": 0.1
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "knowledge_unit"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "reuse_candidate"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring",
+            "on_fail": "quarantine"
+          },
+          {
+            "name": "exact_hash_dedup"
+          },
+          {
+            "name": "claim_evidence"
+          },
+          {
+            "name": "joint_dedup"
+          }
+        ],
+        "grading": "validity_tier"
+      },
+      "metrics": {
+        "recipe": "e1_ku",
+        "chunks": 2,
+        "questions": 2,
+        "distilled": 2,
+        "kept": 0,
+        "rejected": 2,
+        "answerability": null,
+        "answerability_reason": "missing_answerable_label",
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {},
+        "retention": 0.0,
+        "retention_reason": null,
+        "s_ratio": 0.0,
+        "grade_distribution": {},
+        "evidence_grounded": null,
+        "evidence_grounded_detail": {
+          "value": null,
+          "numerator": 0,
+          "denominator": 0,
+          "reason": "zero_denominator"
+        },
+        "funnel_stages": {
+          "candidate": 2,
+          "format_valid": 2,
+          "semantic_valid": 2,
+          "accepted": 0,
+          "derived": 0
+        },
+        "llm_calls": 6,
+        "prompt_tokens": 1665,
+        "completion_tokens": 705,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {
+          "chunking": 0.001,
+          "anchor": 0.0,
+          "question_gen": 0.001,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 0.0,
+          "filter:rule_clean": 0.0,
+          "filter:evidence_substring": 0.0,
+          "filter:exact_hash_dedup": 0.0,
+          "filter:claim_evidence": 0.0,
+          "filter:joint_dedup": 0.0,
+          "grading": 0.0,
+          "total": 0.003
+        },
+        "rejected_by_filter": {},
+        "funnel": {
+          "rule_clean": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          },
+          "evidence_substring": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          },
+          "exact_hash_dedup": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          },
+          "claim_evidence": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          },
+          "joint_dedup": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": null
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "skip_sft"
+      },
+      "note": ""
+    },
+    {
+      "id": "E2_fixed",
+      "purpose": "固定题型比例对照",
+      "recipe": "e2_fixed_quota",
+      "recipe_snapshot": {
+        "name": "e2_fixed_quota",
+        "description": "固定题型比例对照。默认路径不使用该配额。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 512,
+          "overlap": 0.1
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "direct_grounded"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "reuse_candidate"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring",
+            "on_fail": "quarantine"
+          },
+          {
+            "name": "claim_evidence"
+          },
+          {
+            "name": "diversity_sample",
+            "quota": {
+              "factual": 0.4,
+              "procedural": 0.2,
+              "conditional": 0.15,
+              "comparative": 0.15,
+              "multihop": 0.1
+            }
+          }
+        ],
+        "grading": "validity_tier"
+      },
+      "metrics": {
+        "recipe": "e2_fixed_quota",
+        "chunks": 2,
+        "questions": 2,
+        "distilled": 2,
+        "kept": 0,
+        "rejected": 2,
+        "answerability": null,
+        "answerability_reason": "missing_answerable_label",
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {},
+        "retention": 0.0,
+        "retention_reason": null,
+        "s_ratio": 0.0,
+        "grade_distribution": {},
+        "evidence_grounded": null,
+        "evidence_grounded_detail": {
+          "value": null,
+          "numerator": 0,
+          "denominator": 0,
+          "reason": "zero_denominator"
+        },
+        "funnel_stages": {
+          "candidate": 2,
+          "format_valid": 2,
+          "semantic_valid": 2,
+          "accepted": 0,
+          "derived": 0
+        },
+        "llm_calls": 4,
+        "prompt_tokens": 1429,
+        "completion_tokens": 276,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {
+          "chunking": 0.001,
+          "anchor": 0.0,
+          "question_gen": 0.001,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 0.0,
+          "filter:rule_clean": 0.0,
+          "filter:evidence_substring": 0.0,
+          "filter:claim_evidence": 0.0,
+          "filter:diversity_sample": 0.0,
+          "grading": 0.0,
+          "total": 0.003
+        },
+        "rejected_by_filter": {},
+        "funnel": {
+          "rule_clean": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          },
+          "evidence_substring": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          },
+          "claim_evidence": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          },
+          "diversity_sample": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": null
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "skip_sft"
+      },
+      "note": ""
+    },
+    {
+      "id": "E2_gap",
+      "purpose": "默认路径。允许零题，并做行为样本与抽样诊断",
+      "recipe": "recommended",
+      "recipe_snapshot": {
+        "name": "recommended",
+        "description": "一期默认路径——直接证据生成、复用候选答案、一次主张验证、不足证据行为样本与抽样诊断。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 512,
+          "overlap": 0.1
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "direct_grounded"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "reuse_candidate"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring",
+            "on_fail": "quarantine"
+          },
+          {
+            "name": "exact_hash_dedup"
+          },
+          {
+            "name": "claim_evidence"
+          },
+          {
+            "name": "risk_escalate"
+          },
+          {
+            "name": "behavior_insufficient",
+            "max_new": 1
+          },
+          {
+            "name": "student_diagnostic",
+            "sample_size": 2
+          },
+          {
+            "name": "joint_dedup"
+          }
+        ],
+        "grading": "validity_tier"
+      },
+      "metrics": {
+        "recipe": "recommended",
+        "chunks": 3,
+        "questions": 3,
+        "distilled": 3,
+        "kept": 4,
+        "rejected": 0,
+        "answerability": null,
+        "answerability_reason": "missing_answerable_label",
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {
+          "factual": 1.0
+        },
+        "retention": 1.3333,
+        "retention_reason": null,
+        "s_ratio": 0.75,
+        "grade_distribution": {
+          "S": 3,
+          "A": 1
+        },
+        "evidence_grounded": 1.0,
+        "evidence_grounded_detail": {
+          "value": 1.0,
+          "numerator": 3,
+          "denominator": 3,
+          "reason": null
+        },
+        "funnel_stages": {
+          "candidate": 3,
+          "format_valid": 3,
+          "semantic_valid": 3,
+          "accepted": 4,
+          "derived": 1
+        },
+        "llm_calls": 8,
+        "prompt_tokens": 2168,
+        "completion_tokens": 435,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [
+          "student_diagnostic:not_executed"
+        ],
+        "stage_seconds": {
+          "chunking": 0.001,
+          "anchor": 0.0,
+          "question_gen": 0.001,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 0.0,
+          "filter:rule_clean": 0.0,
+          "filter:evidence_substring": 0.0,
+          "filter:exact_hash_dedup": 0.0,
+          "filter:claim_evidence": 0.0,
+          "filter:risk_escalate": 0.0,
+          "filter:behavior_insufficient": 0.0,
+          "filter:student_diagnostic": 0.0,
+          "filter:joint_dedup": 0.0,
+          "grading": 0.0,
+          "total": 0.004
+        },
+        "rejected_by_filter": {
+          "behavior_insufficient": -1
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          },
+          "evidence_substring": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          },
+          "exact_hash_dedup": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          },
+          "claim_evidence": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          },
+          "risk_escalate": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          },
+          "behavior_insufficient": {
+            "in": 3,
+            "out": 4,
+            "dropped": -1
+          },
+          "student_diagnostic": {
+            "in": 4,
+            "out": 4,
+            "dropped": 0
+          },
+          "joint_dedup": {
+            "in": 4,
+            "out": 4,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 6507500
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "skip_sft"
+      },
+      "note": ""
+    },
+    {
+      "id": "E3_diagnostic",
+      "purpose": "抽样诊断。无上下文答对不删除样本",
+      "recipe": "e3_diagnostic",
+      "recipe_snapshot": {
+        "name": "e3_diagnostic",
+        "description": "抽样诊断。无上下文答对只记分，不删除样本。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 512,
+          "overlap": 0.1
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "direct_grounded"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "reuse_candidate"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring",
+            "on_fail": "quarantine"
+          },
+          {
+            "name": "claim_evidence"
+          },
+          {
+            "name": "student_diagnostic",
+            "sample_size": 2
+          }
+        ],
+        "grading": "validity_tier"
+      },
+      "metrics": {
+        "recipe": "e3_diagnostic",
+        "chunks": 0,
+        "questions": 3,
+        "distilled": 3,
+        "kept": 1,
+        "rejected": 2,
+        "answerability": null,
+        "answerability_reason": "missing_answerable_label",
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {
+          "factual": 1.0
+        },
+        "retention": 0.3333,
+        "retention_reason": null,
+        "s_ratio": 1.0,
+        "grade_distribution": {
+          "S": 1
+        },
+        "evidence_grounded": 1.0,
+        "evidence_grounded_detail": {
+          "value": 1.0,
+          "numerator": 1,
+          "denominator": 1,
+          "reason": null
+        },
+        "funnel_stages": {
+          "candidate": 3,
+          "format_valid": 3,
+          "semantic_valid": 3,
+          "accepted": 1,
+          "derived": 0
+        },
+        "llm_calls": 3,
+        "prompt_tokens": 820,
+        "completion_tokens": 78,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [
+          "student_diagnostic:not_executed"
+        ],
+        "stage_seconds": {
+          "teacher_router": 0.0,
+          "distillation": 0.0,
+          "filter:rule_clean": 0.0,
+          "filter:evidence_substring": 0.0,
+          "filter:claim_evidence": 0.0,
+          "filter:student_diagnostic": 0.0,
+          "grading": 0.0,
+          "total": 0.002
+        },
+        "rejected_by_filter": {},
+        "funnel": {
+          "rule_clean": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          },
+          "evidence_substring": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          },
+          "claim_evidence": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          },
+          "student_diagnostic": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 8980000
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "skip_sft"
+      },
+      "note": ""
+    },
+    {
+      "id": "E4_multi",
+      "purpose": "固定多次复验对照",
+      "recipe": "e4_fixed_multi",
+      "recipe_snapshot": {
+        "name": "e4_fixed_multi",
+        "description": "固定多次复验对照。默认路径不走这条验证。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 512,
+          "overlap": 0.1
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "direct_grounded"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "reuse_candidate"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring"
+          },
+          {
+            "name": "roundtrip",
+            "k": 3,
+            "pass_sim": 0.75,
+            "mean_sim": 0.6
+          },
+          {
+            "name": "selfcheck",
+            "n": 5,
+            "min_consistency": 0.6
+          }
+        ],
+        "grading": "validity_tier"
+      },
+      "metrics": {
+        "recipe": "e4_fixed_multi",
+        "chunks": 0,
+        "questions": 0,
+        "distilled": 3,
+        "kept": 3,
+        "rejected": 0,
+        "answerability": null,
+        "answerability_reason": "missing_answerable_label",
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {
+          "factual": 1.0
+        },
+        "retention": 1.0,
+        "retention_reason": null,
+        "s_ratio": 0.0,
+        "grade_distribution": {
+          "A": 3
+        },
+        "evidence_grounded": 1.0,
+        "evidence_grounded_detail": {
+          "value": 1.0,
+          "numerator": 3,
+          "denominator": 3,
+          "reason": null
+        },
+        "funnel_stages": {
+          "candidate": 3,
+          "format_valid": null,
+          "semantic_valid": null,
+          "accepted": 3,
+          "derived": 0
+        },
+        "llm_calls": 9,
+        "prompt_tokens": 1632,
+        "completion_tokens": 198,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {
+          "filter:rule_clean": 0.0,
+          "filter:evidence_substring": 0.0,
+          "filter:roundtrip": 0.003,
+          "filter:selfcheck": 0.0
+        },
+        "rejected_by_filter": {},
+        "funnel": {
+          "rule_clean": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          },
+          "evidence_substring": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          },
+          "roundtrip": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          },
+          "selfcheck": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 6100000
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "skip_sft"
+      },
+      "note": ""
+    },
+    {
+      "id": "E5_annotation",
+      "purpose": "导出通过门槛的 S/A 抽检表",
+      "recipe": "",
+      "recipe_snapshot": {},
+      "metrics": {
+        "kept": 4
+      },
+      "sft": {},
+      "note": "未提供人工标签，不计算 Cohen's Kappa",
+      "annotation": {
+        "exported": 4,
+        "path": "runs/m0_baseline_20261007/suite/E5_annotation/annotation.jsonl",
+        "annotated": false,
+        "reason": "未提供人工标签，不计算 Cohen's Kappa",
+        "kappa": null
+      }
+    },
+    {
+      "id": "E6_cost",
+      "purpose": "汇总默认路径的过滤漏斗、token 与费用",
+      "recipe": "",
+      "recipe_snapshot": {},
+      "metrics": {
+        "recipe": "recommended",
+        "chunks": 3,
+        "questions": 3,
+        "distilled": 3,
+        "kept": 4,
+        "rejected": 0,
+        "answerability": null,
+        "answerability_reason": "missing_answerable_label",
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {
+          "factual": 1.0
+        },
+        "retention": 1.3333,
+        "retention_reason": null,
+        "s_ratio": 0.75,
+        "grade_distribution": {
+          "S": 3,
+          "A": 1
+        },
+        "evidence_grounded": 1.0,
+        "evidence_grounded_detail": {
+          "value": 1.0,
+          "numerator": 3,
+          "denominator": 3,
+          "reason": null
+        },
+        "funnel_stages": {
+          "candidate": 3,
+          "format_valid": 3,
+          "semantic_valid": 3,
+          "accepted": 4,
+          "derived": 1
+        },
+        "llm_calls": 8,
+        "prompt_tokens": 2168,
+        "completion_tokens": 435,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [
+          "student_diagnostic:not_executed"
+        ],
+        "stage_seconds": {
+          "chunking": 0.001,
+          "anchor": 0.0,
+          "question_gen": 0.001,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 0.0,
+          "filter:rule_clean": 0.0,
+          "filter:evidence_substring": 0.0,
+          "filter:exact_hash_dedup": 0.0,
+          "filter:claim_evidence": 0.0,
+          "filter:risk_escalate": 0.0,
+          "filter:behavior_insufficient": 0.0,
+          "filter:student_diagnostic": 0.0,
+          "filter:joint_dedup": 0.0,
+          "grading": 0.0,
+          "total": 0.004
+        },
+        "rejected_by_filter": {
+          "behavior_insufficient": -1
+        },
+        "funnel": {
+          "rule_clean": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          },
+          "evidence_substring": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          },
+          "exact_hash_dedup": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          },
+          "claim_evidence": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          },
+          "risk_escalate": {
+            "in": 3,
+            "out": 3,
+            "dropped": 0
+          },
+          "behavior_insufficient": {
+            "in": 3,
+            "out": 4,
+            "dropped": -1
+          },
+          "student_diagnostic": {
+            "in": 4,
+            "out": 4,
+            "dropped": 0
+          },
+          "joint_dedup": {
+            "in": 4,
+            "out": 4,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": 6507500,
+        "api_cost_usd": 0.0,
+        "cost_note": "教师 qwen3.8-27b 为内网接口，API 费用按 0 计，tokens_per_10k_kept 为等价 token。"
+      },
+      "sft": {},
+      "note": "教师 qwen3.8-27b 为内网接口，API 费用按 0 计，tokens_per_10k_kept 为等价 token。"
+    },
+    {
+      "id": "E6_behavior",
+      "purpose": "充分证据之外的说明不足行为样本",
+      "recipe": "e6_behavior",
+      "recipe_snapshot": {
+        "name": "e6_behavior",
+        "description": "在充分证据样本之外构造说明不足行为样本。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 512,
+          "overlap": 0.1
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "direct_grounded"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "reuse_candidate"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring",
+            "on_fail": "quarantine"
+          },
+          {
+            "name": "claim_evidence"
+          },
+          {
+            "name": "behavior_insufficient",
+            "max_new": 1
+          },
+          {
+            "name": "joint_dedup"
+          }
+        ],
+        "grading": "validity_tier"
+      },
+      "metrics": {
+        "recipe": "e6_behavior",
+        "chunks": 2,
+        "questions": 2,
+        "distilled": 2,
+        "kept": 0,
+        "rejected": 2,
+        "answerability": null,
+        "answerability_reason": "missing_answerable_label",
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {},
+        "retention": 0.0,
+        "retention_reason": null,
+        "s_ratio": 0.0,
+        "grade_distribution": {},
+        "evidence_grounded": null,
+        "evidence_grounded_detail": {
+          "value": null,
+          "numerator": 0,
+          "denominator": 0,
+          "reason": "zero_denominator"
+        },
+        "funnel_stages": {
+          "candidate": 2,
+          "format_valid": 2,
+          "semantic_valid": 2,
+          "accepted": 0,
+          "derived": 0
+        },
+        "llm_calls": 4,
+        "prompt_tokens": 1429,
+        "completion_tokens": 276,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {
+          "chunking": 0.001,
+          "anchor": 0.0,
+          "question_gen": 0.001,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 0.0,
+          "filter:rule_clean": 0.0,
+          "filter:evidence_substring": 0.0,
+          "filter:claim_evidence": 0.0,
+          "filter:behavior_insufficient": 0.0,
+          "filter:joint_dedup": 0.0,
+          "grading": 0.0,
+          "total": 0.003
+        },
+        "rejected_by_filter": {},
+        "funnel": {
+          "rule_clean": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          },
+          "evidence_substring": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          },
+          "claim_evidence": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          },
+          "behavior_insufficient": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          },
+          "joint_dedup": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": null
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "skip_sft"
+      },
+      "note": ""
+    },
+    {
+      "id": "E7_rationale",
+      "purpose": "解释文本作为单独蒸馏因素",
+      "recipe": "e7_rationale",
+      "recipe_snapshot": {
+        "name": "e7_rationale",
+        "description": "解释文本单独生成，用于观察额外 token。事实门槛与直接路径相同。",
+        "chunking": {
+          "name": "heading_window",
+          "max_tokens": 512,
+          "overlap": 0.1
+        },
+        "anchor": {
+          "name": "none"
+        },
+        "question_gen": {
+          "name": "direct_grounded"
+        },
+        "evolution": {
+          "name": "none"
+        },
+        "question_filter": {
+          "name": "none"
+        },
+        "distillation": {
+          "name": "cot_mixed"
+        },
+        "teacher_router": {
+          "name": "single"
+        },
+        "filters": [
+          {
+            "name": "rule_clean",
+            "min_answer_tokens": 4
+          },
+          {
+            "name": "evidence_substring",
+            "on_fail": "quarantine"
+          },
+          {
+            "name": "claim_evidence"
+          }
+        ],
+        "grading": "validity_tier"
+      },
+      "metrics": {
+        "recipe": "e7_rationale",
+        "chunks": 2,
+        "questions": 2,
+        "distilled": 2,
+        "kept": 0,
+        "rejected": 2,
+        "answerability": null,
+        "answerability_reason": "missing_answerable_label",
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {},
+        "retention": 0.0,
+        "retention_reason": null,
+        "s_ratio": 0.0,
+        "grade_distribution": {},
+        "evidence_grounded": null,
+        "evidence_grounded_detail": {
+          "value": null,
+          "numerator": 0,
+          "denominator": 0,
+          "reason": "zero_denominator"
+        },
+        "funnel_stages": {
+          "candidate": 2,
+          "format_valid": 2,
+          "semantic_valid": 2,
+          "accepted": 0,
+          "derived": 0
+        },
+        "llm_calls": 6,
+        "prompt_tokens": 1953,
+        "completion_tokens": 410,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {
+          "chunking": 0.001,
+          "anchor": 0.0,
+          "question_gen": 0.001,
+          "evolution": 0.0,
+          "question_filter": 0.0,
+          "teacher_router": 0.0,
+          "distillation": 0.0,
+          "filter:rule_clean": 0.0,
+          "filter:evidence_substring": 0.0,
+          "filter:claim_evidence": 0.0,
+          "grading": 0.0,
+          "total": 0.003
+        },
+        "rejected_by_filter": {},
+        "funnel": {
+          "rule_clean": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          },
+          "evidence_substring": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          },
+          "claim_evidence": {
+            "in": 2,
+            "out": 2,
+            "dropped": 0
+          }
+        },
+        "tokens_per_10k_kept": null
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "skip_sft"
+      },
+      "note": ""
+    },
+    {
+      "id": "E7_refusal",
+      "purpose": "对比基线与默认路径在干扰上下文上的行为",
+      "recipe": "",
+      "recipe_snapshot": {},
+      "metrics": {},
+      "sft": {},
+      "note": "\"skip_sft\"",
+      "refusal": {
+        "skipped": true,
+        "arms": {},
+        "reason": "skip_sft"
+      }
+    },
+    {
+      "id": "E8_scale",
+      "purpose": "发布子集。只保留通过门槛的 S/A，隔离样本不进入该子集",
+      "recipe": "",
+      "recipe_snapshot": {},
+      "metrics": {
+        "recipe": "E8_scale",
+        "chunks": 0,
+        "questions": 4,
+        "distilled": 4,
+        "kept": 4,
+        "rejected": 0,
+        "answerability": null,
+        "answerability_reason": "missing_answerable_label",
+        "nli_mean": null,
+        "hallucination_proxy": null,
+        "knowledge_gain_rate": null,
+        "judge_mean": null,
+        "type_entropy": 0.0,
+        "type_distribution": {
+          "factual": 1.0
+        },
+        "retention": 1.0,
+        "retention_reason": null,
+        "s_ratio": 0.75,
+        "grade_distribution": {
+          "S": 3,
+          "A": 1
+        },
+        "evidence_grounded": 1.0,
+        "evidence_grounded_detail": {
+          "value": 1.0,
+          "numerator": 3,
+          "denominator": 3,
+          "reason": null
+        },
+        "funnel_stages": {},
+        "llm_calls": 0,
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "estimated_cost_usd": 0.0,
+        "fallbacks": [],
+        "stage_seconds": {},
+        "rejected_by_filter": {},
+        "funnel": {},
+        "tokens_per_10k_kept": 0
+      },
+      "sft": {
+        "skipped": true,
+        "reason": "skip_sft"
+      },
+      "note": ""
+    }
+  ]
+}

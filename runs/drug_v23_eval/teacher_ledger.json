@@ -1,0 +1,12 @@
+{
+  "calls": 40,
+  "prompt_tokens": 12702,
+  "completion_tokens": 4026,
+  "retries": 0,
+  "consecutive_transport_failures": 0,
+  "stopped_reason": null,
+  "temperature": 0.2,
+  "max_tokens": 700,
+  "max_calls": 48,
+  "model": "qwen3.8-27b"
+}

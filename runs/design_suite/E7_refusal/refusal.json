@@ -1,0 +1,16 @@
+{
+  "skipped": false,
+  "arms": {
+    "E1_baseline": {
+      "n": 10,
+      "refusal_rate": 1.0,
+      "gold_f1": 0.6649,
+      "false_refusal_rate": 0.0,
+      "refusal_f1": 1.0
+    },
+    "E1_ours_full": {
+      "skipped": true,
+      "reason": "no_adapter"
+    }
+  }
+}

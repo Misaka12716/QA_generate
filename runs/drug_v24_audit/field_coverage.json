@@ -1,0 +1,46 @@
+{
+  "checks": [
+    {
+      "check": "numeric_bindings",
+      "applicable_n": 89,
+      "with_required_fields_n": 0,
+      "executed_n": 0,
+      "not_executed_reason": "本批候选没有执行该检查所需的字段，或评分器不会仅因支持该字段就自动运行。",
+      "note": "把数字绑到对象。历史评分没有这个字段时不会执行。"
+    },
+    {
+      "check": "required_conditions",
+      "applicable_n": 16,
+      "with_required_fields_n": 0,
+      "executed_n": 0,
+      "not_executed_reason": "本批候选没有执行该检查所需的字段，或评分器不会仅因支持该字段就自动运行。",
+      "note": "条件要点必须出现在回答中。字段为空时不会执行。"
+    },
+    {
+      "check": "synonym_groups",
+      "applicable_n": 100,
+      "with_required_fields_n": 0,
+      "executed_n": 0,
+      "not_executed_reason": "本批候选没有执行该检查所需的字段，或评分器不会仅因支持该字段就自动运行。",
+      "note": "同义说法。v3 只把与整个要点等价的同义组算命中，字段为空时不会执行。"
+    },
+    {
+      "check": "atomic_answer_points",
+      "applicable_n": 100,
+      "with_required_fields_n": 39,
+      "executed_n": 0,
+      "not_executed_reason": "本批候选没有执行该检查所需的字段，或评分器不会仅因支持该字段就自动运行。",
+      "note": "评分器按整条 answer_points 做覆盖，不会自动拆开复合句。"
+    },
+    {
+      "check": "visible_evidence_map",
+      "applicable_n": 100,
+      "with_required_fields_n": 30,
+      "executed_n": 10,
+      "not_executed_reason": "本次只对 10 道行为题执行了可见证据审计。普通题没有证据映射字段，历史评分器没有执行该检查。",
+      "note": "证据位于学生可见 excerpt。历史 v2 评分没有单独执行这项。",
+      "historical_scorer_executed_n": 0
+    }
+  ],
+  "candidate_n": 100
+}

@@ -1,0 +1,61 @@
+{
+  "llm_calls": 100,
+  "prompt_tokens": 21086,
+  "completion_tokens": 16046,
+  "estimated_cost_usd": 0.007445,
+  "stage_seconds": {
+    "chunking": 0.109,
+    "anchor": 0.0,
+    "question_gen": 251.164,
+    "evolution": 0.0,
+    "question_filter": 0.0,
+    "teacher_router": 0.0,
+    "distillation": 0.004,
+    "filter:rule_clean": 3.695,
+    "filter:evidence_substring": 0.001,
+    "filter:claim_evidence": 92.388,
+    "filter:behavior_insufficient": 0.001,
+    "filter:joint_dedup": 0.001,
+    "grading": 0.004,
+    "total": 347.376
+  },
+  "produced": {
+    "chunks": 30,
+    "questions": 70,
+    "distilled": 70,
+    "kept": 69,
+    "rejected": 2
+  },
+  "rejected": {
+    "behavior_insufficient": -1
+  },
+  "funnel": {
+    "rule_clean": {
+      "in": 70,
+      "out": 70,
+      "dropped": 0
+    },
+    "evidence_substring": {
+      "in": 70,
+      "out": 70,
+      "dropped": 0
+    },
+    "claim_evidence": {
+      "in": 70,
+      "out": 70,
+      "dropped": 0
+    },
+    "behavior_insufficient": {
+      "in": 70,
+      "out": 71,
+      "dropped": -1
+    },
+    "joint_dedup": {
+      "in": 71,
+      "out": 71,
+      "dropped": 0
+    }
+  },
+  "fallbacks": [],
+  "budget_stops": []
+}

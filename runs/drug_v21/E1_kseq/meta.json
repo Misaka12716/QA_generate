@@ -1,0 +1,7 @@
+{
+  "recipe": "drug_e1_kseq",
+  "kept": 146,
+  "rejected": 1,
+  "chunks": 100,
+  "questions": 150
+}

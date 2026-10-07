@@ -112,4 +112,4 @@ python -X utf8 -m pytest -q
 - 代理行为约定放在根目录 [AGENTS.md](../AGENTS.md)，不要复制一份完整使用指南。
 - 旧方案和一次性分析放在 `docs/archive/`，并在归档索引标明性质。既有原文保留历史语境；它们不是当前实现契约。
 - 新行为优先更新现有主题页；避免再新增按版本命名的“最新方案”“修订说明”作为并行入口。
-- 已提交的 `runs/` 报告是历史记录。新验证使用新的输出目录，不能覆盖它们。依照 [.gitignore](../.gitignore) 区分临时产物和有意保留的报告。
+- 已提交的 `runs/` 报告与账本 jsonl 是历史记录。新验证使用新的输出目录，不能覆盖它们。依照 [.gitignore](../.gitignore)：`runs/**` 默认忽略，放行 `*.md`、`*.jsonl` 与小体积 `*.json`；再排除 adapter、`safetensors`、`_cache` 与大型 tokenizer 文件。`data/` 仅忽略原文与缓存，冻结协议见 `data/**/frozen/` 与 `psychiatry/eval/`。索引见 [runs/README.md](../runs/README.md)。

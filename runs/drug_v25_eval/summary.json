@@ -1,0 +1,173 @@
+{
+  "status": {
+    "completed": [
+      "核对 v2.2 训练 JSONL、consumed_ids 与 G0 adapter 仍在原路径。",
+      "核对 v2.3 的 100 道候选和 200 份预测，以及 v2.4 的重评分、补推理和空白审核。",
+      "为 eval-adapter 增加非空、可追溯的冻结来源清单参数。",
+      "写出实验 A、实验 B 和优先行为批次的候选协议与审核包。",
+      "离线核对实验 A 原题能否复用 v2.4 预测身份。"
+    ],
+    "pending_review": [
+      "batch1_behavior：10 道 v2.3 行为题和 4 道 v2.4 新输入的金标与盲评。",
+      "batch_a_gold：实验 A 的原题和两条改写。",
+      "batch_b_gold：实验 B 的每个条件。",
+      "其余 v2.4 历史审核包留作后续批次，本轮不重导。"
+    ],
+    "blocked": [
+      "实验 A 推理：金标尚未全部接受。",
+      "实验 B 推理：金标尚未全部接受。协议内参考答案自评未通过时同样不能启动。"
+    ],
+    "not_started": [
+      "多 seed 稳定性训练。",
+      "普通 SFT 与行为样本的单因素对照。",
+      "G1–G3。",
+      "独立来源正式测试。"
+    ]
+  },
+  "batches": {
+    "batch1_behavior": {
+      "planned_n": 14,
+      "built_n": 14,
+      "valid_prediction_n": 28,
+      "failed_n": 0,
+      "pending_review_n": 14,
+      "adjudicated_n": 0
+    },
+    "experiment_a": {
+      "planned_n": 90,
+      "built_n": 90,
+      "valid_prediction_n": 60,
+      "failed_n": 0,
+      "pending_review_n": 90,
+      "adjudicated_n": 0
+    },
+    "experiment_b": {
+      "planned_n": 48,
+      "built_n": 48,
+      "valid_prediction_n": 0,
+      "failed_n": 0,
+      "pending_review_n": 48,
+      "adjudicated_n": 0
+    }
+  },
+  "human": {
+    "adjudicated_n": 0,
+    "rule_disagreement": "pending_review"
+  },
+  "experiment_a": {
+    "core_n": 30,
+    "planned_n": 90,
+    "built_n": 90,
+    "reused_n": 60,
+    "reuse_checked_n": 60,
+    "aggregate": {
+      "condition_n": 90,
+      "core_question_n": 30,
+      "source_family_n": 18,
+      "weighting": "core_question_and_source_family",
+      "note": "同一核心问题的多个条件或改写不按独立样本相加。"
+    }
+  },
+  "experiment_b": {
+    "planned_n": 48,
+    "built_n": 48,
+    "core_n": 12,
+    "source_family_n": 12,
+    "shortfall_cases": 0,
+    "skipped_n": 4,
+    "overlap_n": 0,
+    "self_check_failed_n": 0,
+    "aggregate": {
+      "condition_n": 48,
+      "core_question_n": 12,
+      "source_family_n": 12,
+      "weighting": "core_question_and_source_family",
+      "note": "同一核心问题的多个条件或改写不按独立样本相加。"
+    }
+  },
+  "auxiliary": {
+    "auxiliary_over_refusal_n": 0,
+    "auxiliary_answered_despite_insufficient_n": 9,
+    "examples": [
+      {
+        "case_id": "v23_behavior_missing_condition",
+        "model_role": "base",
+        "kind": "answered_despite_insufficient",
+        "metric_role": "auxiliary"
+      },
+      {
+        "case_id": "v23_behavior_missing_condition",
+        "model_role": "adapter",
+        "kind": "answered_despite_insufficient",
+        "metric_role": "auxiliary"
+      },
+      {
+        "case_id": "v23_behavior_missing_reaction",
+        "model_role": "base",
+        "kind": "answered_despite_insufficient",
+        "metric_role": "auxiliary"
+      },
+      {
+        "case_id": "v23_behavior_missing_reaction",
+        "model_role": "adapter",
+        "kind": "answered_despite_insufficient",
+        "metric_role": "auxiliary"
+      },
+      {
+        "case_id": "v23_behavior_contra_not_visible",
+        "model_role": "base",
+        "kind": "answered_despite_insufficient",
+        "metric_role": "auxiliary"
+      },
+      {
+        "case_id": "v24_behavior_wrong_object",
+        "model_role": "base",
+        "kind": "answered_despite_insufficient",
+        "metric_role": "auxiliary"
+      },
+      {
+        "case_id": "v24_behavior_replaced_context",
+        "model_role": "base",
+        "kind": "answered_despite_insufficient",
+        "metric_role": "auxiliary"
+      },
+      {
+        "case_id": "v24_behavior_missing_reaction",
+        "model_role": "base",
+        "kind": "answered_despite_insufficient",
+        "metric_role": "auxiliary"
+      },
+      {
+        "case_id": "v24_behavior_contra_not_visible",
+        "model_role": "base",
+        "kind": "answered_despite_insufficient",
+        "metric_role": "auxiliary"
+      }
+    ]
+  },
+  "failures": [
+    "人工裁定仍为 0。规则分不能代替盲评。"
+  ],
+  "execution": {
+    "batch_a": {
+      "status": "blocked",
+      "reason": "pending_review",
+      "model_loaded": false
+    },
+    "batch_b": {
+      "status": "blocked",
+      "reason": "pending_review",
+      "model_loaded": false
+    }
+  },
+  "import": {
+    "error_n": 0,
+    "pending_review_n": 180,
+    "adjudicated_n": 0,
+    "ready_for_inference": {
+      "batch1_behavior": false,
+      "batch_a_gold": false,
+      "batch_b_gold": false
+    }
+  }
+}

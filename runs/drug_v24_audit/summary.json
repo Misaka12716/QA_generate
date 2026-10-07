@@ -1,0 +1,342 @@
+{
+  "git_commit": "abbca92d9aaf9eff98ef80849224c529e06b4a88",
+  "completed": [
+    "修复了行为分类、离线重评分身份核对、缓存分层和正式协议门禁。",
+    "用已有 200 份新题回答做了 v1/v2/v3 离线对照，没有重跑 drug_v23。",
+    "生成了空白金标审核包和盲评包。",
+    "写了来源审计和下一阶段协议，没有启动 A–D。"
+  ],
+  "exploratory_auxiliary": {
+    "by_stratum": {
+      "seen_rephrase": {
+        "row_count": 60,
+        "family_count": 30,
+        "source_family_count": 18,
+        "auxiliary_pass_rate": 0.875,
+        "unresolved_n": 0,
+        "pass_n": 53,
+        "fail_n": 7,
+        "weighting": "equal_source_family",
+        "result_class": "exploratory_auxiliary",
+        "review_status": "pending_review"
+      },
+      "independent": {
+        "row_count": 30,
+        "family_count": 30,
+        "source_family_count": 10,
+        "auxiliary_pass_rate": 1.0,
+        "unresolved_n": 0,
+        "pass_n": 30,
+        "fail_n": 0,
+        "weighting": "equal_source_family",
+        "result_class": "exploratory_auxiliary",
+        "review_status": "pending_review"
+      },
+      "behavior": {
+        "row_count": 10,
+        "family_count": 10,
+        "source_family_count": 7,
+        "auxiliary_pass_rate": 0.5,
+        "unresolved_n": 0,
+        "pass_n": 6,
+        "fail_n": 4,
+        "weighting": "equal_source_family",
+        "result_class": "exploratory_auxiliary",
+        "review_status": "pending_review"
+      }
+    },
+    "combined_generalization_score": null,
+    "offline_v3": {
+      "executed": true,
+      "scored_n": 100,
+      "failed_n": 0
+    },
+    "offline_v2": {
+      "executed": true,
+      "scored_n": 100
+    }
+  },
+  "review": {
+    "gold_items": 174,
+    "blind_answers": 348,
+    "filled_adjudications": 0,
+    "review_status": "pending_review",
+    "reviewers_recorded": false,
+    "new_input_gold_items": 4,
+    "new_input_blind_answers": 8,
+    "new_input_filled_adjudications": 0,
+    "audit_notes": [
+      "新输入的辅助通过不能当成行为已经修好。v24_behavior_missing_reaction 的 adapter 回答称“未提及该药品是否为孕妇禁用”，但新上下文里有“孕妇禁用”。规则把拒答判成通过，这句话要人工看。"
+    ]
+  },
+  "blocked": [],
+  "not_authorized": [
+    "固定上下文新问法对照",
+    "成对行为边界测试",
+    "新增独立来源难题",
+    "多 seed / G1–G3 / 行为训练"
+  ],
+  "score_differences": {
+    "v2_recompute_mismatch_n": 0,
+    "scoring_fix_n": 4,
+    "gold_structure_fix_n": 1,
+    "no_auxiliary_change_n": 95
+  },
+  "identity": {
+    "prediction_n": 200,
+    "message_mismatch_n": 0,
+    "signature_mismatch_n": 0,
+    "missing_case_n": 0,
+    "message_mismatch": [],
+    "signature_mismatch": [],
+    "input_match": true,
+    "signature_match": true
+  },
+  "behavior_items": [
+    {
+      "case_id": "v23_behavior_insufficient_section",
+      "disposition": "reuse_predictions_pending_human_review",
+      "issues": [],
+      "notes": [
+        "题干中的药品名称夹带了抽取残留。这是原输入的一部分，本次不改旧题。"
+      ],
+      "new_input_case_id": null,
+      "self_check_passed": true,
+      "patched_self_check_passed": null
+    },
+    {
+      "case_id": "v23_behavior_wrong_object",
+      "disposition": "pending_review",
+      "issues": [
+        "学生可见上下文没有另一药品的身份。"
+      ],
+      "notes": [
+        "题干中的药品名称夹带了抽取残留。这是原输入的一部分，本次不改旧题。"
+      ],
+      "new_input_case_id": "v24_behavior_wrong_object",
+      "self_check_passed": true,
+      "patched_self_check_passed": null
+    },
+    {
+      "case_id": "v23_behavior_retained_distractor",
+      "disposition": "pending_review",
+      "issues": [
+        "干扰材料没有展示另一对象，不能当成干扰条件下的充分证据。"
+      ],
+      "notes": [
+        "题干中的药品名称夹带了抽取残留。这是原输入的一部分，本次不改旧题。"
+      ],
+      "new_input_case_id": null,
+      "self_check_passed": true,
+      "patched_self_check_passed": null
+    },
+    {
+      "case_id": "v23_behavior_replaced_context",
+      "disposition": "pending_review",
+      "issues": [
+        "上下文过短，看不到被替换资料属于哪一个对象。"
+      ],
+      "notes": [
+        "题干中的药品名称夹带了抽取残留。这是原输入的一部分，本次不改旧题。"
+      ],
+      "new_input_case_id": "v24_behavior_replaced_context",
+      "self_check_passed": true,
+      "patched_self_check_passed": null
+    },
+    {
+      "case_id": "v23_behavior_clarify_strength",
+      "disposition": "pending_review",
+      "issues": [
+        "抽出的数字位于用法用量，不是多个规格。金标前提不能当成已核实。"
+      ],
+      "notes": [],
+      "new_input_case_id": null,
+      "self_check_passed": true,
+      "patched_self_check_passed": null
+    },
+    {
+      "case_id": "v23_behavior_missing_condition",
+      "disposition": "pending_review",
+      "issues": [
+        "题干使用“该条件”，可见上下文没有给出这个指代。被删原句没有保存在候选里，无法确认是否仍有等效表述。"
+      ],
+      "notes": [],
+      "new_input_case_id": null,
+      "self_check_passed": true,
+      "patched_self_check_passed": null
+    },
+    {
+      "case_id": "v23_behavior_missing_reaction",
+      "disposition": "pending_review",
+      "issues": [
+        "上下文没有章节标题，学生看不到金标所声称的章节身份。"
+      ],
+      "notes": [
+        "题干中的药品名称夹带了抽取残留。这是原输入的一部分，本次不改旧题。"
+      ],
+      "new_input_case_id": "v24_behavior_missing_reaction",
+      "self_check_passed": true,
+      "patched_self_check_passed": null
+    },
+    {
+      "case_id": "v23_behavior_child_dose_absent",
+      "disposition": "reuse_predictions_pending_human_review",
+      "issues": [],
+      "notes": [
+        "题干中的药品名称夹带了抽取残留。这是原输入的一部分，本次不改旧题。"
+      ],
+      "new_input_case_id": null,
+      "self_check_passed": true,
+      "patched_self_check_passed": null
+    },
+    {
+      "case_id": "v23_behavior_contra_not_visible",
+      "disposition": "pending_review",
+      "issues": [
+        "上下文没有章节标题，学生看不到金标所声称的章节身份。"
+      ],
+      "notes": [
+        "题干中的药品名称夹带了抽取残留。这是原输入的一部分，本次不改旧题。"
+      ],
+      "new_input_case_id": "v24_behavior_contra_not_visible",
+      "self_check_passed": true,
+      "patched_self_check_passed": null
+    },
+    {
+      "case_id": "v23_behavior_partial_usage",
+      "disposition": "gold_structure_only_reuse_predictions",
+      "issues": [
+        "answer_points 含有学生看不见的要点。评分若把这些要点当必答，会把合法部分回答判错。"
+      ],
+      "notes": [],
+      "new_input_case_id": null,
+      "self_check_passed": false,
+      "patched_self_check_passed": true
+    }
+  ],
+  "source_audit": {
+    "empty_family_id_n": 15,
+    "train_rows_unmapped_n": 0,
+    "independent_case_n": 30,
+    "independent_source_family_n": 10,
+    "independent_file_n": 10,
+    "independent_is_ten_families": true,
+    "prefix_missed_n": 0,
+    "max_full_jaccard": 0.3143,
+    "rule_clean_dropped_n": 9,
+    "evidence_in_excerpt": {
+      "with_evidence_field_n": 30,
+      "evidence_inside_context_n": 30,
+      "evidence_outside_context_n": 0
+    },
+    "frozen_partition_rewritten": false
+  },
+  "field_coverage": [
+    {
+      "check": "numeric_bindings",
+      "applicable_n": 89,
+      "with_required_fields_n": 0,
+      "executed_n": 0,
+      "not_executed_reason": "本批候选没有执行该检查所需的字段，或评分器不会仅因支持该字段就自动运行。",
+      "note": "把数字绑到对象。历史评分没有这个字段时不会执行。"
+    },
+    {
+      "check": "required_conditions",
+      "applicable_n": 16,
+      "with_required_fields_n": 0,
+      "executed_n": 0,
+      "not_executed_reason": "本批候选没有执行该检查所需的字段，或评分器不会仅因支持该字段就自动运行。",
+      "note": "条件要点必须出现在回答中。字段为空时不会执行。"
+    },
+    {
+      "check": "synonym_groups",
+      "applicable_n": 100,
+      "with_required_fields_n": 0,
+      "executed_n": 0,
+      "not_executed_reason": "本批候选没有执行该检查所需的字段，或评分器不会仅因支持该字段就自动运行。",
+      "note": "同义说法。v3 只把与整个要点等价的同义组算命中，字段为空时不会执行。"
+    },
+    {
+      "check": "atomic_answer_points",
+      "applicable_n": 100,
+      "with_required_fields_n": 39,
+      "executed_n": 0,
+      "not_executed_reason": "本批候选没有执行该检查所需的字段，或评分器不会仅因支持该字段就自动运行。",
+      "note": "评分器按整条 answer_points 做覆盖，不会自动拆开复合句。"
+    },
+    {
+      "check": "visible_evidence_map",
+      "applicable_n": 100,
+      "with_required_fields_n": 30,
+      "executed_n": 10,
+      "not_executed_reason": "本次只对 10 道行为题执行了可见证据审计。普通题没有证据映射字段，历史评分器没有执行该检查。",
+      "note": "证据位于学生可见 excerpt。历史 v2 评分没有单独执行这项。",
+      "historical_scorer_executed_n": 0
+    }
+  ],
+  "reinfer": {
+    "gpu_candidates": [
+      3,
+      4,
+      6
+    ],
+    "gpu_error": "",
+    "runs": [
+      {
+        "name": "train_seen",
+        "status": "exploratory_executed",
+        "executed": true,
+        "reason": null,
+        "planned_n": 74,
+        "scored_n": 74,
+        "failed_n": 0,
+        "device": [
+          3
+        ],
+        "prompt_tokens": 25302,
+        "completion_tokens": 5219,
+        "elapsed_sec": 190.821,
+        "infer_config_effective": {
+          "max_new_tokens": 512,
+          "do_sample": false,
+          "dtype": "bfloat16"
+        },
+        "prediction_run_id": "d13a5e20ec4ed907",
+        "out": "/data1/pjw/QA_generate-main/runs/drug_v24_rescore/train_seen_confirmed",
+        "auxiliary_n": 74,
+        "auxiliary_before_pass_n": 52,
+        "auxiliary_after_pass_n": 74,
+        "enters_formal_metric": false
+      },
+      {
+        "name": "new_behavior_inputs",
+        "status": "exploratory_executed",
+        "executed": true,
+        "reason": null,
+        "planned_n": 4,
+        "scored_n": 4,
+        "failed_n": 0,
+        "device": [
+          3
+        ],
+        "prompt_tokens": 504,
+        "completion_tokens": 354,
+        "elapsed_sec": 9.045,
+        "infer_config_effective": {
+          "max_new_tokens": 512,
+          "do_sample": false,
+          "dtype": "bfloat16"
+        },
+        "prediction_run_id": "4e07f24b6e37bcf8",
+        "out": "/data1/pjw/QA_generate-main/runs/drug_v24_rescore/new_inputs",
+        "auxiliary_n": 4,
+        "auxiliary_before_pass_n": 0,
+        "auxiliary_after_pass_n": 4,
+        "enters_formal_metric": false
+      }
+    ],
+    "status": "executed"
+  },
+  "historical_files_unchanged": true,
+  "test_log_excerpt": "command: PYTHONPATH=src python -m pytest tests/test_eval_reliability.py tests/test_adapter_eval.py tests/test_contracts.py tests/test_v24_historical.py tests/test_pipeline.py tests/test_demo.py -q --tb=line\npython: /opt/miniconda/bin/python\nnote: /opt/miniconda/envs/opsd/bin/python has transformers for inference and has no pytest module. This log uses the default interpreter.\ngit_commit: abbca92d9aaf9eff98ef80849224c529e06b4a88\n---\n........................................................................ [ 90%]\n........                                                                 [100%]\n80 passed in 1.99s\nexit_code: 0"
+}

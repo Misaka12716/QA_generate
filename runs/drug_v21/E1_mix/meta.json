@@ -1,0 +1,7 @@
+{
+  "recipe": "drug_e1_mix",
+  "kept": 144,
+  "rejected": 4,
+  "chunks": 100,
+  "questions": 150
+}

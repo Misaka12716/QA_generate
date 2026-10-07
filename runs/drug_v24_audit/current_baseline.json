@@ -1,0 +1,177 @@
+{
+  "note": "这些哈希只说明本次审计开始时的文件状态，不能证明它们在 v23 基线之前没有变化。v23 manifest 没有被重写。",
+  "git_commit": "abbca92d9aaf9eff98ef80849224c529e06b4a88",
+  "v23_manifest_comparison": [
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/run_meta.json",
+      "matches_v23_baseline": true,
+      "current_sha256": "6e0b1fdd57ac70f4f7484844db11ea98be729cb6a2ae7df5a537b20b21d756ff"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/metrics.json",
+      "matches_v23_baseline": true,
+      "current_sha256": "df5b2295f6d737603db7d53dc566947a5a7aee3a4cb4effe17674dce396366ef"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/report.md",
+      "matches_v23_baseline": true,
+      "current_sha256": "594bb69c9b42965ed1ec91c43c403d8a6e22ce288698d1b6ddd7b13d5b434647"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E1_direct/stats.json",
+      "matches_v23_baseline": true,
+      "current_sha256": "94710b248de9c5e8c335a3bb52e40cd09a7a69b138c3e8df5b519d16d2a7b1f2"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E1_direct/metrics.json",
+      "matches_v23_baseline": true,
+      "current_sha256": "ca767f7ce0a123385edd2344416b91efb9c5d858a2d5ed22c5585bddd06a7483"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E1_direct/qa.kept.jsonl",
+      "matches_v23_baseline": true,
+      "current_sha256": "69049fb5c930071cddf0fd15b9a6737815e41af20aad237a3074b029248b7620"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E1_direct/qa.raw.jsonl",
+      "matches_v23_baseline": true,
+      "current_sha256": "8ead93050f9862a7b661225edd2bc1457517274e3d4998d969d9ebc430c26e2d"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E1_direct/qa.rejected.jsonl",
+      "matches_v23_baseline": true,
+      "current_sha256": "382deaa7727f2d0baeaeb340d28115be804645f514476164a57361262fd57738"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E1_direct/questions.jsonl",
+      "matches_v23_baseline": true,
+      "current_sha256": "2ea9eb6a40104016c300096108cafe1544e3d63d589f3b4b1addc1e06d6d7f9d"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E1_direct/chunks.jsonl",
+      "matches_v23_baseline": true,
+      "current_sha256": "776b5ae16f904f0c218ba2d2d86a708e268af97d39ea5cc0ff465af155c9373c"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E3_g0/qa.kept.jsonl",
+      "matches_v23_baseline": true,
+      "current_sha256": "b66e2723d157cdacaf484fb5e9567889b198778e40cf0ea3c3bcefda9a002e3e"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E3_g0/sft/train.jsonl",
+      "matches_v23_baseline": true,
+      "current_sha256": "a95a8aa026bff7b06af8c3034a5030c8837e2c4aa51b04071f089aae2ea331dc"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E3_g0/sft/train_seen.jsonl",
+      "matches_v23_baseline": true,
+      "current_sha256": "0ada8cebd05d44746a78e7c06a2df805c246a181d94bf219eeca1be76ab02fff"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E3_g0/sft/eval.json",
+      "matches_v23_baseline": true,
+      "current_sha256": "44559aca101cea6bc9be63ea2a54c5bb1b17da2c7ceab59f7c840251d711e99a"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E3_g0/sft/lora/sft_metrics.json",
+      "matches_v23_baseline": true,
+      "current_sha256": "171e606d1dd33ea5c4b2be8a0cb0ed4a0e716996f96ab8ab16268dd39cbec0db"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E3_g0/sft/lora/adapter/adapter_config.json",
+      "matches_v23_baseline": true,
+      "current_sha256": "81857a455e686e40eaef4773ac34f0df683e1a2ee84473c1fee563f84146950e"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E3_g0/sft/lora/adapter/adapter_model.safetensors",
+      "matches_v23_baseline": true,
+      "current_sha256": "4f4bdec7b50dab9eeacad634bb69518401190df8a0b40997e8c819f24fb8bef2"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/frozen/heldout.jsonl",
+      "matches_v23_baseline": true,
+      "current_sha256": "dbcbd2766300984d0136cec4b96114acbb94b5964765dbd874dadd1a41457d3e"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/frozen/heldout_protocol.jsonl",
+      "matches_v23_baseline": true,
+      "current_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/frozen/subset_manifest.json",
+      "matches_v23_baseline": true,
+      "current_sha256": "05eef69b0c8abe6d2a927ed7e55f6a431be67d18ee595685d35af35f930b8733"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/frozen/chunk_freeze.json",
+      "matches_v23_baseline": true,
+      "current_sha256": "e31d67bb70a7668f42b255316c83f6d88e4914da8863a9b1371d6b318b3d47de"
+    }
+  ],
+  "files": [
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v23_audit/manifest.json",
+      "exists": true,
+      "bytes": 5703,
+      "sha256": "c2d3109753e7ee875f9c27c95ecedfc091d55ab379e13297f156dbc20c0891c3"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v23_audit/audit.json",
+      "exists": true,
+      "bytes": 17917,
+      "sha256": "2dd8f5f4153f86a81216c61bab205828f7c55d1b9058a8f443e2cf33b054dab4"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E3_g0/sft/train.jsonl",
+      "exists": true,
+      "bytes": 260278,
+      "sha256": "a95a8aa026bff7b06af8c3034a5030c8837e2c4aa51b04071f089aae2ea331dc"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E3_g0/sft/train_seen.jsonl",
+      "exists": true,
+      "bytes": 124099,
+      "sha256": "0ada8cebd05d44746a78e7c06a2df805c246a181d94bf219eeca1be76ab02fff"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v23_eval/candidates/dev_candidates.jsonl",
+      "exists": true,
+      "bytes": 993290,
+      "sha256": "814812ba42484e4d2367e3551cb9eab874739d794e2819a55c226d5ed157a206"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v23_eval/exploratory/predictions.jsonl",
+      "exists": true,
+      "bytes": 2055280,
+      "sha256": "3930f3416bee8b8f4820a98182618b09a18fc72fc5f92ceb88faa955b6bdb7d2"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v23_eval/exploratory/scores.jsonl",
+      "exists": true,
+      "bytes": 149325,
+      "sha256": "1612b37461b42d7354c581742f7fda4dbc90427faf49aa95a64cf84d0e2910a7"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v23_eval/exploratory/eval_report.json",
+      "exists": true,
+      "bytes": 1744,
+      "sha256": "7d7db3e96a4d89fc2316c7daf697ad605acfc16a857cc19b64d5f92ae31db191"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/frozen/heldout_protocol.jsonl",
+      "exists": true,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "models": {
+    "base_model": "/data1/pjw/models/Qwen2.5-7B-Instruct",
+    "base_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter": "/data1/pjw/QA_generate-main/runs/drug_v22/E3_g0/sft/lora/adapter",
+    "adapter_id": "4f4bdec7b50dab9e",
+    "template_id": "5b5d4f65d0acd3b2",
+    "adapter_tokenizer_config_sha256": "0a04a9d7d4a62b28482bdfe726c122756de85714fb64166ace92ae75b8f57614",
+    "base_tokenizer_config_sha256": "5b5d4f65d0acd3b2d56a35b56d374a36cbc1c8fa5cf3b3febbbfabf22f359583",
+    "tokenizer_configs_differ": true
+  }
+}

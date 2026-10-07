@@ -1,0 +1,142 @@
+{
+  "note": "这些哈希是本次审计时的保护基线，不能证明文件在此之前没有被改过。",
+  "files": [
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/run_meta.json",
+      "exists": true,
+      "bytes": 1113,
+      "sha256": "6e0b1fdd57ac70f4f7484844db11ea98be729cb6a2ae7df5a537b20b21d756ff"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/metrics.json",
+      "exists": true,
+      "bytes": 14756,
+      "sha256": "df5b2295f6d737603db7d53dc566947a5a7aee3a4cb4effe17674dce396366ef"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/report.md",
+      "exists": true,
+      "bytes": 3784,
+      "sha256": "594bb69c9b42965ed1ec91c43c403d8a6e22ce288698d1b6ddd7b13d5b434647"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E1_direct/stats.json",
+      "exists": true,
+      "bytes": 1864,
+      "sha256": "94710b248de9c5e8c335a3bb52e40cd09a7a69b138c3e8df5b519d16d2a7b1f2"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E1_direct/metrics.json",
+      "exists": true,
+      "bytes": 2002,
+      "sha256": "ca767f7ce0a123385edd2344416b91efb9c5d858a2d5ed22c5585bddd06a7483"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E1_direct/qa.kept.jsonl",
+      "exists": true,
+      "bytes": 451024,
+      "sha256": "69049fb5c930071cddf0fd15b9a6737815e41af20aad237a3074b029248b7620"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E1_direct/qa.raw.jsonl",
+      "exists": true,
+      "bytes": 423163,
+      "sha256": "8ead93050f9862a7b661225edd2bc1457517274e3d4998d969d9ebc430c26e2d"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E1_direct/qa.rejected.jsonl",
+      "exists": true,
+      "bytes": 37017,
+      "sha256": "382deaa7727f2d0baeaeb340d28115be804645f514476164a57361262fd57738"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E1_direct/questions.jsonl",
+      "exists": true,
+      "bytes": 168990,
+      "sha256": "2ea9eb6a40104016c300096108cafe1544e3d63d589f3b4b1addc1e06d6d7f9d"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E1_direct/chunks.jsonl",
+      "exists": true,
+      "bytes": 90879,
+      "sha256": "776b5ae16f904f0c218ba2d2d86a708e268af97d39ea5cc0ff465af155c9373c"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E3_g0/qa.kept.jsonl",
+      "exists": true,
+      "bytes": 458350,
+      "sha256": "b66e2723d157cdacaf484fb5e9567889b198778e40cf0ea3c3bcefda9a002e3e"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E3_g0/sft/train.jsonl",
+      "exists": true,
+      "bytes": 260278,
+      "sha256": "a95a8aa026bff7b06af8c3034a5030c8837e2c4aa51b04071f089aae2ea331dc"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E3_g0/sft/train_seen.jsonl",
+      "exists": true,
+      "bytes": 124099,
+      "sha256": "0ada8cebd05d44746a78e7c06a2df805c246a181d94bf219eeca1be76ab02fff"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E3_g0/sft/eval.json",
+      "exists": true,
+      "bytes": 3662,
+      "sha256": "44559aca101cea6bc9be63ea2a54c5bb1b17da2c7ceab59f7c840251d711e99a"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E3_g0/sft/lora/sft_metrics.json",
+      "exists": true,
+      "bytes": 2301,
+      "sha256": "171e606d1dd33ea5c4b2be8a0cb0ed4a0e716996f96ab8ab16268dd39cbec0db"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E3_g0/sft/lora/adapter/adapter_config.json",
+      "exists": true,
+      "bytes": 900,
+      "sha256": "81857a455e686e40eaef4773ac34f0df683e1a2ee84473c1fee563f84146950e"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/runs/drug_v22/E3_g0/sft/lora/adapter/adapter_model.safetensors",
+      "exists": true,
+      "bytes": 40400200,
+      "sha256": "4f4bdec7b50dab9eeacad634bb69518401190df8a0b40997e8c819f24fb8bef2"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/frozen/heldout.jsonl",
+      "exists": true,
+      "bytes": 69774,
+      "sha256": "dbcbd2766300984d0136cec4b96114acbb94b5964765dbd874dadd1a41457d3e"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/frozen/heldout_protocol.jsonl",
+      "exists": true,
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/frozen/subset_manifest.json",
+      "exists": true,
+      "bytes": 9595,
+      "sha256": "05eef69b0c8abe6d2a927ed7e55f6a431be67d18ee595685d35af35f930b8733"
+    },
+    {
+      "path": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/frozen/chunk_freeze.json",
+      "exists": true,
+      "bytes": 2774,
+      "sha256": "e31d67bb70a7668f42b255316c83f6d88e4914da8863a9b1371d6b318b3d47de"
+    }
+  ],
+  "base_model": {
+    "path": "/data1/pjw/models/Qwen2.5-7B-Instruct",
+    "exists": true,
+    "config_sha256": "7463bb0ea78315365e6c6b74de4e73bbcc8359dfb0c5a737584e077d42c0b03c"
+  },
+  "alternate_base_model_exists": false,
+  "git_at_audit": {
+    "commit": "78a4883239e923783451e7b979807f7040534f17",
+    "status": "M src/qa_pipeline/cli.py\n M src/qa_pipeline/experiments/scoring.py\n M src/qa_pipeline/pipeline.py\n M src/qa_pipeline/textutil.py\n?? src/qa_pipeline/experiments/adapter_eval.py\n?? src/qa_pipeline/experiments/dev_candidates.py\n?? src/qa_pipeline/experiments/frozen_loader.py\n?? src/qa_pipeline/experiments/v22_audit.py\n?? tests/test_adapter_eval.py",
+    "note": "这是审计命令执行时的工作区，不是 drug_v22 开跑时的 git_status。"
+  }
+}

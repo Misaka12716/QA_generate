@@ -1,0 +1,60 @@
+{
+  "llm_calls": 9,
+  "prompt_tokens": 1632,
+  "completion_tokens": 198,
+  "estimated_cost_usd": 0.0,
+  "stage_seconds": {
+    "filter:rule_clean": 0.0,
+    "filter:evidence_substring": 0.0,
+    "filter:roundtrip": 0.003,
+    "filter:selfcheck": 0.0
+  },
+  "produced": {},
+  "rejected": {},
+  "funnel": {
+    "rule_clean": {
+      "in": 3,
+      "out": 3,
+      "dropped": 0
+    },
+    "evidence_substring": {
+      "in": 3,
+      "out": 3,
+      "dropped": 0
+    },
+    "roundtrip": {
+      "in": 3,
+      "out": 3,
+      "dropped": 0
+    },
+    "selfcheck": {
+      "in": 3,
+      "out": 3,
+      "dropped": 0
+    }
+  },
+  "fallbacks": [],
+  "budget_stops": [],
+  "ledger": {
+    "spent_settled": 0.0,
+    "reserved_inflight": 0.0,
+    "unbilled_reserve": 0.0,
+    "required_process_reserve": 0.0,
+    "safety_margin": 0.0,
+    "authorized_cap": null,
+    "llm_calls": 9,
+    "prompt_tokens": 1632,
+    "completion_tokens": 198,
+    "sequence_tokens": 1830,
+    "supervised_tokens": null,
+    "note": "美元、调用数、序列 token 与监督 token 分开记账"
+  },
+  "call_statuses": {},
+  "stage_counts": {
+    "candidate": 3,
+    "format_valid": null,
+    "semantic_valid": null,
+    "accepted": 3,
+    "derived": 0
+  }
+}

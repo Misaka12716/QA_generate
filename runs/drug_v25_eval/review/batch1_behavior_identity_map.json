@@ -1,0 +1,254 @@
+[
+  {
+    "blind_id": "batch1_behavior_blind_0001",
+    "case_id": "v23_behavior_retained_distractor",
+    "model_role": "adapter",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "4f4bdec7b50dab9e",
+    "signature": "f54b7b35071226777f45be80ee71b72047a84545d0eb48838489837c336ac841",
+    "answer_text": "3～9g。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0002",
+    "case_id": "v23_behavior_contra_not_visible",
+    "model_role": "adapter",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "4f4bdec7b50dab9e",
+    "signature": "3fd08f597f59ef73c4ba4a0b24d7daf5ede72ed7909bb80b6f800cca4da5b253",
+    "answer_text": "资料不足，尚不明确。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0003",
+    "case_id": "v24_behavior_replaced_context",
+    "model_role": "adapter",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "4f4bdec7b50dab9e",
+    "signature": "1d56340649290c8b8b08f8ef00816fc0171b8596ea80a0e3f9b99e45a13ef7e1",
+    "answer_text": "资料中没有提到清半夏的相关信息，无法回答。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0004",
+    "case_id": "v23_behavior_replaced_context",
+    "model_role": "base",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "",
+    "signature": "852374abcc4fe04b8232629fbc99ea2b0aa0a4ca1a2012c31c41c469c0ce39be",
+    "answer_text": "根据您提供的资料，“密封。”与清半夏的用法用量无关。缺少关于清半夏用法用量的具体信息。请提供更详细的信息或药品说明书以获取准确答案。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0005",
+    "case_id": "v23_behavior_missing_reaction",
+    "model_role": "base",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "",
+    "signature": "7b5766b8b33406c4b91427985263edb642e65f03b5f9af5bd0c99465cb3c4263",
+    "answer_text": "根据提供的信息，无法直接得出“牛黄解毒片汉语拼音：NiuhuangJieduPian”可能产生的不良反应。牛黄解毒片的不良反应通常需要参考药品说明书或相关医学资料来确定。提供的信息只表明该药物对孕妇有禁忌，并未提及具体的不良反应。因此，需要进一步查阅牛黄解毒片的具体说明或咨询医疗专业人士以获取准确的不良反应信息。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0006",
+    "case_id": "v24_behavior_missing_reaction",
+    "model_role": "adapter",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "4f4bdec7b50dab9e",
+    "signature": "ec5080dadfd20566733d5cfc381c902bbaa7b70421be11246779dcc47d3d72c1",
+    "answer_text": "资料中没有提供牛黄解毒片的不良反应信息，且未提及该药品是否为孕妇禁用。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0007",
+    "case_id": "v24_behavior_wrong_object",
+    "model_role": "base",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "",
+    "signature": "41a21d880008b0b9bc5a606835f384413e737bfff090933eaa7756c26ad71a8f",
+    "answer_text": "根据您提供的资料，关于“清半夏”的用法用量并没有提及。消炎利胆胶囊的用法用量为每次4粒，每日3次。如果您想了解清半夏的用法用量，需要查看清半夏的药品说明书或咨询医生、药师的意见。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0008",
+    "case_id": "v24_behavior_missing_reaction",
+    "model_role": "base",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "",
+    "signature": "3c3ae4f3346d9be33025ba6a83d29510f07151f7dda3539d59f488df52a1f3e3",
+    "answer_text": "根据提供的资料，无法得知牛黄解毒片（Niuhuang Jiedu Pian）的具体不良反应。资料中只提到了该药物对孕妇的使用禁忌，但未包含关于药物副作用或不良反应的信息。要了解牛黄解毒片可能产生的不良反应，需要参考该药品的说明书或其他官方医药信息来源。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0009",
+    "case_id": "v23_behavior_child_dose_absent",
+    "model_role": "base",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "",
+    "signature": "8c339b969a2bcf7997cd663257fbbb18a6378e83153fec4cc40c1edd68a45654",
+    "answer_text": "根据提供的信息，成人维生素B1片的剂量是一次1片，一日3次。但关于儿童的具体剂量资料中并未给出，通常药物说明书会针对不同年龄段或体重范围给出具体的儿童用药指导。因此，无法直接得出儿童的剂量。建议咨询医生或药师以获得适合儿童的准确剂量。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0010",
+    "case_id": "v23_behavior_child_dose_absent",
+    "model_role": "adapter",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "4f4bdec7b50dab9e",
+    "signature": "b1edbf1d6411635c76693b20640db4bb62802f7a53304d88349c553b94f8e2d7",
+    "answer_text": "资料中未提供儿童剂量信息，无法确定。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0011",
+    "case_id": "v23_behavior_missing_condition",
+    "model_role": "base",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "",
+    "signature": "9ed1475216b0295ed9dfaab08610a53c2b5d5482f250b059b1815cc7cd2da6dc",
+    "answer_text": "根据您提供的信息，如果遇到以下情况，应当采取相应的处理措施：\n\n1. **服药后症状无改善，或症状加重，或出现新的症状**：应立即停止服用，并及时就医。\n\n2. **小儿及年老体弱者**：需要在医生的指导下服用。\n\n3. **对本品过敏者**：应避免使用此药品。\n   \n4. **过敏体质者**：在使用前应谨慎，并最好在医生指导下使用。\n\n5. **药品性状发生改变**：不应继续使用，应丢弃该药品。\n\n6. **与其他药物同时使用**：如果有其他药物正在使用，应该咨询医生或药师，了解可能的药物相互作用。\n\n7. **儿童使用**：儿童必须在成人的监护下使用。\n\n8. **药品存放**：确保药品存放在儿童无法触及的地方。\n\n以上建议是基于提供的说明书内容，具体操作时还需结合个人健康状况和医生的专业意见。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0012",
+    "case_id": "v23_behavior_insufficient_section",
+    "model_role": "base",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "",
+    "signature": "4db61c28033673c5986faa9e62efb2324edeccc129e60da088e3fffab6e6d270",
+    "answer_text": "根据您提供的资料，资料中并没有提到清半夏的用法用量以及存储条件相关信息仅提到存储时应放置在通风干燥处，防蛀。因此无法回答清半夏的用法用量。需要参考具体的药物使用说明书或由专业医生指导。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0013",
+    "case_id": "v24_behavior_contra_not_visible",
+    "model_role": "adapter",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "4f4bdec7b50dab9e",
+    "signature": "230a5ea783983be34e43b686972c02ca7ae91606c6a175ab6cde8a12f9adce40",
+    "answer_text": "资料不足，无法回答。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0014",
+    "case_id": "v23_behavior_insufficient_section",
+    "model_role": "adapter",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "4f4bdec7b50dab9e",
+    "signature": "7282bdb982eac536ccb5000ef79f7c790bdce333ccf2fe696fd63f2d6cdbb085",
+    "answer_text": "资料中没有提供清半夏的用法用量信息，防蛀提示与用法用量无关。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0015",
+    "case_id": "v23_behavior_missing_reaction",
+    "model_role": "adapter",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "4f4bdec7b50dab9e",
+    "signature": "e470506413662073ea7cdbbbb60771ab2d964e1dec1a645351ba99ea6c2d3653",
+    "answer_text": "孕妇禁用，但未提及牛黄解毒片的具体不良反应。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0016",
+    "case_id": "v24_behavior_wrong_object",
+    "model_role": "adapter",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "4f4bdec7b50dab9e",
+    "signature": "553969a03752c67bec9c38601b2eafe08d74d97663a76c84bd31b2a0ca79ec5e",
+    "answer_text": "资料中没有提供清半夏的用法用量信息，无法回答。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0017",
+    "case_id": "v23_behavior_contra_not_visible",
+    "model_role": "base",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "",
+    "signature": "f571b85a423323c4d13e471481551734632ab56dfa3509b0016e07528871a923",
+    "answer_text": "根据提供的信息，“尚不明确”表示关于牛黄解毒片的某些方面（如禁忌）没有明确的资料提供。因此，无法直接从给定资料中得知牛黄解毒片的具体禁忌。建议参考药品说明书或咨询医疗专业人士以获取准确信息。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0018",
+    "case_id": "v23_behavior_retained_distractor",
+    "model_role": "base",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "",
+    "signature": "4917fb0149feed8b21bbc06333dd0469aa8de0c33c362c7a0e85ee026a30de9b",
+    "answer_text": "根据提供的信息，“3～9g”表明清半夏的常用用量范围是3到9克，“密封”可能是存储方式，与用法用量无关。因此，清半夏的用法用量要点是每次使用3到9克。但请注意，具体用法用量最好遵医嘱或参照药品说明书。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0019",
+    "case_id": "v23_behavior_clarify_strength",
+    "model_role": "base",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "",
+    "signature": "29e8f7adb2804c1423355f86e8ce498a12ee1abd6cc0dc56637d394bb76d638f",
+    "answer_text": "根据提供的信息，麦芽的不同规格使用方法如下：\n\n- 生麦芽：10～15g，主要用于健脾和胃，疏肝行气。\n- 炒麦芽：10～15g，主要用于行气消食回乳。\n- 焦麦芽：60g（用于回乳时），主要用于消食化滞。\n\n具体使用时，请根据实际需要选择合适的规格，并遵循医嘱或按照药品说明书进行。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0020",
+    "case_id": "v23_behavior_wrong_object",
+    "model_role": "adapter",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "4f4bdec7b50dab9e",
+    "signature": "c46684e4d966dc58cf19692bf6c0ae2c83c11bef295060fc307e18204a6596e1",
+    "answer_text": "资料不足，无法回答。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0021",
+    "case_id": "v23_behavior_partial_usage",
+    "model_role": "base",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "",
+    "signature": "a5621a0f91241b10321a5dbb1c72e738b2ef17bb5f12a989927507916fd04969",
+    "answer_text": "根据提供的信息，醋酸甲羟孕酮片的功能性闭经的用法用量包括：\n\n1. **用法**：口服。\n2. **用量**：一日4～8mg，即2～4片。\n3. **疗程**：连服5～10天。\n\n以上是基于功能性闭经情况下的用法用量，但请注意，药物的具体使用应遵循医生的处方和指导，因为不同的疾病或个体差异可能需要调整剂量或疗程。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0022",
+    "case_id": "v24_behavior_replaced_context",
+    "model_role": "base",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "",
+    "signature": "c7c22f92d2a6accb76e8fceed59f5c599a5cb04be619c7423cd2f444ef456279",
+    "answer_text": "根据您提供的资料，无法直接找到关于“清半夏”的用法用量信息。消炎利胆胶囊的说明书内容中没有提及清半夏这一成分及其用法用量。要了解清半夏的具体用法用量，需要查看清半夏单独的药品说明书或咨询医疗专业人士。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0023",
+    "case_id": "v23_behavior_partial_usage",
+    "model_role": "adapter",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "4f4bdec7b50dab9e",
+    "signature": "d87fe046468c1cd27861f5800c19ff489ede6cbc909c164a0c38c1fedfc52f7e",
+    "answer_text": "口服，一日4～8mg（2～4片），连服5～10天。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0024",
+    "case_id": "v23_behavior_clarify_strength",
+    "model_role": "adapter",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "4f4bdec7b50dab9e",
+    "signature": "3ce1b980a9b09b4c4a0e2cba2feeb17e936d2d9d86dec1a92c5ae60e3f4c93de",
+    "answer_text": "10～15g；回乳炒用60g。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0025",
+    "case_id": "v23_behavior_wrong_object",
+    "model_role": "base",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "",
+    "signature": "81dca218ea5e1b2650964718807ba2aa45d5a902b673cf38e148ce7dead4f342",
+    "answer_text": "根据提供的资料，“密封。”与清半夏的用法用量无关，资料中没有提到清半夏的具体用法用量信息。因此无法回答清半夏的用法用量是多少。需要查找关于清半夏的具体用药指导或咨询医疗专业人士以获得准确的用法用量信息。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0026",
+    "case_id": "v23_behavior_missing_condition",
+    "model_role": "adapter",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "4f4bdec7b50dab9e",
+    "signature": "a2829a5ee75821e403dd32ba0f90f51b361041ef473fe8959a9811e84b07245b",
+    "answer_text": "服药后症状无改善，或症状加重，或出现新的症状者，应立即停药并到医院就诊。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0027",
+    "case_id": "v24_behavior_contra_not_visible",
+    "model_role": "base",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "",
+    "signature": "705cf00d979343b3c498ae1a82b44fbfedaf381aa883030f31a5d6e808f6ae7f",
+    "answer_text": "根据提供的资料，“牛黄解毒片汉语拼音：NiuhuangJieduPian”的不良反应“尚不明确”，这意味着目前没有足够的信息来描述其可能的不良反应或禁忌症。通常药品说明书会详细列出禁忌症，包括对药物成分过敏的人群、孕妇、哺乳期妇女等不宜使用的情况。如果需要了解具体的禁忌信息，建议查看完整的药品说明书或咨询医疗专业人士。"
+  },
+  {
+    "blind_id": "batch1_behavior_blind_0028",
+    "case_id": "v23_behavior_replaced_context",
+    "model_role": "adapter",
+    "model_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+    "adapter_id": "4f4bdec7b50dab9e",
+    "signature": "1160a0c3e91c17d36ed3653e06edf262324a8d7de720072c5746061b5328f9db",
+    "answer_text": "资料不足，无法回答。"
+  }
+]

@@ -1,0 +1,6 @@
+{
+  "train_messages_checked": 22,
+  "leak_failures": 0,
+  "policy": "可以运用已有领域知识回答。不确定时说明依据不足。",
+  "input_mode_verified": true
+}

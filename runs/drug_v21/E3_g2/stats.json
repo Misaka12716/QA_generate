@@ -1,0 +1,63 @@
+{
+  "llm_calls": 145,
+  "prompt_tokens": 22843,
+  "completion_tokens": 9321,
+  "estimated_cost_usd": 0.0,
+  "stage_seconds": {
+    "teacher_router": 0.0,
+    "distillation": 0.014,
+    "filter:rule_clean": 5.26,
+    "filter:evidence_substring": 0.004,
+    "filter:claim_evidence": 282.729,
+    "filter:replay_replace": 0.0,
+    "filter:joint_dedup": 0.002,
+    "grading": 0.013,
+    "total": 288.052
+  },
+  "produced": {
+    "questions": 150,
+    "distilled": 150,
+    "kept": 139,
+    "rejected": 6
+  },
+  "rejected": {
+    "rule_clean": 5
+  },
+  "funnel": {
+    "rule_clean": {
+      "in": 150,
+      "out": 145,
+      "dropped": 5
+    },
+    "evidence_substring": {
+      "in": 145,
+      "out": 145,
+      "dropped": 0
+    },
+    "claim_evidence": {
+      "in": 145,
+      "out": 145,
+      "dropped": 0
+    },
+    "replay_replace": {
+      "in": 145,
+      "out": 145,
+      "dropped": 0
+    },
+    "joint_dedup": {
+      "in": 145,
+      "out": 145,
+      "dropped": 0
+    }
+  },
+  "fallbacks": [],
+  "budget_stops": [],
+  "ledger": {
+    "spent_settled": 0.0,
+    "reserved_inflight": 0.0,
+    "unbilled_reserve": 0.0,
+    "required_process_reserve": 0.0,
+    "safety_margin": 0.0,
+    "authorized_cap": null
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "train": {
+    "docs": 42,
+    "chars": 273898,
+    "heading_chunks": 809,
+    "fixed_chunks": 537
+  },
+  "heldout": {
+    "docs": 9,
+    "chars": 62443,
+    "heading_chunks": 198,
+    "fixed_chunks": 123
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "llm_calls": 0,
+  "prompt_tokens": 0,
+  "completion_tokens": 0,
+  "estimated_cost_usd": 0.0,
+  "stage_seconds": {},
+  "produced": {},
+  "rejected": {},
+  "funnel": {},
+  "fallbacks": [],
+  "budget_stops": [],
+  "ledger": {},
+  "call_statuses": {},
+  "stage_counts": {
+    "accepted": 74,
+    "selected": 74
+  }
+}

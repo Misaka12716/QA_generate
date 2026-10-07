@@ -1,0 +1,7 @@
+{
+  "recipe": "e2_a1_self_instruct",
+  "kept": 10,
+  "rejected": 0,
+  "chunks": 4,
+  "questions": 12
+}

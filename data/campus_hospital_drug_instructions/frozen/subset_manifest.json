@@ -1,0 +1,362 @@
+[
+  {
+    "order": 0,
+    "stem": "1082",
+    "chars": 77,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1082.txt"
+  },
+  {
+    "order": 1,
+    "stem": "2072",
+    "chars": 418,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/2072.txt"
+  },
+  {
+    "order": 2,
+    "stem": "1978",
+    "chars": 432,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1978.txt"
+  },
+  {
+    "order": 3,
+    "stem": "1914",
+    "chars": 447,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1914.txt"
+  },
+  {
+    "order": 4,
+    "stem": "2096",
+    "chars": 460,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/2096.txt"
+  },
+  {
+    "order": 5,
+    "stem": "1822",
+    "chars": 488,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1822.txt"
+  },
+  {
+    "order": 6,
+    "stem": "1088",
+    "chars": 508,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1088.txt"
+  },
+  {
+    "order": 7,
+    "stem": "901",
+    "chars": 522,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/901.txt"
+  },
+  {
+    "order": 8,
+    "stem": "2290",
+    "chars": 555,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/2290.txt"
+  },
+  {
+    "order": 9,
+    "stem": "436",
+    "chars": 580,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/436.txt"
+  },
+  {
+    "order": 10,
+    "stem": "426",
+    "chars": 607,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/426.txt"
+  },
+  {
+    "order": 11,
+    "stem": "2148",
+    "chars": 644,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/2148.txt"
+  },
+  {
+    "order": 12,
+    "stem": "940",
+    "chars": 677,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/940.txt"
+  },
+  {
+    "order": 13,
+    "stem": "712",
+    "chars": 721,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/712.txt"
+  },
+  {
+    "order": 14,
+    "stem": "182",
+    "chars": 755,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/182.txt"
+  },
+  {
+    "order": 15,
+    "stem": "1366",
+    "chars": 802,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1366.txt"
+  },
+  {
+    "order": 16,
+    "stem": "2368",
+    "chars": 831,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/2368.txt"
+  },
+  {
+    "order": 17,
+    "stem": "1975",
+    "chars": 858,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1975.txt"
+  },
+  {
+    "order": 18,
+    "stem": "362",
+    "chars": 895,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/362.txt"
+  },
+  {
+    "order": 19,
+    "stem": "1057",
+    "chars": 938,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1057.txt"
+  },
+  {
+    "order": 20,
+    "stem": "381",
+    "chars": 969,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/381.txt"
+  },
+  {
+    "order": 21,
+    "stem": "779",
+    "chars": 1022,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/779.txt"
+  },
+  {
+    "order": 22,
+    "stem": "1397",
+    "chars": 1075,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1397.txt"
+  },
+  {
+    "order": 23,
+    "stem": "2481",
+    "chars": 1140,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/2481.txt"
+  },
+  {
+    "order": 24,
+    "stem": "2329",
+    "chars": 1216,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/2329.txt"
+  },
+  {
+    "order": 25,
+    "stem": "1937",
+    "chars": 1289,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1937.txt"
+  },
+  {
+    "order": 26,
+    "stem": "1262",
+    "chars": 1365,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1262.txt"
+  },
+  {
+    "order": 27,
+    "stem": "1973",
+    "chars": 1459,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1973.txt"
+  },
+  {
+    "order": 28,
+    "stem": "1157",
+    "chars": 1544,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1157.txt"
+  },
+  {
+    "order": 29,
+    "stem": "322",
+    "chars": 1634,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/322.txt"
+  },
+  {
+    "order": 30,
+    "stem": "2160",
+    "chars": 1717,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/2160.txt"
+  },
+  {
+    "order": 31,
+    "stem": "2441",
+    "chars": 1821,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/2441.txt"
+  },
+  {
+    "order": 32,
+    "stem": "1335",
+    "chars": 1899,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1335.txt"
+  },
+  {
+    "order": 33,
+    "stem": "444",
+    "chars": 1999,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/444.txt"
+  },
+  {
+    "order": 34,
+    "stem": "1855",
+    "chars": 2096,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1855.txt"
+  },
+  {
+    "order": 35,
+    "stem": "2132",
+    "chars": 2200,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/2132.txt"
+  },
+  {
+    "order": 36,
+    "stem": "1146",
+    "chars": 2338,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1146.txt"
+  },
+  {
+    "order": 37,
+    "stem": "933",
+    "chars": 2467,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/933.txt"
+  },
+  {
+    "order": 38,
+    "stem": "1773",
+    "chars": 2671,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1773.txt"
+  },
+  {
+    "order": 39,
+    "stem": "1036",
+    "chars": 2842,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1036.txt"
+  },
+  {
+    "order": 40,
+    "stem": "1307",
+    "chars": 3025,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1307.txt"
+  },
+  {
+    "order": 41,
+    "stem": "1081",
+    "chars": 3235,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1081.txt"
+  },
+  {
+    "order": 42,
+    "stem": "185",
+    "chars": 3385,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/185.txt"
+  },
+  {
+    "order": 43,
+    "stem": "597",
+    "chars": 3572,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/597.txt"
+  },
+  {
+    "order": 44,
+    "stem": "711",
+    "chars": 3827,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/711.txt"
+  },
+  {
+    "order": 45,
+    "stem": "594",
+    "chars": 4133,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/594.txt"
+  },
+  {
+    "order": 46,
+    "stem": "2379",
+    "chars": 4690,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/2379.txt"
+  },
+  {
+    "order": 47,
+    "stem": "2418",
+    "chars": 5216,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/2418.txt"
+  },
+  {
+    "order": 48,
+    "stem": "421",
+    "chars": 5745,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/421.txt"
+  },
+  {
+    "order": 49,
+    "stem": "2422",
+    "chars": 6246,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/2422.txt"
+  },
+  {
+    "order": 50,
+    "stem": "1314",
+    "chars": 6824,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1314.txt"
+  },
+  {
+    "order": 51,
+    "stem": "2064",
+    "chars": 7803,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/2064.txt"
+  },
+  {
+    "order": 52,
+    "stem": "485",
+    "chars": 8791,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/485.txt"
+  },
+  {
+    "order": 53,
+    "stem": "783",
+    "chars": 10179,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/783.txt"
+  },
+  {
+    "order": 54,
+    "stem": "2075",
+    "chars": 11118,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/2075.txt"
+  },
+  {
+    "order": 55,
+    "stem": "270",
+    "chars": 12467,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/270.txt"
+  },
+  {
+    "order": 56,
+    "stem": "1473",
+    "chars": 14481,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1473.txt"
+  },
+  {
+    "order": 57,
+    "stem": "123",
+    "chars": 16570,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/123.txt"
+  },
+  {
+    "order": 58,
+    "stem": "1882",
+    "chars": 18552,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1882.txt"
+  },
+  {
+    "order": 59,
+    "stem": "1991",
+    "chars": 25387,
+    "source": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions/raw/1991.txt"
+  }
+]

@@ -7,11 +7,11 @@
 | 套件 | 输入来源 | 干净 checkout |
 | --- | --- | --- |
 | [suite.yaml](../configs/experiments/suite.yaml) | `fixtures/` 示例文档、heldout、拒答集 | 可运行 fake 流程 |
-| [suite_psychiatry.yaml](../configs/experiments/suite_psychiatry.yaml) | `data/psychiatry/` | 需另行准备领域数据 |
-| [suite_drug.yaml](../configs/experiments/suite_drug.yaml) | `data/campus_hospital_drug_instructions/frozen/` | 需冻结语料与 heldout 协议 |
+| [suite_psychiatry.yaml](../configs/experiments/suite_psychiatry.yaml) | `data/psychiatry/` | 仓库含 `eval/` 协议；`train/`、`heldout/` 正文需本地准备 |
+| [suite_drug.yaml](../configs/experiments/suite_drug.yaml) | `data/campus_hospital_drug_instructions/frozen/` | 仓库含冻结清单与 heldout 协议；`raw/` 与 zip 不进 Git |
 | [suite_drug_v22_validate.yaml](../configs/experiments/suite_drug_v22_validate.yaml) | 领域验证套件所声明的数据和配置 | 逐项核对其路径与冻结产物 |
 
-`data/` 默认不提交。提供历史报告并不意味着报告所需的输入、预测和模型都已随仓库分发。套件内相对的 `input / recipes_dir / heldout / refusal` 路径按仓库根目录解析，不按套件文件所在目录解析。
+语料**原文**（`data/**/raw/`、`train/`、`heldout/`、zip、`_cache/`）默认不提交；**冻结协议与元数据**（如 `frozen/*.jsonl`、`psychiatry/eval/`、`SOURCES.md`）随仓库分发。`runs/` 内问答对、账本 jsonl 与报告可提交，LoRA 权重与 `_cache` 仍忽略。目录 lineage 见 [runs/README.md](../runs/README.md)。提供历史报告并不意味着 adapter 权重已随仓库分发。套件内相对的 `input / recipes_dir / heldout / refusal` 路径按仓库根目录解析，不按套件文件所在目录解析。
 
 运行前检查主测试清单。清单缺失时套件在生成前中止，不回退旧题库；存在但为空时允许流程验证及适用的训练原题探针，主评测不能据此报告有效增益。
 

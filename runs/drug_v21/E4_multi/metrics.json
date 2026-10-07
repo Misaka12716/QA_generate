@@ -1,0 +1,58 @@
+{
+  "recipe": "drug_e4_multi",
+  "chunks": 0,
+  "questions": 0,
+  "distilled": 143,
+  "kept": 143,
+  "rejected": 0,
+  "answerability": 0.0,
+  "nli_mean": null,
+  "hallucination_proxy": null,
+  "knowledge_gain_rate": null,
+  "judge_mean": null,
+  "type_entropy": 1.46,
+  "type_distribution": {
+    "factual": 0.615,
+    "conditional": 0.196,
+    "procedural": 0.161,
+    "comparative": 0.028
+  },
+  "retention": 1.0,
+  "s_ratio": 0.0,
+  "grade_distribution": {
+    "A": 143
+  },
+  "evidence_grounded": 1.0,
+  "llm_calls": 0,
+  "prompt_tokens": 0,
+  "completion_tokens": 0,
+  "estimated_cost_usd": 0.0,
+  "fallbacks": [],
+  "stage_seconds": {
+    "filter:rule_clean": 5.905,
+    "filter:evidence_substring": 0.003,
+    "filter:roundtrip": 388.22
+  },
+  "rejected_by_filter": {
+    "rule_clean": 5,
+    "roundtrip": 2
+  },
+  "funnel": {
+    "rule_clean": {
+      "in": 150,
+      "out": 145,
+      "dropped": 5
+    },
+    "evidence_substring": {
+      "in": 145,
+      "out": 145,
+      "dropped": 0
+    },
+    "roundtrip": {
+      "in": 145,
+      "out": 143,
+      "dropped": 2
+    }
+  },
+  "tokens_per_10k_kept": 0
+}

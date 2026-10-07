@@ -1,0 +1,43 @@
+{
+  "behavior": {
+    "row_count": 10,
+    "family_count": 10,
+    "source_family_count": 7,
+    "auxiliary_pass_rate_before": 0.1429,
+    "auxiliary_pass_rate_after": 0.2857,
+    "weighting": "equal_source_family",
+    "transitions": {
+      "fail_fail": 6,
+      "fail_pass": 2,
+      "pass_pass": 2
+    },
+    "note": "未完成人工审核，仅供探索。不是正式语义正确率。"
+  },
+  "independent": {
+    "row_count": 30,
+    "family_count": 30,
+    "source_family_count": 10,
+    "auxiliary_pass_rate_before": 0.9667,
+    "auxiliary_pass_rate_after": 1.0,
+    "weighting": "equal_source_family",
+    "transitions": {
+      "pass_pass": 29,
+      "fail_pass": 1
+    },
+    "note": "未完成人工审核，仅供探索。不是正式语义正确率。"
+  },
+  "seen_rephrase": {
+    "row_count": 60,
+    "family_count": 30,
+    "source_family_count": 18,
+    "auxiliary_pass_rate_before": 0.4861,
+    "auxiliary_pass_rate_after": 0.875,
+    "weighting": "equal_source_family",
+    "transitions": {
+      "fail_pass": 24,
+      "pass_pass": 29,
+      "fail_fail": 7
+    },
+    "note": "未完成人工审核，仅供探索。不是正式语义正确率。"
+  }
+}

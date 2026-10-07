@@ -1,0 +1,13 @@
+{
+  "skipped": false,
+  "arms": {
+    "E1_baseline": {
+      "skipped": true,
+      "reason": "no_adapter"
+    },
+    "E2_gap": {
+      "skipped": true,
+      "reason": "no_adapter"
+    }
+  }
+}

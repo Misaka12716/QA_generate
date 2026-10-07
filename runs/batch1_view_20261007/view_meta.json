@@ -1,0 +1,20 @@
+{
+  "banner": "历史真实预测与实验 B 小试",
+  "limitation": "历史对照里的旧 adapter 来自脏工作区，tokenizer 与基座配置不一致。两侧差异不能直接归因于微调。实验 B 小试是本轮新推理，父协议分母仍是 48，不把 8 题写成实验完成。",
+  "teacher_pending_label": "待自动评估",
+  "assembled_at": "2026-10-07T08:48:55.412903+00:00",
+  "protocol_n": 14,
+  "matched_predictions": 28,
+  "unmatched_predictions": 0,
+  "unmatched": [],
+  "block": "historical",
+  "git_commit": "39eb41f56a68dc5ab58a7df229f8d5785142aea2",
+  "git_dirty": true,
+  "git_diff_sha256": "6214a2dabd1ee07a3fb9d31a9a6f938c09456c731dcdfac7c31ecf8ccbf650a0",
+  "sources": [
+    "drug_v23_eval/exploratory",
+    "drug_v24_rescore/new_inputs"
+  ],
+  "b_pilot_selected_n": 8,
+  "b_parent_planned_n": 48
+}

@@ -1,0 +1,87 @@
+{
+  "llm_calls": 21,
+  "prompt_tokens": 6165,
+  "completion_tokens": 8657,
+  "estimated_cost_usd": 0.003287,
+  "stage_seconds": {
+    "chunking": 0.005,
+    "anchor": 1.607,
+    "question_gen": 223.802,
+    "evolution": 0.0,
+    "question_filter": 0.0,
+    "teacher_router": 0.0,
+    "distillation": 74.346,
+    "filter:rule_clean": 0.616,
+    "filter:nli_fact": 34.061,
+    "filter:roundtrip": 0.0,
+    "filter:knowledge_ablation": 0.0,
+    "filter:selfcheck": 0.0,
+    "filter:llm_judge": 0.0,
+    "filter:exact_hash_dedup": 0.0,
+    "filter:semdedup": 0.0,
+    "filter:diversity_sample": 0.0,
+    "grading": 0.0,
+    "total": 334.441
+  },
+  "produced": {
+    "chunks": 4,
+    "questions": 10,
+    "distilled": 10,
+    "kept": 0,
+    "rejected": 0
+  },
+  "rejected": {
+    "rule_clean": 2,
+    "nli_fact": 8
+  },
+  "funnel": {
+    "rule_clean": {
+      "in": 10,
+      "out": 8,
+      "dropped": 2
+    },
+    "nli_fact": {
+      "in": 8,
+      "out": 0,
+      "dropped": 8
+    },
+    "roundtrip": {
+      "in": 0,
+      "out": 0,
+      "dropped": 0
+    },
+    "knowledge_ablation": {
+      "in": 0,
+      "out": 0,
+      "dropped": 0
+    },
+    "selfcheck": {
+      "in": 0,
+      "out": 0,
+      "dropped": 0
+    },
+    "llm_judge": {
+      "in": 0,
+      "out": 0,
+      "dropped": 0
+    },
+    "exact_hash_dedup": {
+      "in": 0,
+      "out": 0,
+      "dropped": 0
+    },
+    "semdedup": {
+      "in": 0,
+      "out": 0,
+      "dropped": 0
+    },
+    "diversity_sample": {
+      "in": 0,
+      "out": 0,
+      "dropped": 0
+    }
+  },
+  "fallbacks": [
+    "anchor.ner_rake_textrank:backend=heuristic"
+  ]
+}

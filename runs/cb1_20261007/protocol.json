@@ -1,0 +1,57 @@
+{
+  "task_mode": "closed_book_domain",
+  "status": "frozen",
+  "hypothesis": "同一基座上，闭卷 adapter 是否改善已训练知识的新问法，并保持冻结保留题。",
+  "seed": 42,
+  "base_model": "/data1/pjw/models/Qwen2.5-7B-Instruct",
+  "hyperparameters": {
+    "epochs": 3,
+    "lr": 0.0002,
+    "rank": 16,
+    "max_length": 1024,
+    "seed": 42
+  },
+  "infer": {
+    "max_new_tokens": 256,
+    "do_sample": false,
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "dtype": "bfloat16"
+  },
+  "system_policy": "可以运用已有领域知识回答。不确定时说明依据不足。",
+  "paraphrase_method": "预先固定的表面改写，不是教师生成的新问法。",
+  "train_planned": 22,
+  "train_limit": 100,
+  "knowledge_planned": 10,
+  "knowledge_selected": 10,
+  "eval_planned": {
+    "CB-paraphrase": 20,
+    "CB-retention": 20,
+    "CB-memory": 10,
+    "main_inputs": 40,
+    "main_predictions": 80
+  },
+  "teacher_budget": {
+    "ledger_calls_used": 97,
+    "ledger_call_cap": 120,
+    "remaining_calls": 23,
+    "remaining_tokens": 92908,
+    "ideal_review_calls": 120,
+    "status": "blocked_teacher_budget",
+    "note": "沿用已记录共享额度，不自动扩容。未知用量不按零计算。"
+  },
+  "blockers": [
+    "teacher_review_not_authorized_for_full_protocol"
+  ],
+  "shortfalls": [],
+  "limitations": [
+    "历史样本原为 rag_grounded。只有通过脱离上下文明确性检查的题目进入闭卷训练集。",
+    "旧教师接受不是闭卷 rubric 下的重新审核。",
+    "CB-paraphrase 允许事实重叠，测试问法不进入训练。",
+    "保留题是冻结的通用题，不是药品语料，也不是训练样本。",
+    "全局来源隔离仍然适用于独立来源评测；本协议显式标记为已训练知识诊断。"
+  ],
+  "source_sha256": "a95a8aa026bff7b06af8c3034a5030c8837e2c4aa51b04071f089aae2ea331dc",
+  "retention_sha256": "c3802ca38065d796bfdf6cb6d72354f83df170dcc1cd801a4483b2c2d17c04e0",
+  "status_note": "协议已冻结。教师审核调用超出剩余额度时不执行审核。"
+}

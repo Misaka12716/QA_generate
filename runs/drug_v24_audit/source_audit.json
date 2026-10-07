@@ -1,0 +1,88 @@
+{
+  "source_index_n": 60,
+  "train_rows_mapped_by_source_index": 74,
+  "train_rows_unmapped": [],
+  "empty_family_id_n": 15,
+  "empty_family_id": [
+    "qa_a1f4c8712364",
+    "qa_0f2bb01637cc",
+    "qa_06bfcec2a9e4",
+    "qa_f250832c5f45",
+    "qa_1e2b12d86dcc",
+    "qa_4787c975dfb5",
+    "qa_92cea2c87190",
+    "qa_a16f1cd1484e",
+    "qa_95d1d7be431c",
+    "qa_6c8069e0ae54",
+    "qa_8c7055e7d2b9",
+    "qa_0ffd8cfbd025",
+    "qa_d3373d127c31",
+    "qa_4eb3138a417d",
+    "qa_c49d7de63346"
+  ],
+  "empty_family_status": "待补映射。本次没有填写 family_id。",
+  "recomputed_family_mismatch_n": 0,
+  "recomputed_family_mismatch": [],
+  "recomputed_split_mismatch_n": 0,
+  "recomputed_split_mismatch": [],
+  "frozen_partition_rewritten": false,
+  "independent_case_n": 30,
+  "independent_source_family_n": 10,
+  "independent_file_n": 10,
+  "independent_is_ten_families": true,
+  "prefix_screen_missed_full_text_near_duplicate": [],
+  "max_full_jaccard_seen_during_audit": 0.3143,
+  "evidence_in_excerpt": {
+    "with_evidence_field_n": 30,
+    "evidence_inside_context_n": 30,
+    "evidence_outside_context_n": 0
+  },
+  "rule_clean_dropped": [
+    {
+      "id": "qa_2aa8cbeebe6a",
+      "reason": "unknown",
+      "provenance": "reconstructed_from_id_set_difference"
+    },
+    {
+      "id": "qa_3459d76f9f8a",
+      "reason": "unknown",
+      "provenance": "reconstructed_from_id_set_difference"
+    },
+    {
+      "id": "qa_51ac1ee7988e",
+      "reason": "unknown",
+      "provenance": "reconstructed_from_id_set_difference"
+    },
+    {
+      "id": "qa_7d24e66480bc",
+      "reason": "unknown",
+      "provenance": "reconstructed_from_id_set_difference"
+    },
+    {
+      "id": "qa_829b4ef85d28",
+      "reason": "unknown",
+      "provenance": "reconstructed_from_id_set_difference"
+    },
+    {
+      "id": "qa_859783b2fbd4",
+      "reason": "unknown",
+      "provenance": "reconstructed_from_id_set_difference"
+    },
+    {
+      "id": "qa_a04be3bc3226",
+      "reason": "unknown",
+      "provenance": "reconstructed_from_id_set_difference"
+    },
+    {
+      "id": "qa_dbdcd9ccafc3",
+      "reason": "unknown",
+      "provenance": "reconstructed_from_id_set_difference"
+    },
+    {
+      "id": "qa_f4430ece71cd",
+      "reason": "unknown",
+      "provenance": "reconstructed_from_id_set_difference"
+    }
+  ],
+  "note": "重算结果只作审计，没有回写冻结分区或 source_index。"
+}

@@ -1,0 +1,126 @@
+{
+  "status": "exploratory_executed",
+  "executed": true,
+  "reason": null,
+  "mode": "exploratory",
+  "result_class": "exploratory_auxiliary",
+  "disclaimer": "未完成人工审核，仅供探索",
+  "enters_formal_metric": false,
+  "formal_main_metric": "not_executed",
+  "formal_gold": false,
+  "formal_protocol_executable": false,
+  "semantic_accuracy_verified": false,
+  "metric_role": "auxiliary",
+  "reason_main_metric": "uncalibrated_rules",
+  "scorer_version": "aux-rules-v3",
+  "prediction_run_id": "d13a5e20ec4ed907",
+  "score_run_id": "85a7400346c206f9",
+  "base_id": "Qwen2.5-7B-Instruct@7463bb0ea7831536",
+  "adapter_id": "4f4bdec7b50dab9e",
+  "template_id": "5b5d4f65d0acd3b2",
+  "infer_config": {
+    "max_new_tokens": 512,
+    "do_sample": false,
+    "temperature": 0.0,
+    "top_p": 1.0,
+    "dtype": "bfloat16"
+  },
+  "infer_config_effective": {
+    "max_new_tokens": 512,
+    "do_sample": false,
+    "dtype": "bfloat16"
+  },
+  "infer_inactive_when_greedy": [
+    "temperature",
+    "top_p"
+  ],
+  "planned_n": 74,
+  "generated_n": {
+    "base": 74,
+    "adapter": 74
+  },
+  "scored_n": 74,
+  "failed_n": 0,
+  "count_units": {
+    "planned_n": "questions",
+    "generated_n": "model_answers",
+    "scored_n": "questions",
+    "failed_n": "questions"
+  },
+  "cache_hits": 0,
+  "cache_problems": [],
+  "protocol_failures": [],
+  "content_error_n": 22,
+  "unresolved_n": 0,
+  "technical_failure_n": 0,
+  "layered": {
+    "by_stratum": {
+      "seen_rephrase": {
+        "family_count": 0,
+        "source_family_count": 0,
+        "task_accuracy": null,
+        "reason": "zero_denominator",
+        "weighting": "equal_source_family",
+        "row_count": 0,
+        "unresolved_n": 0
+      },
+      "independent": {
+        "family_count": 0,
+        "source_family_count": 0,
+        "task_accuracy": null,
+        "reason": "zero_denominator",
+        "weighting": "equal_source_family",
+        "row_count": 0,
+        "unresolved_n": 0
+      },
+      "behavior": {
+        "family_count": 0,
+        "source_family_count": 0,
+        "task_accuracy": null,
+        "reason": "zero_denominator",
+        "weighting": "equal_source_family",
+        "row_count": 0,
+        "unresolved_n": 0
+      }
+    },
+    "seen_rephrase": {
+      "family_count": 0,
+      "source_family_count": 0,
+      "task_accuracy": null,
+      "reason": "zero_denominator",
+      "weighting": "equal_source_family",
+      "row_count": 0,
+      "unresolved_n": 0
+    },
+    "independent": {
+      "family_count": 0,
+      "source_family_count": 0,
+      "task_accuracy": null,
+      "reason": "zero_denominator",
+      "weighting": "equal_source_family",
+      "row_count": 0,
+      "unresolved_n": 0
+    },
+    "behavior": {
+      "family_count": 0,
+      "source_family_count": 0,
+      "task_accuracy": null,
+      "reason": "zero_denominator",
+      "weighting": "equal_source_family",
+      "row_count": 0,
+      "unresolved_n": 0
+    },
+    "unspecified_row_count": 74,
+    "row_count": 74,
+    "combined_generalization_score": null,
+    "note": "seen_rephrase、independent、behavior 分开汇总，不合成泛化总分。"
+  },
+  "combined_generalization_score": null,
+  "delta_f1": null,
+  "model_loaded": true,
+  "judge": {
+    "mean": null,
+    "reason": "not_called",
+    "note": "本轮不为填空值调用模型评委，评委结果也不是人工金标。"
+  }
+}

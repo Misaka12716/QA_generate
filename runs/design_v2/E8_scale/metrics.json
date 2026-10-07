@@ -1,0 +1,35 @@
+{
+  "recipe": "E8_scale",
+  "chunks": 0,
+  "questions": 71,
+  "distilled": 71,
+  "kept": 71,
+  "rejected": 0,
+  "answerability": 1.0,
+  "nli_mean": null,
+  "hallucination_proxy": null,
+  "knowledge_gain_rate": null,
+  "judge_mean": null,
+  "type_entropy": 0.6741,
+  "type_distribution": {
+    "factual": 0.873,
+    "comparative": 0.07,
+    "procedural": 0.056
+  },
+  "retention": 1.0,
+  "s_ratio": 0.9859,
+  "grade_distribution": {
+    "S": 70,
+    "A": 1
+  },
+  "evidence_grounded": 1.0,
+  "llm_calls": 0,
+  "prompt_tokens": 0,
+  "completion_tokens": 0,
+  "estimated_cost_usd": 0.0,
+  "fallbacks": [],
+  "stage_seconds": {},
+  "rejected_by_filter": {},
+  "funnel": {},
+  "tokens_per_10k_kept": 0
+}
