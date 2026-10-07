@@ -5,8 +5,23 @@ from __future__ import annotations
 import re
 
 from ..llm import json_payload
+from ..qtypes import classify_q_type, intent_projection_note
 from ..registry import register
-from ..schemas import INTENTS, Q_TYPES, Anchor, Chunk, Question, canon_intent, canon_qtype, content_id, qtype_for_intent
+from ..schemas import (
+    INTENTS,
+    Q_TYPES,
+    AnswerPointSpec,
+    Anchor,
+    Chunk,
+    EvidenceQuote,
+    Question,
+    ResponseContract,
+    canon_action,
+    canon_intent,
+    canon_qtype,
+    content_id,
+    qtype_for_intent,
+)
 from ..textutil import is_substring, rouge_l, tokenize
 
 _TEACHER_CONSTRAINT = (
@@ -440,25 +455,72 @@ def _question_from_sample(item: dict, chunk: Chunk, strategy: str) -> Question |
     if isinstance(operations, str):
         operations = [operations]
     requested_type = str(item.get("intent_primary") or item.get("q_type") or "")
+    requested_q = str(item.get("requested_q_type") or "")
+    if requested_q not in Q_TYPES:
+        requested_q = ""
+    point_texts = [str(point) for point in points if str(point).strip()]
+    actual = classify_q_type(qtext, requested=requested_q)
+    specs = []
+    contract = ResponseContract(response_style="brief" if actual == "factual" else "standard")
+    for index, text in enumerate(point_texts, start=1):
+        point_id = f"p{index}"
+        specs.append(AnswerPointSpec(point_id=point_id, text=text, criticality="required", support_quote_ids=["primary"] if evidence else []))
+        contract.required_point_ids.append(point_id)
+    if actual == "procedural":
+        contract.required_steps = list(point_texts)
+    elif actual == "conditional":
+        contract.critical_conditions = list(point_texts)
+    elif actual == "comparative":
+        contract.comparison_dimensions = list(point_texts)
+    quotes = []
+    if evidence:
+        quotes.append(
+            EvidenceQuote(
+                quote_id="primary",
+                source_id=chunk.document_identity.source_id or chunk.doc_id,
+                source_version=chunk.document_identity.version,
+                source_family_id=chunk.source_family_id,
+                chunk_id=chunk.chunk_id,
+                char_start=chunk.char_start + max(0, chunk.text.find(evidence)),
+                char_end=chunk.char_start + max(0, chunk.text.find(evidence)) + len(evidence),
+                quote=evidence,
+                quote_hash=content_id("", {"q": evidence})[-12:],
+            )
+        )
+    action = canon_action(item.get("expected_action") or "answer")
     return Question(
         question=qtext,
         chunk_id=chunk.chunk_id,
-        q_type=qtype_for_intent(intent),
+        q_type=actual if requested_q else qtype_for_intent(intent),
         evidence_span=evidence,
-        answer_hint=answer,
+        answer_hint=answer or "；".join(point_texts),
         intent_primary=intent if intent in INTENTS else "other_review",
         operations=[str(op) for op in operations],
-        evidence_topology=str(item.get("evidence_topology") or "single"),
-        answer_points=[str(point) for point in points if str(point).strip()],
+        evidence_topology=str(item.get("evidence_topology") or ("multi" if len(quotes) > 1 else "single")),
+        answer_points=point_texts,
+        expected_action=action,  # type: ignore[arg-type]
         requested_type=requested_type,
         actual_type=intent,
+        requested_q_type=requested_q,
+        actual_q_type=actual,
+        type_label_origin="source",
         requested_evidence=requested,
         located_evidence=evidence,
         repair_status=repair,
         verification_status="evidence_located",
         source_family_id=chunk.source_family_id,
         source_hash=chunk.source_hash,
-        metadata={"source_doc": chunk.source_doc, "chunk_text": chunk.text, "strategy": strategy},
+        document_identity=chunk.document_identity,
+        evidence_quotes=quotes,
+        answer_point_specs=specs,
+        response_contract=contract,
+        metadata={
+            "source_doc": chunk.source_doc,
+            "chunk_text": chunk.text,
+            "strategy": strategy,
+            "intent_projection": intent_projection_note(intent, actual),
+            "goal": chunk.metadata.get("goal") or "",
+        },
     )
 
 
@@ -695,3 +757,133 @@ class MixedRouteQG:
             chosen = self.sequential if index % 2 else self.direct
             out.extend(chosen.run([chunk], ctx))
         return _dedup(out)
+
+
+def _chunks_by_id(chunks: list[Chunk]) -> dict[str, Chunk]:
+    return {chunk.chunk_id: chunk for chunk in chunks}
+
+
+@register("question_gen", "planned_grounded")
+class PlannedGroundedQG:
+    """按 planner 给出的 requested_q_type 和证据包出题，不让教师自选题型。"""
+
+    name = "planned_grounded"
+
+    def __init__(self, per_chunk: int | None = None, **_: object) -> None:
+        self.per_chunk = per_chunk
+
+    def run(self, chunks: list[Chunk], ctx) -> list[Question]:
+        tasks = list(ctx.extras.get("generation_tasks") or [])
+        if not tasks:
+            ctx.extras.setdefault("coverage_report", {})["generator"] = "no_tasks"
+            return []
+        by_id = _chunks_by_id(chunks)
+        out: list[Question] = []
+        for task in tasks:
+            chunk = by_id.get(str(task.get("chunk_id") or "")) or (chunks[0] if chunks else None)
+            if chunk is None:
+                continue
+            quotes = [EvidenceQuote.model_validate(item) for item in (task.get("quotes") or []) if isinstance(item, dict)]
+            located = [quote for quote in quotes if quote.quote and is_substring(quote.quote, _chunk_text(by_id, quote.chunk_id, chunk))]
+            if task.get("expected_action") not in {None, "", "answer", "state_insufficient"} and not located and task.get("expected_action") != "state_insufficient":
+                continue
+            if task.get("expected_action") in {None, "", "answer"} and not located:
+                ctx.stats.fallbacks.append(f"planned_skip_unlocated:{task.get('requested_q_type')}")
+                continue
+            evidence = located[0].quote if len(located) == 1 else ""
+            user_quotes = "\n".join(quote.quote for quote in located) or chunk.text
+            data = _chat_json_once(
+                ctx,
+                [
+                    {
+                        "role": "system",
+                        "content": (
+                            _TEACHER_CONSTRAINT
+                            + "你是 planned_grounded 出题器。必须生成 requested_q_type 指定的题型，"
+                            "不能改成更容易的事实题。证据必须是给定引用中的连续原文。"
+                            "多段引用保持多条，不要拼成一段。"
+                            '只输出 JSON：{"samples":[{"question":"...","candidate_answer":"...","answer_points":["..."],'
+                            '"evidence":"...","requested_q_type":"factual","expected_action":"answer"}]}'
+                        ),
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            f"requested_q_type={task.get('requested_q_type')}\n"
+                            f"expected_action={task.get('expected_action') or 'answer'}\n"
+                            f"资料：\n{chunk.text}\n\n引用：\n{user_quotes}"
+                        ),
+                    },
+                ],
+                ctx.model_for("default"),
+            )
+            samples = data.get("samples") or []
+            if not samples:
+                continue
+            item = samples[0]
+            if not isinstance(item, dict):
+                continue
+            item = dict(item)
+            item["requested_q_type"] = task.get("requested_q_type")
+            item["expected_action"] = task.get("expected_action") or item.get("expected_action") or "answer"
+            if task.get("expected_action") == "state_insufficient":
+                question = _insufficient_question(item, chunk)
+            else:
+                item["evidence"] = evidence or (located[0].quote if located else item.get("evidence"))
+                question = _question_from_sample(item, chunk, self.name)
+            if question is None:
+                continue
+            if len(located) != 1:
+                question.evidence_span = ""
+                question.located_evidence = ""
+                question.requested_evidence = ""
+                question.evidence_quotes = located
+                question.metadata["evidence_chunk_texts"] = [
+                    _chunk_text(by_id, quote.chunk_id, chunk) for quote in located
+                ]
+            question.requested_q_type = str(task.get("requested_q_type") or "")
+            question.actual_q_type = classify_q_type(question.question, requested=question.requested_q_type)
+            question.q_type = question.actual_q_type if question.actual_q_type in Q_TYPES else question.q_type
+            question.metadata["type_match"] = question.actual_q_type == question.requested_q_type
+            question.metadata["selection_role"] = task.get("selection_role") or "learning"
+            if task.get("behavior"):
+                question.metadata["selection_role"] = "behavior"
+            if question.actual_q_type != question.requested_q_type and not task.get("behavior"):
+                question.metadata["type_mismatch"] = True
+            out.append(question)
+        seen: set[str] = set()
+        unique: list[Question] = []
+        for question in out:
+            if question.question in seen:
+                continue
+            seen.add(question.question)
+            unique.append(question)
+        return unique
+
+
+def _chunk_text(by_id: dict[str, Chunk], chunk_id: str, fallback: Chunk) -> str:
+    return (by_id.get(chunk_id) or fallback).text
+
+
+def _insufficient_question(item: dict, chunk: Chunk) -> Question | None:
+    qtext = str(item.get("question") or "").strip()
+    answer = str(item.get("candidate_answer") or "").strip()
+    if not qtext:
+        return None
+    question = Question(
+        question=qtext,
+        chunk_id=chunk.chunk_id,
+        q_type="factual",
+        answer_hint=answer or "资料没有给出该项信息。",
+        evidence_state="missing",
+        expected_action="state_insufficient",
+        requested_q_type="factual",
+        actual_q_type="factual",
+        type_label_origin="source",
+        verification_status="evidence_located",
+        source_family_id=chunk.source_family_id,
+        source_hash=chunk.source_hash,
+        document_identity=chunk.document_identity,
+        metadata={"source_doc": chunk.source_doc, "chunk_text": chunk.text, "strategy": "planned_grounded", "selection_role": "behavior"},
+    )
+    return question

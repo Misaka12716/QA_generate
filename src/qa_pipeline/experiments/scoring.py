@@ -349,12 +349,16 @@ def build_supervised_batch(
     supervised = [token for token in labels if token != -100]
     if not supervised or (eos_id is not None and supervised == [eos_id]):
         return {"skipped": True, "reason": "no_effective_target"}
+    prompt_masked = labels[: len(prompt_ids)] == [-100] * len(prompt_ids)
     return {
         "skipped": False,
         "input_ids": input_ids,
         "labels": labels,
         "assistant_target_tokens": len(answer_ids),
         "sequence_tokens": len(input_ids),
+        "prompt_masked": prompt_masked,
+        "eos_in_labels": eos_id is not None and eos_id in labels,
+        "truncated_target": False,
     }
 
 
@@ -380,6 +384,7 @@ def cache_signature(payload: dict[str, Any]) -> str:
 SCORER_V1 = "aux-rules-v1"
 SCORER_V2 = "aux-rules-v2"
 SCORER_V3 = "aux-rules-v3"
+SCORER_CONTRACT = "contract-points-v1"
 SCORER_NOTE = "规则辅助分，不是已验证的语义正确率。"
 SCORER_V3_NOTE = "规则辅助分，只检查已实现的数值、条件与行为标签。不是语义正确率，也不能升为正式主指标。unsupported_numeric_assertions 只列出答案、证据、上下文和要点中都没有的额外数量，不判断非数值编造。"
 
@@ -803,6 +808,80 @@ def reference_self_check(case: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _point_covered(prediction: str, point: str) -> bool:
+    text = str(point or "").strip()
+    if not text:
+        return False
+    return text in (prediction or "")
+
+
+def score_contract(prediction: str, case: dict[str, Any]) -> dict[str, Any]:
+    """要点契约辅助分。未审核、未预测、未决不记 0 分。长度只作诊断。"""
+    status = str(case.get("review_status") or case.get("score_status") or "")
+    if status in {"pending_review", "unreviewed", "not_executed", "unresolved"} or case.get("prediction_status") in {
+        "not_predicted",
+        "not_executed",
+        "unresolved",
+    }:
+        return {
+            "scorer_version": SCORER_CONTRACT,
+            "required_point_coverage": None,
+            "complete_supported": None,
+            "unsupported_claim_rate": None,
+            "passed": None,
+            "judgment": status or "unreviewed",
+            "metric_role": "auxiliary",
+            "formal_main_metric": "not_executed",
+            "semantic_accuracy_verified": False,
+            "char_len": len(prediction or ""),
+            "length_reading": None,
+        }
+    points = [str(item) for item in (case.get("required_points") or case.get("answer_points") or []) if str(item).strip()]
+    hits = [_point_covered(prediction or "", point) for point in points]
+    coverage = round(sum(hits) / len(points), 4) if points else None
+    exceptions = [str(item) for item in (case.get("exceptions") or []) if str(item).strip()]
+    exception_hits = [_point_covered(prediction or "", item) for item in exceptions]
+    steps = [str(item) for item in (case.get("required_steps") or []) if str(item).strip()]
+    step_hits = [_point_covered(prediction or "", item) for item in steps]
+    dimensions = [str(item) for item in (case.get("comparison_dimensions") or []) if str(item).strip()]
+    dimension_hits = [_point_covered(prediction or "", item) for item in dimensions]
+    unsupported = []
+    for number in re.findall(r"\d+(?:\.\d+)?", prediction or ""):
+        blob = " ".join(points + [str(case.get("answer") or ""), str(case.get("evidence") or "")])
+        if number not in blob:
+            unsupported.append(number)
+    missing_exception = [item for item, hit in zip(exceptions, exception_hits) if not hit]
+    complete = bool(points) and all(hits) and not unsupported and not missing_exception
+    reading = None
+    if prediction is not None:
+        n = len(prediction)
+        if unsupported and n > 30:
+            reading = "long_unsupported"
+        elif n <= 30 and complete:
+            reading = "short_complete"
+        elif n <= 30 and points and not all(hits):
+            reading = "short_incomplete"
+    return {
+        "scorer_version": SCORER_CONTRACT,
+        "required_point_coverage": coverage,
+        "point_hits": hits,
+        "complete_supported": complete,
+        "unsupported_claims": unsupported,
+        "unsupported_claim_rate": (len(unsupported) / max(1, len(re.findall(r"\d+(?:\.\d+)?", prediction or "")))) if prediction else None,
+        "exception_retention": round(sum(exception_hits) / len(exceptions), 4) if exceptions else None,
+        "step_completion": round(sum(step_hits) / len(steps), 4) if steps else None,
+        "comparison_coverage": round(sum(dimension_hits) / len(dimensions), 4) if dimensions else None,
+        "passed": complete,
+        "judgment": "auxiliary_only",
+        "metric_role": "auxiliary",
+        "formal_main_metric": "not_executed",
+        "semantic_accuracy_verified": False,
+        "char_len": len(prediction or ""),
+        "length_reading": reading,
+        "note": "必答要点覆盖是辅助诊断。未审核样本不在这里记 0 分。",
+    }
+
+
 def prediction_item_signature(
     case: dict[str, Any],
     model_id: str,
@@ -838,6 +917,7 @@ def score_item_signature(prediction_signature: str, case: dict[str, Any], scorer
     gold = {
         "answer": case.get("answer") or "",
         "answer_points": case.get("answer_points") or [],
+        "required_points": case.get("required_points") or [],
         "expected_action": case.get("expected_action"),
         "evidence_state": case.get("evidence_state"),
         "required_conditions": case.get("required_conditions") or [],

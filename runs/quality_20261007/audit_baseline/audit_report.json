@@ -1,0 +1,306 @@
+{
+  "status": "audited",
+  "rewrote_historical_files": false,
+  "char_unit": "python_len_including_whitespace_and_punctuation",
+  "expected_reference": {
+    "historical_train_rows": 74,
+    "closed_book_train_rows": 22,
+    "saved_prediction_rows_each": 50,
+    "main_eval_inputs": 40
+  },
+  "observed": {
+    "historical_train_rows": 74,
+    "closed_book_train_rows": 22,
+    "base_prediction_rows": 50,
+    "adapter_prediction_rows": 50,
+    "cb_paraphrase": 20,
+    "cb_retention": 20,
+    "cb_memory": 10
+  },
+  "main_eval_inputs": 40,
+  "differences": [],
+  "historical_q_type": {
+    "factual": 61,
+    "procedural": 10,
+    "conditional": 3,
+    "comparative": 0,
+    "multihop": 0,
+    "unknown": 0
+  },
+  "stages": {
+    "generated": {
+      "available": false,
+      "reason": "candidate_run_not_requested",
+      "rows": 0
+    },
+    "qualified": {
+      "available": false,
+      "reason": "candidate_run_not_requested",
+      "rows": 0
+    },
+    "selected": {
+      "available": false,
+      "reason": "candidate_run_not_requested",
+      "rows": 0
+    },
+    "exported": {
+      "available": false,
+      "reason": "candidate_run_not_requested",
+      "rows": 0
+    },
+    "consumed": {
+      "available": true,
+      "reason": "",
+      "rows": 74,
+      "unique_qa_id": 74,
+      "unique_knowledge_id": 0,
+      "source_family_count": 0,
+      "sample_family_count": 59,
+      "q_type": {
+        "conditional": 3,
+        "factual": 61,
+        "procedural": 10
+      },
+      "intent_primary": {
+        "lookup_explain": 61,
+        "procedure": 10,
+        "rule_decision": 3
+      },
+      "expected_action": {
+        "answer": 74
+      },
+      "task_mode": {
+        "": 74
+      },
+      "cross": {
+        "conditional|rule_decision|answer|": 3,
+        "factual|lookup_explain|answer|": 61,
+        "procedural|procedure|answer|": 10
+      },
+      "chars": {
+        "n": 74,
+        "p10": 5,
+        "p50": 19,
+        "p90": 53,
+        "median_pair_average": 19.5,
+        "mean": 25.61,
+        "unit": "python_len_including_whitespace_and_punctuation",
+        "percentile_method": "nearest_rank_round_half_even"
+      },
+      "token_stats": {
+        "status": "not_executed",
+        "reason": "tokenizer_not_local"
+      },
+      "mean_points": 0.0,
+      "mean_evidence": 1.0,
+      "empty_source_family": 74,
+      "source_family_fallback": 0,
+      "unknown_q_type": 0,
+      "deictic_questions": 42,
+      "not_selected": 0,
+      "unresolved_subject": 74,
+      "top_source_doc": [
+        [
+          "051_2064",
+          6
+        ],
+        [
+          "057_123",
+          5
+        ],
+        [
+          "058_1882",
+          4
+        ],
+        [
+          "002_1978",
+          4
+        ],
+        [
+          "023_2481",
+          4
+        ]
+      ],
+      "top_knowledge": [
+        [
+          "qa_16dc6a9da933",
+          1
+        ],
+        [
+          "qa_7cd54080ce4b",
+          1
+        ],
+        [
+          "qa_3010425201ae",
+          1
+        ],
+        [
+          "qa_e0226e688dc6",
+          1
+        ],
+        [
+          "qa_a1f4c8712364",
+          1
+        ]
+      ]
+    }
+  },
+  "closed_book_consumed": {
+    "available": true,
+    "reason": "",
+    "rows": 22,
+    "unique_qa_id": 22,
+    "unique_knowledge_id": 22,
+    "source_family_count": 0,
+    "sample_family_count": 22,
+    "q_type": {
+      "conditional": 1,
+      "factual": 15,
+      "procedural": 6
+    },
+    "intent_primary": {
+      "lookup_explain": 15,
+      "procedure": 6,
+      "rule_decision": 1
+    },
+    "expected_action": {
+      "answer": 22
+    },
+    "task_mode": {
+      "closed_book_domain": 22
+    },
+    "cross": {
+      "conditional|rule_decision|answer|closed_book_domain": 1,
+      "factual|lookup_explain|answer|closed_book_domain": 15,
+      "procedural|procedure|answer|closed_book_domain": 6
+    },
+    "chars": {
+      "n": 22,
+      "p10": 7,
+      "p50": 25,
+      "p90": 74,
+      "median_pair_average": 28.5,
+      "mean": 38.55,
+      "unit": "python_len_including_whitespace_and_punctuation",
+      "percentile_method": "nearest_rank_round_half_even"
+    },
+    "token_stats": {
+      "status": "not_executed",
+      "reason": "tokenizer_not_supplied"
+    },
+    "mean_points": 0.0,
+    "mean_evidence": 0.0,
+    "empty_source_family": 22,
+    "source_family_fallback": 22,
+    "unknown_q_type": 0,
+    "deictic_questions": 4,
+    "not_selected": 0,
+    "unresolved_subject": 22,
+    "top_source_doc": [
+      [
+        "",
+        22
+      ]
+    ],
+    "top_knowledge": [
+      [
+        "qfam_cd8487cdc4abee1282ab::qa_0d19335bbd54",
+        1
+      ],
+      [
+        "qfam_75145c6995571324b999::qa_fefbf062bf11",
+        1
+      ],
+      [
+        "qfam_8adea35e80915295cf6f::qa_000adeec0933",
+        1
+      ],
+      [
+        "qfam_ca06d05f57cf15cf32f8::qa_2291d24481de",
+        1
+      ],
+      [
+        "qfam_6d19c13ef9aab389a5ec::qa_03480ff61456",
+        1
+      ]
+    ]
+  },
+  "predictions": {
+    "base": {
+      "available": true,
+      "path": "runs/cb1_20261007/predictions/base.jsonl",
+      "rows": 50,
+      "chars": {
+        "n": 50,
+        "p10": 13,
+        "p50": 94,
+        "p90": 386,
+        "median_pair_average": 94.5,
+        "mean": 135.48,
+        "unit": "python_len_including_whitespace_and_punctuation",
+        "percentile_method": "nearest_rank_round_half_even"
+      },
+      "finish_reason_stored": {
+        "stop": 45,
+        "length": 5
+      },
+      "finish_reason_evidence": "inferred_from_length",
+      "last_token": "not_recorded",
+      "truncated_flag": 5,
+      "hit_max_new_tokens": 5,
+      "max_new_tokens": 256,
+      "completion_tokens": {
+        "median": 64.0,
+        "max": 256
+      },
+      "note": "历史预测没有末尾 token。stop/length 只说明是否达到当时的生成上限，不能证明 EOS。"
+    },
+    "adapter": {
+      "available": true,
+      "path": "runs/cb1_20261007/predictions/adapter.jsonl",
+      "rows": 50,
+      "chars": {
+        "n": 50,
+        "p10": 2,
+        "p50": 6,
+        "p90": 29,
+        "median_pair_average": 6.5,
+        "mean": 13.44,
+        "unit": "python_len_including_whitespace_and_punctuation",
+        "percentile_method": "nearest_rank_round_half_even"
+      },
+      "finish_reason_stored": {
+        "stop": 50
+      },
+      "finish_reason_evidence": "inferred_from_length",
+      "last_token": "not_recorded",
+      "truncated_flag": 0,
+      "hit_max_new_tokens": 0,
+      "max_new_tokens": 256,
+      "completion_tokens": {
+        "median": 6.0,
+        "max": 76
+      },
+      "note": "历史预测没有末尾 token。stop/length 只说明是否达到当时的生成上限，不能证明 EOS。"
+    },
+    "saved_inputs": {
+      "cb_memory": 10,
+      "cb_paraphrase": 20,
+      "cb_retention": 20
+    },
+    "main_eval_note": "主评测是 CB-paraphrase 与 CB-retention 之和。CB-memory 只作记忆诊断，不计入主评测分母。"
+  },
+  "object_review": {
+    "qa_id": "qa_8deb52518a53",
+    "found": true,
+    "source_doc": "004_2096",
+    "same_source_doc_ids": [
+      "qa_8deb52518a53",
+      "qa_89549cc2feac",
+      "qa_928ed5b7bddf"
+    ],
+    "note": "对象错配的判定在实体过滤器回归测试中固定。这里只列出历史训练行里的传播范围，不改等级。"
+  },
+  "gaps": [],
+  "quota_note": "本审计不把 qa.kept 行数或 filter in/out 当成配额达成。"
+}

@@ -1,0 +1,27 @@
+name: quality_planned_v1
+description: 生成前按证据能力分配五类题。配额不足时保留缺口，不改标签。
+goal: rag_grounded
+chunking: {name: heading_window, max_tokens: 512, overlap: 0.1}
+anchor: {name: none}
+planner:
+  name: capability_catalog
+  answerable_target: 10
+  behavior_samples: 0
+  quota: {factual: 0.4, procedural: 0.2, conditional: 0.15, comparative: 0.15, multihop: 0.1}
+question_gen: {name: planned_grounded}
+evolution: {name: none}
+question_filter: {name: none}
+distillation: {name: reuse_candidate}
+teacher_router: {name: single}
+filters:
+  - {name: rule_clean, min_answer_tokens: 4}
+  - {name: evidence_substring, on_fail: quarantine}
+  - {name: entity_subject}
+  - {name: diversity_sample, quota: {factual: 0.4, procedural: 0.2, conditional: 0.15, comparative: 0.15, multihop: 0.1}}
+grading: validity_tier
+questions_per_chunk: 0
+max_chunks: 20
+max_samples: 40
+gap_fill_rounds: 2
+gap_fill_max_calls: 40
+seed: 42

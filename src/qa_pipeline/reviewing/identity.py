@@ -11,7 +11,7 @@ from ..task_mode import TaskModeError, canonical_task_mode
 
 PROMPTS = Path(__file__).resolve().parent / "prompts"
 INFERENCE_CONFIG = {"temperature": 0, "response_format": "json_object", "max_tokens": 2000}
-REVIEW_IDENTITY_SCHEMA = "review-identity-v2"
+REVIEW_IDENTITY_SCHEMA = "review-identity-v3"
 
 
 def prompt_for(subject_type: str) -> tuple[str, str]:
@@ -79,6 +79,8 @@ def subject_hash(subject: dict[str, Any]) -> str:
             "answer_text": canonical_answer_text(subject),
             "reference_answer": reference_answer_of(subject),
             "required_points": list(subject.get("required_points") or []),
+            "answer_point_specs": subject.get("answer_point_specs") or [],
+            "response_contract": subject.get("response_contract") or {},
             "unavailable_points": list(subject.get("unavailable_points") or []),
             "expected_action": subject.get("expected_action") or "",
             "condition_id": subject.get("condition_id") or "",
@@ -123,6 +125,8 @@ def gold_hash(subject: dict[str, Any]) -> str:
             "schema": REVIEW_IDENTITY_SCHEMA,
             "reference_answer": reference,
             "required_points": points,
+            "answer_point_specs": subject.get("answer_point_specs") or [],
+            "response_contract": subject.get("response_contract") or {},
             "unavailable_points": unavailable,
             "expected_action": subject.get("expected_action") or "",
             "condition_id": subject.get("condition_id") or "",

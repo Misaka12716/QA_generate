@@ -34,7 +34,12 @@ def _to_pair(q: Question, payload: dict, model: str, cot: bool) -> QAPair:
     if not answer and q.answer_hint:
         answer = q.answer_hint
     requested = str(payload.get("evidence_span") or q.requested_evidence or q.evidence_span or "").strip()
-    evidence = requested if requested and is_substring(requested, chunk_text) else ""
+    quote_count = len([item for item in q.evidence_quotes if item.quote])
+    if quote_count > 1:
+        evidence = ""
+        requested = ""
+    else:
+        evidence = requested if requested and is_substring(requested, chunk_text) else ""
     repair = "located" if evidence else ("missing" if not requested else "repair_pending")
     intent = canon_intent(q.intent_primary or q.q_type)
     points = [str(item) for item in (q.answer_points or []) if str(item).strip()]
@@ -47,13 +52,22 @@ def _to_pair(q: Question, payload: dict, model: str, cot: bool) -> QAPair:
         chunk_id=q.chunk_id,
         chunk_text=chunk_text,
         source_doc=str(q.metadata.get("source_doc") or ""),
-        q_type=q.q_type or qtype_for_intent(intent),
+        q_type=q.actual_q_type or q.q_type or qtype_for_intent(intent),
         intent_primary=intent,
         operations=list(q.operations),
         evidence_topology=q.evidence_topology or "single",
         evidence_state=q.evidence_state,
         expected_action=q.expected_action,
-        answer_points=points,
+        answer_points=points or [spec.text for spec in q.answer_point_specs if spec.criticality == "required"],
+        answer_point_specs=list(q.answer_point_specs),
+        response_contract=q.response_contract,
+        document_identity=q.document_identity,
+        evidence_quotes=list(q.evidence_quotes) if q.evidence_quotes else [],
+        requested_q_type=q.requested_q_type,
+        actual_q_type=q.actual_q_type or q.q_type,
+        type_label_origin=q.type_label_origin or "source",
+        knowledge_id=q.knowledge_id,
+        selection_role=q.metadata.get("selection_role") or "learning",
         requested_evidence=requested,
         located_evidence=evidence,
         repair_status=repair,

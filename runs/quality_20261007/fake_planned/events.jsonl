@@ -1,0 +1,9 @@
+{"balance_ok":true,"count_unit":"qa","created_n":0,"duration_sec":null,"event_id":"evt_0001","event_type":"stage_count","input_n":5,"itemized_reasons":false,"output_n":5,"removed_n":0,"seq":1,"stage_key":"rule_clean"}
+{"balance_ok":true,"count_unit":"qa","created_n":0,"duration_sec":null,"event_id":"evt_0002","event_type":"stage_count","input_n":5,"itemized_reasons":false,"output_n":5,"removed_n":0,"seq":2,"stage_key":"evidence_substring"}
+{"balance_ok":true,"count_unit":"qa","created_n":0,"duration_sec":null,"event_id":"evt_0003","event_type":"stage_count","input_n":5,"itemized_reasons":false,"output_n":5,"removed_n":0,"seq":3,"stage_key":"entity_subject"}
+{"balance_ok":true,"count_unit":"qa","created_n":0,"duration_sec":null,"event_id":"evt_0004","event_type":"stage_count","input_n":5,"itemized_reasons":false,"output_n":5,"removed_n":0,"seq":4,"stage_key":"diversity_sample"}
+{"entity_id":"qa_a2708816dfa7","event_id":"evt_0005","event_type":"sample_disposition","reason_codes":[],"reason_source":"filter_trace","seq":5,"terminal_disposition":"kept"}
+{"entity_id":"qa_f8bc4a9f69dc","event_id":"evt_0006","event_type":"sample_disposition","reason_codes":[],"reason_source":"filter_trace","seq":6,"terminal_disposition":"kept"}
+{"entity_id":"qa_8847e9cb7663","event_id":"evt_0007","event_type":"sample_disposition","reason_codes":[],"reason_source":"filter_trace","seq":7,"terminal_disposition":"kept"}
+{"entity_id":"qa_4d693bcf1832","event_id":"evt_0008","event_type":"sample_disposition","reason_codes":[],"reason_source":"filter_trace","seq":8,"terminal_disposition":"kept"}
+{"entity_id":"qa_7783f304ed1e","event_id":"evt_0009","event_type":"sample_disposition","reason_codes":[],"reason_source":"filter_trace","seq":9,"terminal_disposition":"kept"}

@@ -1,0 +1,90 @@
+{
+  "llm_calls": 6,
+  "prompt_tokens": 1987,
+  "completion_tokens": 547,
+  "estimated_cost_usd": 0.0,
+  "stage_seconds": {
+    "chunking": 0.002,
+    "anchor": 0.0,
+    "planner": 0.001,
+    "question_gen": 0.002,
+    "evolution": 0.0,
+    "question_filter": 0.0,
+    "teacher_router": 0.0,
+    "distillation": 0.0,
+    "filter:rule_clean": 0.0,
+    "filter:evidence_substring": 0.0,
+    "filter:entity_subject": 0.0,
+    "grading": 0.0,
+    "total": 0.007
+  },
+  "produced": {
+    "chunks": 3,
+    "questions": 5,
+    "distilled": 5,
+    "kept": 5,
+    "rejected": 0
+  },
+  "rejected": {},
+  "funnel": {
+    "rule_clean": {
+      "in": 5,
+      "out": 5,
+      "dropped": 0
+    },
+    "evidence_substring": {
+      "in": 5,
+      "out": 5,
+      "dropped": 0
+    },
+    "entity_subject": {
+      "in": 5,
+      "out": 5,
+      "dropped": 0
+    }
+  },
+  "fallbacks": [],
+  "budget_stops": [],
+  "ledger": {
+    "spent_settled": 0.0,
+    "reserved_inflight": 0.0,
+    "unbilled_reserve": 0.0,
+    "required_process_reserve": 0.0,
+    "safety_margin": 0.0,
+    "authorized_cap": null,
+    "llm_calls": 6,
+    "prompt_tokens": 1987,
+    "completion_tokens": 547,
+    "sequence_tokens": 2534,
+    "supervised_tokens": null,
+    "note": "美元、调用数、序列 token 与监督 token 分开记账"
+  },
+  "call_statuses": {
+    "ok": 6
+  },
+  "stage_counts": {
+    "candidate": 5,
+    "format_valid": 5,
+    "semantic_valid": 5,
+    "accepted": 5,
+    "derived": 0,
+    "coverage": {
+      "targets": {
+        "factual": 0,
+        "procedural": 0,
+        "conditional": 0,
+        "comparative": 0,
+        "multihop": 0
+      },
+      "eligible": {
+        "factual": 3,
+        "procedural": 2,
+        "conditional": 1,
+        "comparative": 1,
+        "multihop": 1
+      },
+      "shortage": {},
+      "behavior_tasks": 5
+    }
+  }
+}

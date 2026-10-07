@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ..entity import identity_from_document
 from ..registry import register
 from ..schemas import Chunk, Document, refresh_chunk_id
 from ..textutil import approx_tokens, heading_sections, sentences, sliding_windows
@@ -40,11 +41,12 @@ def _emit(
     tokens = approx_tokens(body)
     if tokens < _MIN_TOKENS and path:
         return None
-    identity = {
-        "generic_name": doc.metadata.get("generic_name") or "",
-        "strength": doc.metadata.get("strength") or "",
-        "dosage_form": doc.metadata.get("dosage_form") or "",
-        "version": doc.source_version or doc.metadata.get("version") or "",
+    identity = identity_from_document(doc)
+    legacy_identity = {
+        "generic_name": doc.metadata.get("generic_name") or identity.canonical_subject,
+        "strength": identity.strength,
+        "dosage_form": identity.dosage_form,
+        "version": identity.version,
     }
     chunk = Chunk(
         text=body,
@@ -59,12 +61,15 @@ def _emit(
         dataset_version=doc.dataset_version,
         tokenizer_id=doc.tokenizer_id or "approx-v1",
         location=" / ".join(path),
+        document_identity=identity,
         metadata={
             "chunking": strategy,
             "source_group": doc.source_group or doc.doc_id,
             "clean_version": doc.clean_version,
             "chunk_params": params or {},
-            "identity": identity,
+            "identity": legacy_identity,
+            "document_identity": identity.model_dump(),
+            "identity_notes": identity.identity_notes,
             "boundary_note": boundary,
             "offset_origin": start,
         },

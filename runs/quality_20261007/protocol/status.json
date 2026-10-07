@@ -1,0 +1,44 @@
+{
+  "stage_A_protocol": "frozen_dev_diagnostic",
+  "stage_A_prediction": {
+    "status": "not_executed",
+    "reason": "prediction_not_started",
+    "gpu": {
+      "status": "available",
+      "devices": [
+        6
+      ]
+    },
+    "conditions": [
+      "A0 max_new_tokens=256",
+      "A1 max_new_tokens=1024",
+      "A2 completeness prompt max_new_tokens=1024"
+    ]
+  },
+  "stage_B": {
+    "status": "not_executed",
+    "reason": "real_generation_not_authorized_in_this_run",
+    "corpus": "/data1/pjw/QA_generate-main/data/campus_hospital_drug_instructions",
+    "corpus_present": true,
+    "answerable_target": 100,
+    "behavior_probe": 5
+  },
+  "stage_C": {
+    "status": "not_executed",
+    "reason": "qualified_pool_missing"
+  },
+  "stage_D": {
+    "status": "not_executed",
+    "reason": "waiting_for_stage_c_winner"
+  },
+  "formal_locked_test": {
+    "status": "not_executed",
+    "planned_inputs": 120,
+    "reason": "预测审核 480 次加 gold 最多 120 次。未读取到可覆盖该数量的当前额度。"
+  },
+  "thresholds": {
+    "complex_complete_gain_vs_c0": 0.1,
+    "factual_and_retention_regression_limit": 0.05,
+    "note": "小样本只写有或无改善信号，待复验。"
+  }
+}

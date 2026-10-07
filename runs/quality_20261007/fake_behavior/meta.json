@@ -1,0 +1,7 @@
+{
+  "recipe": "quality_behavior_probe_v1",
+  "kept": 5,
+  "rejected": 0,
+  "chunks": 3,
+  "questions": 5
+}

@@ -24,6 +24,14 @@ qa-pipeline audit-state --out runs/local_state
 
 `audit-state` 只读取代码里登记的仓库资产和基座路径，并在 `--out` 写出 `state_snapshot.json` 与 `state_report.md`。它不扫描任意磁盘，也不会把缺失或空文件当成空数据集。`git_dirty` 为真时，快照不会把当前工作区标成可复现基线。
 
+`audit-coverage` 另做题型、长度、身份和停止证据的只读复算，不改历史 jsonl。`prepare-quality-protocol` 写出质量实验的诊断协议和预算门，不启动教师调用或训练。`run` 仍是生成入口，只有带 `planner` 的配方才会做生成前规划和有限补题。`prepare-closed-book` 仍从给定合格池冻结闭卷数据，新池会带上契约字段，但不覆盖 `runs/cb1_20261007`。`eval-adapter` 仍评测已有 adapter；阶段 A 的诊断要用新的协议、推理配置和输出目录。
+
+```sh
+qa-pipeline audit-coverage --out runs/quality_20261007/audit_baseline
+qa-pipeline prepare-quality-protocol --out runs/quality_20261007/protocol
+qa-pipeline run --recipe configs/recipes/quality/planned_v1.yaml --input fixtures/quality_five_types.md --out runs/quality_20261007/fake_planned --fake
+```
+
 如果终端找不到 `qa-pipeline`，可用同一 Python 环境的 `python -m qa_pipeline` 替代。CLI 定义位于 [cli.py](../src/qa_pipeline/cli.py)。
 
 ## 教师审核

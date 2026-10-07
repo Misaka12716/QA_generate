@@ -32,6 +32,7 @@ class Recipe(BaseModel):
     chunking: StrategySpec
     anchor: StrategySpec
     question_gen: StrategySpec
+    planner: StrategySpec = Field(default_factory=lambda: StrategySpec(name="none"))
     evolution: StrategySpec = Field(default_factory=lambda: StrategySpec(name="none"))
     question_filter: StrategySpec = Field(default_factory=lambda: StrategySpec(name="none"))
     distillation: StrategySpec = Field(default_factory=lambda: StrategySpec(name="concise_response"))
@@ -48,6 +49,8 @@ class Recipe(BaseModel):
     escalation_max: int = 1
     split: Literal["train", "validation", "test"] = "train"
     seed: int = 42
+    gap_fill_rounds: int = 0
+    gap_fill_max_calls: int = 0
     teacher_models: dict[str, str] = Field(
         default_factory=lambda: {
             "default": "qwen3.8-27b",
@@ -64,6 +67,7 @@ class Recipe(BaseModel):
             "chunking",
             "anchor",
             "question_gen",
+            "planner",
             "evolution",
             "question_filter",
             "distillation",
@@ -84,6 +88,7 @@ class Recipe(BaseModel):
             "chunking": spec(self.chunking),
             "anchor": spec(self.anchor),
             "question_gen": spec(self.question_gen),
+            "planner": spec(self.planner),
             "evolution": spec(self.evolution),
             "question_filter": spec(self.question_filter),
             "distillation": spec(self.distillation),
@@ -100,6 +105,8 @@ class Recipe(BaseModel):
             "escalation_max": self.escalation_max,
             "split": self.split,
             "seed": self.seed,
+            "gap_fill_rounds": self.gap_fill_rounds,
+            "gap_fill_max_calls": self.gap_fill_max_calls,
             "teacher_models": self.teacher_models,
             "extra": self.extra,
         }

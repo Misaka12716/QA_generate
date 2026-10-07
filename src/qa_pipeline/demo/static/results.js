@@ -307,6 +307,110 @@ function switchMode(mode) {
   loadCompare();
 }
 
+const coverageState = { stage: "consumed", reading: "" };
+
+function coverageText(value) {
+  if (value === null || value === undefined || value === "") return "未记录";
+  return String(value);
+}
+
+function renderCoverage(data) {
+  const statusNode = document.querySelector("#coverage-status");
+  const summary = document.querySelector("#coverage-summary");
+  const samples = document.querySelector("#coverage-samples");
+  summary.replaceChildren();
+  samples.replaceChildren();
+  if (!data || data.status === "not_executed") {
+    statusNode.textContent = data && data.reason ? "未执行：" + data.reason : "未执行";
+    return;
+  }
+  const stageSummary = data.summary || {};
+  if (stageSummary.available === false) {
+    statusNode.textContent = "阶段 " + data.stage + " 未执行：" + (stageSummary.reason || "未记录");
+    return;
+  }
+  statusNode.textContent = "阶段 " + data.stage + "。缺字段不是 0 分。";
+  const chars = stageSummary.chars || {};
+  const line = document.createElement("p");
+  line.textContent = "行数 " + coverageText(stageSummary.rows)
+    + "；字符 P50 " + coverageText(chars.p50)
+    + "；来源族 " + coverageText(stageSummary.source_family_count)
+    + "；样本族 " + coverageText(stageSummary.sample_family_count);
+  summary.append(line);
+  const types = stageSummary.q_type || {};
+  const typeLine = document.createElement("p");
+  typeLine.textContent = "题型 " + JSON.stringify(types);
+  summary.append(typeLine);
+  const predictions = data.predictions || {};
+  if (predictions.adapter) {
+    const pred = document.createElement("p");
+    pred.className = "qa-note";
+    pred.textContent = "adapter 停止证据：" + coverageText(predictions.adapter.finish_reason_evidence)
+      + "；末尾 token " + coverageText(predictions.adapter.last_token);
+    summary.append(pred);
+  }
+  (data.samples || []).filter((row) => !coverageState.reading || row.length_reading === coverageState.reading).forEach((row) => {
+    const card = document.createElement("article");
+    card.className = "qa-case";
+    const title = document.createElement("h3");
+    title.textContent = (row.document_title || "未记录标题") + " / " + (row.canonical_subject || "对象未记录");
+    const body = document.createElement("p");
+    body.textContent = (row.q_type || "unknown") + " · " + (row.question || "");
+    const meta = document.createElement("p");
+    meta.className = "qa-note";
+    meta.textContent = "要点 " + coverageText(row.point_count)
+      + "；证据 " + coverageText(row.evidence_count)
+      + "；状态 " + (row.selection_status || row.action || "未记录")
+      + "；字符 " + coverageText(row.char_len);
+    card.append(title, body, meta);
+    samples.append(card);
+  });
+  if (!samples.childElementCount) {
+    const empty = document.createElement("p");
+    empty.className = "qa-note";
+    empty.textContent = coverageState.reading ? "当前筛选没有样本。" : "这一阶段没有样本行。";
+    samples.append(empty);
+  }
+}
+
+async function loadCoverage() {
+  const statusNode = document.querySelector("#coverage-status");
+  statusNode.textContent = "正在读取覆盖审计…";
+  let response;
+  let body;
+  try {
+    response = await fetch("/api/v1/coverage?stage=" + encodeURIComponent(coverageState.stage));
+    body = await response.json();
+  } catch (_error) {
+    statusNode.textContent = "网络请求失败。";
+    return;
+  }
+  if (!response.ok) {
+    statusNode.textContent = body.error ? body.error.message : "覆盖数据不可用";
+    return;
+  }
+  renderCoverage(body.data || {});
+}
+
+function ensureCoverageControls() {
+  const stages = document.querySelector("#coverage-stages");
+  if (!stages || stages.childElementCount) return;
+  ["generated", "qualified", "selected", "exported", "consumed"].forEach((stage) => {
+    stages.append(button(stage, "qa-inline", () => {
+      coverageState.stage = stage;
+      loadCoverage();
+    }));
+  });
+  const filters = document.querySelector("#coverage-filters");
+  const labels = {"": "全部", short_complete: "简短但完整", short_incomplete: "简短且不完整", long_unsupported: "较长但有编造"};
+  Object.entries(labels).forEach(([reading, label]) => {
+    filters.append(button(label, "qa-inline", () => {
+      coverageState.reading = reading;
+      loadCoverage();
+    }));
+  });
+}
+
 document.querySelectorAll(".qa-nav-list button").forEach((node) => {
   node.addEventListener("click", () => {
     state.view = node.dataset.view;
@@ -318,6 +422,10 @@ document.querySelectorAll(".qa-nav-list button").forEach((node) => {
     document.querySelector("#page-title").textContent = node.textContent.trim();
     document.querySelector("#nav").classList.remove("open");
     document.querySelector("#menu").setAttribute("aria-expanded", "false");
+    if (state.view === "coverage") {
+      ensureCoverageControls();
+      loadCoverage();
+    }
   });
 });
 

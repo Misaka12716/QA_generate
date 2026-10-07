@@ -8,7 +8,9 @@ from pathlib import Path
 from typing import Any, Callable
 
 from .devices import select_trainable_gpus
+from .generation_stop import classify_generation_stop
 from .scoring import (
+    SCORER_CONTRACT,
     SCORER_V1,
     SCORER_V2,
     SCORER_V3,
@@ -17,6 +19,7 @@ from .scoring import (
     cache_signature,
     message_digest,
     prediction_item_signature,
+    score_contract,
     score_task,
     score_task_v2,
     score_task_v3,
@@ -707,6 +710,8 @@ def _score_one(prediction: str, case: dict[str, Any], scorer_version: str) -> di
         return scored
     if scorer_version == SCORER_V3:
         return score_task_v3(prediction, case)
+    if scorer_version == SCORER_CONTRACT:
+        return score_contract(prediction, case)
     raise ProtocolError(f"unknown_scorer:{scorer_version}")
 
 
@@ -1312,15 +1317,25 @@ def generate_with_model(
         with torch.no_grad():
             generated = current.generate(**inputs, **generate_kwargs)
         new_tokens = generated[0][prompt_tokens:]
+        token_ids = [int(token) for token in new_tokens.tolist()]
         text = tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
-        completion_tokens = int(new_tokens.shape[0])
-        truncated = completion_tokens >= max_new
+        stop_info = classify_generation_stop(
+            completion_token_ids=token_ids,
+            completion_tokens=len(token_ids),
+            max_new_tokens=max_new,
+            eos_token_id=getattr(tokenizer, "eos_token_id", None),
+            text=text,
+        )
         return {
             "text": text,
             "prompt_tokens": prompt_tokens,
-            "completion_tokens": completion_tokens,
-            "finish_reason": "length" if truncated else "stop",
-            "truncated": truncated,
+            "completion_tokens": stop_info["completion_tokens"],
+            "finish_reason": stop_info["finish_reason"],
+            "finish_reason_evidence": stop_info["finish_reason_evidence"],
+            "last_token_id": stop_info["last_token_id"],
+            "eos_matched": stop_info["eos_matched"],
+            "truncated": stop_info["truncated"],
+            "hit_max_new_tokens": stop_info["hit_max_new_tokens"],
             "device": index,
             "elapsed_sec": round(time.perf_counter() - started, 3),
         }

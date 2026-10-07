@@ -139,9 +139,21 @@ def audit_training_row(row: dict[str, Any]) -> dict[str, Any]:
     answer = next((item.get("content") or "" for item in messages if item.get("role") == "assistant"), "")
     question = extract_question(user)
     meta = row.get("metadata") or {}
-    family = str(meta.get("source_family_id") or meta.get("family_id") or "")
+    source_family = str(meta.get("source_family_id") or "")
+    sample_family = str(meta.get("family_id") or "")
+    if source_family.startswith("qfam"):
+        sample_family = sample_family or source_family
+        source_family = ""
+        issues_family = ["source_family_is_sample_family"]
+    else:
+        issues_family = []
+    family = source_family
     evidence = str(meta.get("evidence") or "")
-    issues = question_issues(question)
+    points = meta.get("answer_points") or []
+    if isinstance(points, str):
+        points = [points]
+    required_points = [str(item) for item in points if str(item).strip()] or ([answer] if answer else [])
+    issues = question_issues(question) + issues_family
     if not answer.strip():
         issues.append("empty_answer")
     if not family:
@@ -153,8 +165,15 @@ def audit_training_row(row: dict[str, Any]) -> dict[str, Any]:
     return {
         "qa_id": row.get("id"),
         "source_family_id": family,
+        "sample_family_id": sample_family,
         "question": question,
         "answer": answer,
+        "required_points": required_points,
+        "q_type": str(meta.get("q_type") or ""),
+        "intent_primary": str(meta.get("intent_primary") or ""),
+        "answer_point_specs": meta.get("answer_point_specs") or [],
+        "evidence_quotes": meta.get("evidence_quotes") or [],
+        "review_lineage": meta.get("review_history") or [],
         "evidence": evidence,
         "source": meta.get("source"),
         "eligible": not issues,
@@ -230,7 +249,7 @@ def prepare_closed_book(
                     "source_family_id": row["source_family_id"],
                     "question": question,
                     "reference_answer": row["answer"],
-                    "required_points": [row["answer"]],
+                    "required_points": list(row.get("required_points") or [row["answer"]]),
                     "source_evidence": row["evidence"],
                     "train_seen_fact": True,
                     "train_seen_question": False,
@@ -264,7 +283,7 @@ def prepare_closed_book(
             "source_family_id": row["source_family_id"],
             "question": row["question"],
             "reference_answer": row["answer"],
-            "required_points": [row["answer"]],
+            "required_points": list(row.get("required_points") or [row["answer"]]),
             "source_evidence": row["evidence"],
             "train_seen_fact": True,
             "train_seen_question": True,
@@ -284,8 +303,16 @@ def prepare_closed_book(
                 "messages": messages,
                 "metadata": {
                     "task_mode": CLOSED_BOOK,
-                    "knowledge_id": f"{row['source_family_id']}::{row['qa_id']}",
+                    "knowledge_id": f"{row['source_family_id']}::{row['qa_id']}" if row.get("source_family_id") else row["qa_id"],
                     "source_family_id": row["source_family_id"],
+                    "sample_family_id": row.get("sample_family_id") or "",
+                    "q_type": row.get("q_type") or "",
+                    "intent_primary": row.get("intent_primary") or "",
+                    "answer_points": list(row.get("required_points") or []),
+                    "answer_point_specs": row.get("answer_point_specs") or [],
+                    "evidence_quotes": row.get("evidence_quotes") or [],
+                    "review_lineage": row.get("review_lineage") or [],
+                    "judge_only": "仅供审核，学生未看到",
                     "train_seen_question": True,
                 },
             }
@@ -321,7 +348,9 @@ def prepare_closed_book(
         "hyperparameters": TRAIN_HYPER,
         "infer": INFER,
         "system_policy": CLOSED_POLICY,
-        "paraphrase_method": "预先固定的表面改写，不是教师生成的新问法。",
+        "paraphrase_method": "surface_only",
+        "paraphrase_status": "historical_surface",
+        "paraphrase_note": "表面改写只用于历史复现，包含可能出现到常见的替换，不能代表真实用户问法。新质量协议默认 not_executed。",
         "train_planned": len(exported),
         "train_limit": TRAIN_LIMIT,
         "knowledge_planned": KNOWLEDGE_LIMIT,
@@ -399,6 +428,7 @@ def train_closed_book(out_dir: str | Path, *, device: int | None = None) -> dict
         rank=hyper["rank"],
         max_length=hyper["max_length"],
         seed=hyper["seed"],
+        save_epochs=bool(protocol.get("save_epochs")),
     )
     return metrics
 

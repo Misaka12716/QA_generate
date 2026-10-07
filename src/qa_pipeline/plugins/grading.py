@@ -116,6 +116,14 @@ class SABGrade:
 _PASS_CLAIM = {"supported"}
 
 
+def _quotes_located(pair: QAPair) -> bool:
+    quotes = [quote.quote for quote in pair.evidence_quotes if quote.quote]
+    haystacks = [pair.chunk_text, *(pair.metadata.get("evidence_chunk_texts") or [])]
+    if len(quotes) > 1:
+        return not pair.evidence_span and all(any(text and is_substring(quote, text) for text in haystacks) for quote in quotes)
+    return bool(pair.evidence_span) and is_substring(pair.evidence_span, pair.chunk_text)
+
+
 @register("grading", "validity_tier")
 class ValidityTier:
     """共同有效性门槛之上区分 S/A。未解决样本标为 quarantine，不发布。"""
@@ -143,11 +151,7 @@ class ValidityTier:
             elif pair.claims and any(str(item.get("status")) not in _PASS_CLAIM for item in pair.claims):
                 pair.grade = "quarantine"
                 pair.action = "quarantine"
-            elif (
-                pair.evidence_state == "sufficient"
-                and pair.chunk_text
-                and not is_substring(pair.evidence_span, pair.chunk_text)
-            ):
+            elif pair.evidence_state == "sufficient" and pair.chunk_text and not _quotes_located(pair):
                 pair.grade = "quarantine"
                 pair.action = "quarantine"
             elif pair.claims and all(str(item.get("status")) in _PASS_CLAIM for item in pair.claims):

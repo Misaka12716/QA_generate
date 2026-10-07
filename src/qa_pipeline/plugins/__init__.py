@@ -7,6 +7,7 @@ from importlib import import_module
 _MODULES = [
     "qa_pipeline.plugins.chunking",
     "qa_pipeline.plugins.anchors",
+    "qa_pipeline.plugins.planner",
     "qa_pipeline.plugins.question_gen",
     "qa_pipeline.plugins.evolution",
     "qa_pipeline.plugins.question_filter",

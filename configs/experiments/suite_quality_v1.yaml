@@ -1,0 +1,12 @@
+name: quality_v1
+input: fixtures/quality_five_types.md
+heldout: fixtures/heldout.jsonl
+refusal: fixtures/refusal.jsonl
+recipes_dir: configs/recipes
+experiments:
+  - id: Q_planned
+    purpose: 证据能力目录上的五类试产。fake 运行只验证链路，不是质量结论。
+    recipe: quality/planned_v1.yaml
+  - id: Q_behavior
+    purpose: 五条行为题链路。不混入可回答配额。
+    recipe: quality/behavior_probe_v1.yaml

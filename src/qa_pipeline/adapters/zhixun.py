@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any, Iterable
 
-from ..schemas import Chunk, Document, QAPair
+from ..schemas import Chunk, Document, QAPair, project_required_texts
 from ..store import json_line, read_jsonl, write_jsonl
 from ..textutil import is_substring, normalize
 
@@ -85,6 +85,8 @@ def assert_releasable(pair: QAPair) -> None:
         raise ReleaseRejected(f"样本 {pair.qa_id} 未达到发布等级")
     if pair.metadata.get("verification_status") == "pending" or pair.verification_status == "pending":
         raise ReleaseRejected(f"样本 {pair.qa_id} 仍待核验")
+    if pair.selection_status == "not_selected" or pair.included_in_this_run is False:
+        raise ReleaseRejected(f"样本 {pair.qa_id} 未选中，不能当作内容拒绝或发布")
     if pair.grade not in {"S", "A"}:
         raise ReleaseRejected(f"样本 {pair.qa_id} 等级不可发布")
     bind_validation_hash(pair)
@@ -147,6 +149,17 @@ def to_zhixun_row(pair: QAPair, split: str | None = None, *, bind: bool = True) 
             "subject_hash": pair.metadata.get("subject_hash"),
             "family_id": pair.family_id,
             "source_family_id": pair.source_family_id,
+            "sample_family_id": pair.family_id,
+            "knowledge_id": pair.knowledge_id,
+            "requested_q_type": pair.requested_q_type,
+            "actual_q_type": pair.actual_q_type or pair.q_type,
+            "type_label_origin": pair.type_label_origin,
+            "answer_points": project_required_texts(pair),
+            "answer_point_specs": [item.model_dump() for item in pair.answer_point_specs],
+            "response_contract": pair.response_contract.model_dump(),
+            "evidence_quotes": [item.model_dump() for item in pair.evidence_quotes],
+            "document_identity": pair.document_identity.model_dump(),
+            "selection_status": pair.selection_status,
             "task_variant_id": pair.task_variant_id,
             "parent_id": pair.parent_sample_id,
         },

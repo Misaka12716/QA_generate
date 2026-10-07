@@ -1,0 +1,30 @@
+{
+  "arms": {
+    "C0": "同一合格池按自然类型取可回答样本，使用已核验的简洁候选答案。",
+    "C1": "与 C0 相同的问题、证据和知识，改用 response_contract 的完整回答。简单题不扩写。",
+    "C2": "同一合格池按 40/20/15/15/10 选择，并使用同一完整回答规范。"
+  },
+  "shared_hyperparameters": {
+    "base_model_status": "not_selected_until_local_path_confirmed",
+    "lora_rank": 16,
+    "lora_alpha": 32,
+    "target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj"
+    ],
+    "seed": 42,
+    "epochs": 3,
+    "learning_rate": 0.0002,
+    "per_device_train_batch_size": 1,
+    "gradient_accumulation_steps": 4,
+    "max_length": 1024,
+    "save_epochs": true,
+    "status": "proposed_not_frozen",
+    "reason": "独立 dev 预试尚未执行，不能把这组数字写成已冻结超参。"
+  },
+  "old_cb1": "historical_reference_only",
+  "common_knowledge_exposure": "not_executed",
+  "reason": "合格池尚未生成，不能冻结三份 100 条清单。"
+}

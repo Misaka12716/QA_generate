@@ -11,6 +11,8 @@ import numpy as np
 
 from ..llm import json_payload
 from ..registry import register
+from ..entity import subject_status
+from ..qtypes import answerable, partial_quota_caps
 from ..schemas import QAPair, _uid, content_id
 from ..textutil import (
     balanced_take,
@@ -104,7 +106,14 @@ class EvidenceSubstring:
     def run(self, pairs: list[QAPair], ctx) -> list[QAPair]:
         kept = []
         for p in pairs:
-            ok = bool(p.evidence_span) and is_substring(p.evidence_span, p.chunk_text)
+            quotes = [quote.quote for quote in p.evidence_quotes if quote.quote]
+            haystacks = [p.chunk_text, *(p.metadata.get("evidence_chunk_texts") or [])]
+            if len(quotes) > 1:
+                ok = not p.evidence_span and all(any(text and is_substring(quote, text) for text in haystacks) for quote in quotes)
+            else:
+                ok = bool(p.evidence_span) and is_substring(p.evidence_span, p.chunk_text)
+            if p.expected_action == "state_insufficient" and p.evidence_state == "missing" and not p.evidence_span:
+                ok = True
             action = "pass" if ok else self.on_fail
             p.filter_trace[self.name] = {"action": action, "ok": ok}
             p.log("filter", self.name, ok=ok, action=action)
@@ -561,40 +570,47 @@ class DiversitySample:
     def run(self, pairs: list[QAPair], ctx) -> list[QAPair]:
         if not pairs:
             return pairs
+        targets = dict(getattr(ctx, "extras", {}).get("quota_targets") or {})
+        answer_rows = [pair for pair in pairs if answerable(pair)]
         by_type: dict[str, list[QAPair]] = defaultdict(list)
-        for p in pairs:
-            by_type[p.q_type].append(p)
-        target_n = len(pairs)
+        for pair in answer_rows:
+            by_type[pair.actual_q_type or pair.q_type].append(pair)
+        if not targets:
+            targets = partial_quota_caps(len(answer_rows), self.quota)
         chosen: list[QAPair] = []
-        for q_type, ratio in self.quota.items():
+        for q_type, limit in targets.items():
             bucket = by_type.get(q_type, [])
-            k = max(1, int(target_n * ratio)) if bucket else 0
-            bucket.sort(key=lambda x: (x.judge_overall or x.nli_score or 0), reverse=True)
-            chosen.extend(bucket[:k])
+            bucket.sort(key=lambda x: ((x.judge_overall or x.nli_score or 0), x.qa_id), reverse=True)
+            chosen.extend(bucket[: int(limit)])
         if self.per_doc_cap:
             counts: dict[str, int] = defaultdict(int)
             trimmed = []
-            for p in chosen:
-                key = p.source_doc or p.chunk_id
+            for pair in chosen:
+                key = pair.source_family_id or pair.source_doc or pair.chunk_id
                 if counts[key] >= self.per_doc_cap:
-                    p.action = "reject"
-                    p.filter_trace[self.name] = {"dropped": "doc_cap"}
+                    pair.selection_status = "not_selected"
+                    pair.included_in_this_run = False
+                    pair.exclude_reason = pair.exclude_reason or "doc_cap"
+                    pair.filter_trace[self.name] = {"kept": False, "reason": "doc_cap"}
                     continue
                 counts[key] += 1
-                trimmed.append(p)
+                trimmed.append(pair)
             chosen = trimmed
-        ids = {id(p) for p in chosen}
+        ids = {id(pair) for pair in chosen}
         for pair in pairs:
+            if not answerable(pair):
+                pair.filter_trace[self.name] = {"kept": pair.action == "pass", "quota": "excluded_behavior"}
+                continue
             selected = id(pair) in ids and pair.action != "reject"
             pair.filter_trace[self.name] = {"kept": selected}
             if selected:
                 pair.included_in_this_run = True
-            elif pair.action == "reject":
-                pair.included_in_this_run = False
-                pair.exclude_reason = pair.exclude_reason or "doc_cap"
+                pair.selection_status = "selected"
             else:
                 pair.included_in_this_run = False
-                pair.exclude_reason = pair.exclude_reason or "quota"
+                pair.selection_status = "not_selected"
+                if pair.action != "reject":
+                    pair.exclude_reason = pair.exclude_reason or "quota"
         return pairs
 
 
@@ -1181,3 +1197,28 @@ class GapFill:
         for pair in added:
             pair.filter_trace[self.name] = {"filled": True}
         return pairs + added
+
+
+@register("filter", "entity_subject")
+class EntitySubject:
+    """题干对象与标准对象冲突时隔离。证据原句不能抵消对象错误。"""
+
+    name = "entity_subject"
+
+    def __init__(self, **_: object) -> None:
+        pass
+
+    def run(self, pairs: list[QAPair], ctx) -> list[QAPair]:
+        for pair in pairs:
+            status = subject_status(pair.question, pair.document_identity, pair.chunk_text)
+            if pair.expected_action == "clarify" and status in {"unresolved_anaphora", "unresolved_subject"}:
+                status = ""
+            pair.filter_trace[self.name] = {"status": status or "ok"}
+            pair.log("filter", self.name, status=status or "ok")
+            if not status:
+                continue
+            pair.action = "quarantine"
+            pair.grade = "quarantine"
+            pair.exclude_reason = pair.exclude_reason or status
+            pair.verification_status = pair.verification_status or "failed"
+        return pairs

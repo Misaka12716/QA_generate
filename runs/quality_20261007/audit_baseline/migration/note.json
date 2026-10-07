@@ -1,0 +1,6 @@
+{
+  "in_place": false,
+  "rows": 74,
+  "missing_source_family": 74,
+  "rule": "source_family_id 为空就保持为空，不用 family_id 或 qfam 填补。"
+}

@@ -454,6 +454,43 @@ def _fake_json(blob: str, user: str) -> dict[str, Any]:
                 }
             ],
         }
+    if "planned_grounded" in blob:
+        requested = "factual"
+        match = re.search(r"requested_q_type=([a-z_]+)", user)
+        action_match = re.search(r"expected_action=([a-z_]+)", user)
+        action = action_match.group(1) if action_match else "answer"
+        if match:
+            requested = match.group(1)
+        questions = {
+            "factual": "示例制剂甲每片含有多少主成分？",
+            "procedural": "使用示例制剂甲时需要按什么顺序完成哪些步骤？",
+            "conditional": "肾功能不全者在什么条件下禁用示例制剂甲，有什么例外？",
+            "comparative": "示例制剂甲和示例制剂乙在每片主成分含量上有什么不同？",
+            "multihop": "结合示例制剂甲和示例制剂乙的含量，合并前需要确认哪些事实？",
+        }
+        behavior_questions = {
+            "state_insufficient": "资料没有记载的患者体重换算剂量是多少？",
+            "partial_answer": "示例制剂甲的含量和未记载的儿童剂量分别是多少？",
+            "clarify": "该药指的是哪一个制剂？",
+            "correct_premise": "示例制剂甲每片含主成分 100 mg，这个前提对吗？",
+            "state_scope": "请推荐一种资料范围以外的新药，并说明资料里的含量边界。",
+        }
+        question = behavior_questions.get(action) or questions.get(requested) or questions["factual"]
+        return {
+            "samples": [
+                {
+                    "question": question,
+                    "candidate_answer": sent,
+                    "answer_points": [sent] if sent else [],
+                    "evidence": sent,
+                    "intent_primary": "lookup_explain",
+                    "operations": ["抽取"],
+                    "evidence_topology": "single",
+                    "requested_q_type": requested,
+                    "expected_action": action,
+                }
+            ]
+        }
     if "候选答案" in blob or "direct_grounded" in blob:
         return {
             "samples": [

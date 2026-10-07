@@ -247,6 +247,29 @@ def cmd_audit_state(args) -> int:
     return 0
 
 
+def cmd_audit_coverage(args) -> int:
+    from .experiments.coverage_audit import write_coverage_audit
+
+    report = write_coverage_audit(
+        args.out,
+        train_path=args.train,
+        closed_book_dir=args.closed_book,
+        candidate_run=args.candidate_run,
+        question_paths=args.questions or [],
+        tokenizer_path=args.tokenizer,
+    )
+    print(json.dumps({"out": args.out, "observed": report.get("observed"), "differences": report.get("differences"), "gaps": report.get("gaps")}, ensure_ascii=False))
+    return 0
+
+
+def cmd_prepare_quality_protocol(args) -> int:
+    from .experiments.quality_protocol import write_quality_protocol
+
+    status = write_quality_protocol(args.out, ledger_path=args.ledger, corpus_dir=args.corpus)
+    print(json.dumps({"out": args.out, "stage_B": status["stage_B"]["status"], "stage_C": status["stage_C"]["status"], "formal_locked_test": status["formal_locked_test"]["status"]}, ensure_ascii=False))
+    return 0
+
+
 def cmd_teacher_review(args) -> int:
     from .reviewing.service import assert_safe_review_out, run_teacher_review
 
@@ -377,6 +400,21 @@ def main(argv: list[str] | None = None) -> int:
     audit_p.add_argument("--out", required=True)
     audit_p.add_argument("--repo", default=None)
     audit_p.set_defaults(func=cmd_audit_state)
+
+    cover_p = sub.add_parser("audit-coverage", help="只读复算题型、长度、身份和停止证据")
+    cover_p.add_argument("--out", required=True)
+    cover_p.add_argument("--train", default="runs/drug_v22/E3_g0/sft/train.jsonl")
+    cover_p.add_argument("--closed-book", dest="closed_book", default="runs/cb1_20261007")
+    cover_p.add_argument("--candidate-run", dest="candidate_run", default=None)
+    cover_p.add_argument("--questions", action="append", default=None)
+    cover_p.add_argument("--tokenizer", default=None)
+    cover_p.set_defaults(func=cmd_audit_coverage)
+
+    quality_p = sub.add_parser("prepare-quality-protocol", help="写下诊断协议、分组和预算门；不训练")
+    quality_p.add_argument("--out", required=True)
+    quality_p.add_argument("--ledger", default=None)
+    quality_p.add_argument("--corpus", default=None)
+    quality_p.set_defaults(func=cmd_prepare_quality_protocol)
 
     teacher_p = sub.add_parser("teacher-review", help="教师审核。不写入人工审核 CSV")
     teacher_p.add_argument("--manifest", required=True)

@@ -1,0 +1,21 @@
+{
+  "gold_review_calls": 120,
+  "prediction_review_calls": 480,
+  "generation_and_revision": "stage_B_unpriced_until_source_exists",
+  "reserve": "review_margin_not_estimated_from_old_120",
+  "formal_locked_test": "not_executed",
+  "reason": "预测审核 480 次加 gold 最多 120 次。未读取到可覆盖该数量的当前额度。",
+  "ledger": {
+    "status": "snapshot_not_current_balance",
+    "path": "/data1/pjw/QA_generate-main/runs/batch1_view_20261007/metrics.json",
+    "budget": {
+      "calls": 97,
+      "call_denominator": 120,
+      "tokens": 107092,
+      "token_denominator": 200000,
+      "estimated_cost": null,
+      "currency": "unknown"
+    },
+    "note": "历史账本不能当作当前余额，也不能据此扩容。"
+  }
+}

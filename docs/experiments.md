@@ -110,6 +110,16 @@ qa-pipeline prepare-closed-book \
 
 训练和预测分开追加 `--train --device <空闲GPU>` 与 `--predict --device <空闲GPU>`。不要覆盖 `runs/cb1_20261007`。
 
+## 质量与题型覆盖
+
+`configs/experiments/suite_quality_v1.yaml` 和 `configs/recipes/quality/` 是 2026-10-07 的新路线。`configs/recipes/recommended.yaml` 保持原来的直接生成配方。新产物写在 `runs/quality_20261007/`，历史 `runs/drug_v22/` 与 `runs/cb1_20261007/` 只读。
+
+可回答样本按最大余数法分配五类题型：100 条为 40/20/15/15/10，400 条为 160/80/60/60/40。行为题单独计数，不进入这 100%。主类型优先级是多跳、比较、条件、流程、事实。查询采收季节和生长阶段的问题标为事实题。来源族缺失时保持空，不用样本族 `qfam` 填充。未选中样本的 `action` 保持 `pass`，`selection_status` 为 `not_selected`。
+
+阶段 A 是 20 条开发诊断，不能转成锁定测试。阶段 B/C 的真实教师调用和训练要先读到当前额度和合格池；额度或语料不够时保持 `not_executed`，不缩小分母。执行记录只维护 [quality_experiment_status.md](quality_experiment_status.md)。
+
+结果页的「数据质量与覆盖」读取 `GET /api/v1/coverage`。缺审计、未审核和未预测显示为未记录，不计 0 分。
+
 ## 如何阅读实验结论
 
 - 接受条数、导出条数、训练条数和主评测条数是不同分母。

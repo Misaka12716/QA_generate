@@ -14,6 +14,7 @@
         <li><button type="button" data-view="overview"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>概览</button></li>
         <li><button type="button" data-view="flow"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h9M5 12h14M5 17h9"/><circle cx="17" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>数据与流程</button></li>
         <li><button type="button" data-view="compare" aria-current="page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V9M12 19V5M19 19v-7"/></svg>效果对比</button></li>
+        <li><button type="button" data-view="coverage"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16M6 16V9M12 16V5M18 16v-4"/></svg>数据质量与覆盖</button></li>
         <li><button type="button" data-view="chat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 16.5V7.5A2.5 2.5 0 0 1 7.5 5h9A2.5 2.5 0 0 1 19 7.5v6A2.5 2.5 0 0 1 16.5 16H9l-4 3z"/></svg>问答体验</button></li>
         <li><button type="button" data-view="runs"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7h11M8 12h11M8 17h11"/><circle cx="4.5" cy="7" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="17" r="1"/></svg>实验记录</button></li>
       </ul>
@@ -64,6 +65,21 @@
           <article class="qa-panel">
             <h2 style="font-size:18px">逐题对照</h2>
             <div id="cases"></div>
+          </article>
+        </section>
+        <section class="qa-workspace" id="view-coverage" hidden>
+          <article class="qa-panel">
+            <p class="qa-kicker">数据质量与覆盖</p>
+            <h2 id="coverage-title">阶段覆盖</h2>
+            <div class="qa-segment" id="coverage-stages" role="group" aria-label="数据阶段"></div>
+            <p class="qa-status" id="coverage-status" role="status">尚未读取审计。</p>
+            <div id="coverage-summary"></div>
+          </article>
+          <article class="qa-panel">
+            <h2 style="font-size:18px">样本</h2>
+            <div class="qa-segment" id="coverage-filters" role="group" aria-label="长度阅读"></div>
+            <div id="coverage-samples"></div>
+            <p class="qa-note">闭卷证据仅供审核，学生未看到。未审核、未预测和未决不显示为 0 分。</p>
           </article>
         </section>
         <section class="qa-workspace" id="view-chat" hidden>

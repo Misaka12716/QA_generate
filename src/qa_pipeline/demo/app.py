@@ -197,6 +197,15 @@ def create_app(run_dir: str | Path) -> FastAPI:
             return _api_error("unknown_case", f"没有用例 {case_id}", 404)
         return {"data": public_case(found, full=True), "meta": {**_api_meta(total=1), "view": meta}}
 
+    @app.get("/api/v1/coverage")
+    def coverage(stage: str = "consumed") -> Any:
+        from ..experiments.coverage_audit import STAGES, load_coverage_view
+
+        if stage not in STAGES:
+            return _api_error("unknown_stage", "阶段必须是 generated、qualified、selected、exported 或 consumed", 422)
+        payload = load_coverage_view(root, stage=stage)
+        return {"data": payload, "meta": _api_meta(total=len(payload.get("samples") or []))}
+
     @app.get("/api/v1/comparisons")
     def comparisons(task_mode: str = "rag_grounded", batch: str = "historical") -> Any:
         from ..experiments.workbench import comparison_view

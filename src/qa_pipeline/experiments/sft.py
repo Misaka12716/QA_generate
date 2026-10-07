@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
@@ -174,6 +175,7 @@ def train_lora(
     rank: int = 16,
     max_length: int = 1024,
     seed: int = 42,
+    save_epochs: bool = False,
 ) -> dict[str, Any]:
     try:
         import torch
@@ -241,23 +243,29 @@ def train_lora(
 
     if not prepared:
         return {"skipped": True, "reason": "no_effective_target", "skipped_rows": skipped_rows}
-    supervised_tokens = sum(item["assistant_target_tokens"] for item in prepared) * epochs
+    per_epoch_tokens = sum(item["assistant_target_tokens"] for item in prepared)
+    supervised_tokens = per_epoch_tokens * epochs
+    prompt_masked = all(item.get("prompt_masked") for item in prepared)
     use_cuda = torch.cuda.is_available()
+    train_args: dict[str, Any] = {
+        "output_dir": str(out_dir / "trainer"),
+        "num_train_epochs": epochs,
+        "learning_rate": lr,
+        "per_device_train_batch_size": 1,
+        "gradient_accumulation_steps": 4,
+        "save_strategy": "no",
+        "logging_steps": 1,
+        "bf16": use_cuda,
+        "report_to": [],
+        "disable_tqdm": True,
+        "seed": seed,
+    }
+    if save_epochs:
+        train_args["save_strategy"] = "epoch"
+        train_args["save_total_limit"] = 3
     trainer = Trainer(
         model=model,
-        args=TrainingArguments(
-            output_dir=str(out_dir / "trainer"),
-            num_train_epochs=epochs,
-            learning_rate=lr,
-            per_device_train_batch_size=1,
-            gradient_accumulation_steps=4,
-            save_strategy="no",
-            logging_steps=1,
-            bf16=use_cuda,
-            report_to=[],
-            disable_tqdm=True,
-            seed=seed,
-        ),
+        args=TrainingArguments(**train_args),
         train_dataset=Rows(),
         data_collator=collate,
     )
@@ -272,12 +280,22 @@ def train_lora(
         "planned_samples": len(rows),
         "skipped_rows": skipped_rows,
         "supervised_tokens": supervised_tokens,
+        "supervised_tokens_per_epoch": per_epoch_tokens,
+        "supervised_tokens_note": "supervised_tokens 是每条答案 token 之和再乘 epoch，不是单条答案长度。",
+        "per_sample_supervised_tokens": [item.get("assistant_target_tokens") for item in prepared],
+        "prompt_masked": prompt_masked,
+        "chat_template_sha256": hashlib.sha256(str(getattr(tokenizer, "chat_template", "") or "").encode("utf-8")).hexdigest(),
+        "eos_token_id": getattr(tokenizer, "eos_token_id", None),
+        "pad_token_id": getattr(tokenizer, "pad_token_id", None),
+        "bos_token_id": getattr(tokenizer, "bos_token_id", None),
         "epochs": epochs,
+        "save_epochs": save_epochs,
         "seed": seed,
         "base_model": base_model,
         "adapter": str(artifact),
         "consumed_ids": [item.get("id") for item in prepared],
         "global_step": int(getattr(result, "global_step", 0) or 0),
+        "optimizer_steps": int(getattr(result, "global_step", 0) or 0),
         "exposure_count": epochs,
         "exposure_definition": EXPOSURE_DEFINITION,
     }

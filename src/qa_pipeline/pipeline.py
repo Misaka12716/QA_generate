@@ -58,6 +58,7 @@ class Pipeline:
         self.llm = llm or LLMClient()
         self.chunker = build_strategy("chunking", _spec(recipe.chunking))
         self.anchorer = build_strategy("anchor", _spec(recipe.anchor))
+        self.planner = build_strategy("planner", _spec(recipe.planner))
         self.qgen = build_strategy("question_gen", _spec(recipe.question_gen))
         self.evolver = build_strategy("evolution", _spec(recipe.evolution))
         self.question_filter = build_strategy("question_filter", _spec(recipe.question_filter))
@@ -89,6 +90,7 @@ class Pipeline:
         ctx.stats.produced["chunks"] = len(chunks)
 
         anchored = self._timed("anchor", lambda: self.anchorer.run(chunks, ctx), ctx)
+        anchored = self._timed("planner", lambda: self.planner.run(anchored, ctx), ctx)
         questions = self._timed("question_gen", lambda: self.qgen.run(anchored, ctx), ctx)
         questions = self._timed("evolution", lambda: self.evolver.run(questions, ctx), ctx)
         questions = self._timed("question_filter", lambda: self.question_filter.run(questions, ctx), ctx)
@@ -100,7 +102,10 @@ class Pipeline:
                 self.recipe.seed,
             )
         ctx.stats.produced["questions"] = len(questions)
-        return self._finish(docs, chunks, questions, ctx, t0)
+        result = self._finish(docs, chunks, questions, ctx, t0)
+        result = self._fill_gaps(result, anchored, ctx, t0)
+        self._store_coverage(result, ctx)
+        return result
 
     def distill_from_questions(self, questions: list[Question]) -> PipelineResult:
         """跳过切分与提问，只重跑路由、蒸馏、过滤和分层。"""
@@ -173,6 +178,63 @@ class Pipeline:
             stats=ctx.stats,
             raw_pairs=raw_pairs,
         )
+
+    def _fill_gaps(self, result: PipelineResult, chunks: list[Chunk], ctx: PipelineContext, t0: float) -> PipelineResult:
+        rounds = int(getattr(self.recipe, "gap_fill_rounds", 0) or 0)
+        if rounds <= 0:
+            return result
+        from .plugins.planner import gap_from_counts
+
+        call_cap = int(getattr(self.recipe, "gap_fill_max_calls", 0) or 0)
+        report = ctx.extras.get("coverage_report") or {}
+        targets = dict(ctx.extras.get("quota_targets") or {})
+        eligible = dict((report.get("eligible") or {}))
+        all_questions = list(result.questions)
+        kept = list(result.pairs)
+        rejected = list(result.rejected)
+        completed = 0
+        for _ in range(rounds):
+            if call_cap and ctx.stats.llm_calls >= call_cap:
+                report["gap_fill_stop"] = "call_cap"
+                break
+            actual: dict[str, int] = {}
+            for pair in kept:
+                if pair.expected_action == "answer" and pair.selection_role != "behavior":
+                    actual[pair.actual_q_type or pair.q_type] = actual.get(pair.actual_q_type or pair.q_type, 0) + 1
+            gap = gap_from_counts(targets, actual, eligible)
+            report["after_filter"] = gap
+            actionable = []
+            plan_tasks = list((ctx.extras.get("generation_plan") or {}).get("tasks") or [])
+            have = {task.get("requested_q_type") for task in plan_tasks}
+            for item in gap["actionable_tasks"]:
+                q_type = item["requested_q_type"]
+                if q_type in have:
+                    continue
+                actionable.append({"requested_q_type": q_type, "expected_action": "answer", "chunk_id": chunks[0].chunk_id if chunks else "", "quotes": []})
+            if not actionable:
+                report["gap_fill_stop"] = "no_additional_evidence"
+                break
+            ctx.extras["generation_tasks"] = actionable
+            extra_questions = self.qgen.run(chunks, ctx)
+            if not extra_questions:
+                report["gap_fill_stop"] = "generator_empty"
+                break
+            extra = self._finish(result.documents, result.chunks, extra_questions, ctx, t0)
+            all_questions.extend(extra.questions)
+            kept.extend(extra.pairs)
+            rejected.extend(extra.rejected)
+            completed += 1
+        result.questions = all_questions
+        result.pairs = kept
+        result.rejected = rejected
+        report["gap_fill_rounds_completed"] = completed
+        ctx.extras["coverage_report"] = report
+        return result
+
+    def _store_coverage(self, result: PipelineResult, ctx: PipelineContext) -> None:
+        report = ctx.extras.get("coverage_report")
+        if report:
+            result.stats.stage_counts = {**result.stats.stage_counts, "coverage": report}
 
     def _apply_filters(self, pairs: list[QAPair], ctx: PipelineContext) -> tuple[list[QAPair], PipelineContext]:
         for filt in self.filters:
@@ -310,7 +372,7 @@ def _stage_counts(questions: list, pairs: list[QAPair], kept: list[QAPair]) -> d
 
 
 def _publishable(pair: QAPair) -> bool:
-    if pair.included_in_this_run is False:
+    if pair.selection_status == "not_selected" or pair.included_in_this_run is False:
         return False
     if pair.grade == "B":
         return False
